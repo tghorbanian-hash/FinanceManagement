@@ -181,7 +181,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     );
   };
 
-  // کاشی فشرده با طول و عرض مساوی و بسیار کوچک (80 در 80 پیکسل - کلاس w-20 h-20)
   const renderTileCard = (item) => {
     const isFav = favorites.has(item.id);
 
@@ -189,22 +188,21 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       <div 
         key={item.id}
         onClick={() => handleFormClick(item.id)}
-        className="w-20 h-20 shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
+        className="w-[100px] h-[100px] shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
       >
         <div className="flex items-start justify-between z-10">
           <div className="p-1 rounded-md transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
-            <DynamicIcon name={item.icon || 'FileText'} size={14} strokeWidth={2.5} />
+            <DynamicIcon name={item.icon || 'FileText'} size={16} strokeWidth={2.5} />
           </div>
           <button 
             onClick={(e) => toggleFavorite(e, item.id)}
             className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
           >
-            <Star size={12} fill={isFav ? "currentColor" : "none"} />
+            <Star size={14} fill={isFav ? "currentColor" : "none"} />
           </button>
         </div>
         <div className="z-10 mt-auto pt-1">
-          {/* متن کاشی کوچک شده (10px) و در صورت طولانی بودن در سه خط می‌شکند */}
-          <div className="text-[10px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
+          <div className="text-[11px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
             {item.label_fa}
           </div>
         </div>
@@ -257,14 +255,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
               </div>
               
               <div className="space-y-4 pt-1">
-                {/* فرم‌های زیر مستقیم بدون متن اضافی و حاشیه */}
                 {moduleDirectForms.length > 0 && (
                   <div className="flex flex-wrap gap-3 mb-4">
                     {moduleDirectForms.map(renderTileCard)}
                   </div>
                 )}
 
-                {/* بخش‌ها (در صورت وجود) */}
                 {sections.map(section => {
                   const sectionForms = getAllForms(section);
                   if (sectionForms.length === 0) return null;
@@ -420,22 +416,20 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            {activeDomainId !== 'HOME_FAV' && (
-              <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200">
-                <button 
-                  onClick={() => setViewMode('tree')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <ListTree size={12} /><span>درختی</span>
-                </button>
-                <button 
-                  onClick={() => setViewMode('tile')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <LayoutGrid size={12} /><span>کاشی</span>
-                </button>
-              </div>
-            )}
+            <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200">
+              <button 
+                onClick={() => setViewMode('tree')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <ListTree size={12} /><span>درختی</span>
+              </button>
+              <button 
+                onClick={() => setViewMode('tile')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                <LayoutGrid size={12} /><span>کاشی</span>
+              </button>
+            </div>
             
             <div className="w-px h-4 bg-slate-200 mx-1"></div>
             <button className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 relative transition-all">
