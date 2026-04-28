@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enterprise Navigation System</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+  
+  <style>
+    body { font-family: 'Vazirmatn', sans-serif; background-color: #f8fafc; margin: 0; overflow: hidden; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "@angular/core": "https://esm.sh/@angular/core@17.0.0",
+        "@angular/common": "https://esm.sh/@angular/common@17.0.0",
+        "@angular/platform-browser": "https://esm.sh/@angular/platform-browser@17.0.0",
+        "lucide-angular": "https://esm.sh/lucide-angular@0.344.0",
+        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+      }
+    }
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+
+  <script type="module">
+    import { bootstrapApplication } from '@angular/platform-browser';
+    import { AppComponent } from './app.component.js';
+    
+    bootstrapApplication(AppComponent).catch(err => console.error(err));
+  </script>
+</body>
+</html>
