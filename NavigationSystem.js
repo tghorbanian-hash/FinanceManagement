@@ -181,6 +181,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     );
   };
 
+  // کاشی فشرده با طول و عرض مساوی و بسیار کوچک (80 در 80 پیکسل - کلاس w-20 h-20)
   const renderTileCard = (item) => {
     const isFav = favorites.has(item.id);
 
@@ -188,21 +189,22 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       <div 
         key={item.id}
         onClick={() => handleFormClick(item.id)}
-        className="w-24 h-24 shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
+        className="w-20 h-20 shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
       >
         <div className="flex items-start justify-between z-10">
-          <div className="p-1 rounded-lg transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
-            <DynamicIcon name={item.icon || 'FileText'} size={16} strokeWidth={2} />
+          <div className="p-1 rounded-md transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+            <DynamicIcon name={item.icon || 'FileText'} size={14} strokeWidth={2.5} />
           </div>
           <button 
             onClick={(e) => toggleFavorite(e, item.id)}
-            className={`z-20 p-1 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
+            className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
           >
-            <Star size={14} fill={isFav ? "currentColor" : "none"} />
+            <Star size={12} fill={isFav ? "currentColor" : "none"} />
           </button>
         </div>
         <div className="z-10 mt-auto pt-1">
-          <div className="text-[11px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
+          {/* متن کاشی کوچک شده (10px) و در صورت طولانی بودن در سه خط می‌شکند */}
+          <div className="text-[10px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
             {item.label_fa}
           </div>
         </div>
@@ -225,7 +227,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         {directForms.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-              <h3 className="text-[15px] font-black text-slate-800">فرم‌های مستقل</h3>
+              <h3 className="text-[14px] font-black text-slate-800">فرم‌های مستقل</h3>
             </div>
             <div className="flex flex-wrap gap-3">
               {directForms.map(renderTileCard)}
@@ -248,30 +250,27 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
           return (
             <section key={moduleNode.id} className="space-y-4">
               <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
-                <h3 className="text-[15px] font-black text-slate-800">{moduleNode.label_fa}</h3>
+                <h3 className="text-[14px] font-black text-slate-800">{moduleNode.label_fa}</h3>
                 <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
                   {allNested.length} فرم
                 </span>
               </div>
               
-              <div className="space-y-3 pt-1">
+              <div className="space-y-4 pt-1">
+                {/* فرم‌های زیر مستقیم بدون متن اضافی و حاشیه */}
                 {moduleDirectForms.length > 0 && (
-                  <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="w-28 shrink-0 pt-1.5 font-bold text-slate-400 text-[11px] uppercase tracking-wider">
-                      عمومی
-                    </div>
-                    <div className="flex-1 flex flex-wrap gap-3">
-                      {moduleDirectForms.map(renderTileCard)}
-                    </div>
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    {moduleDirectForms.map(renderTileCard)}
                   </div>
                 )}
 
+                {/* بخش‌ها (در صورت وجود) */}
                 {sections.map(section => {
                   const sectionForms = getAllForms(section);
                   if (sectionForms.length === 0) return null;
                   return (
-                    <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4">
-                      <div className="w-28 shrink-0 pt-1.5 flex items-center gap-1.5 font-bold text-slate-700 text-[12px]">
+                    <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
+                      <div className="w-24 shrink-0 pt-1 flex items-center gap-1.5 font-bold text-slate-700 text-[11px]">
                         <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
                         <span className="leading-tight">{section.label_fa}</span>
                       </div>
@@ -287,7 +286,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         })}
 
         {activeTree.length === 0 && (
-          <div className="text-center text-slate-400 py-10 text-[13px]">فرمی جهت نمایش وجود ندارد.</div>
+          <div className="text-center text-slate-400 py-10 text-[12px]">فرمی جهت نمایش وجود ندارد.</div>
         )}
       </div>
     );
@@ -301,12 +300,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       <div className="p-8 space-y-10 animate-in fade-in">
         <section>
           <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
-            <Clock size={18} className="text-indigo-500" strokeWidth={2.5} />
-            <h2 className="text-[15px] font-black text-slate-800">بازدیدهای اخیر</h2>
+            <Clock size={16} className="text-indigo-500" strokeWidth={2.5} />
+            <h2 className="text-[14px] font-black text-slate-800">بازدیدهای اخیر</h2>
           </div>
           <div className="flex flex-wrap gap-3">
             {recentItems.length > 0 ? recentItems.map(renderTileCard) : (
-              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
+              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[12px]">
                 شما هنوز از فرمی بازدید نکرده‌اید.
               </div>
             )}
@@ -315,12 +314,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
         <section>
           <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
-            <Star size={18} className="text-amber-500" fill="currentColor" />
-            <h2 className="text-[15px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
+            <Star size={16} className="text-amber-500" fill="currentColor" />
+            <h2 className="text-[14px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
           </div>
           <div className="flex flex-wrap gap-3">
             {favItems.length > 0 ? favItems.map(renderTileCard) : (
-              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
+              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[12px]">
                 فرمی به علاقه‌مندی‌ها اضافه نشده است.
               </div>
             )}
@@ -373,12 +372,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
       {showSidebar && (
         <aside className={`bg-white border-l border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-0 border-l-0 overflow-hidden opacity-0'}`}>
-          <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100 shrink-0">
-            <h2 className="font-black text-slate-800 tracking-tight text-[13px] truncate flex-1">
+          <div className="h-14 flex items-center justify-between px-5 border-b border-slate-100 shrink-0">
+            <h2 className="font-black text-slate-800 tracking-tight text-[12px] truncate flex-1">
               {domains.find(d => d.id === activeDomainId)?.label_fa}
             </h2>
             <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-slate-100 rounded text-slate-400 transition-colors">
-              <ChevronRight size={18} />
+              <ChevronRight size={16} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
@@ -388,33 +387,33 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       )}
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-20">
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-20">
           <div className="flex items-center gap-4 w-full max-w-2xl">
             {showSidebar && !sidebarOpen && (
-              <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-95">
-                <ChevronLeft size={18} strokeWidth={2.5} />
+              <button onClick={() => setSidebarOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-95">
+                <ChevronLeft size={16} strokeWidth={2.5} />
               </button>
             )}
             
             <div className="relative w-full">
-              <Search size={16} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400`} />
+              <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400`} />
               <input 
                 placeholder="جستجو در تمام فرم‌ها..."
-                className={`w-full h-10 bg-slate-50 border border-slate-200 rounded-xl text-[12px] ${isRtl ? 'pr-10 pl-4' : 'pl-10 pr-4'} focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400 text-slate-700`}
+                className={`w-full h-9 bg-slate-50 border border-slate-200 rounded-lg text-[11px] ${isRtl ? 'pr-9 pl-4' : 'pl-9 pr-4'} focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400 text-slate-700`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
                 <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50">
                   {filteredItems.length > 0 ? filteredItems.map(item => (
-                    <div key={item.id} onClick={() => {handleFormClick(item.id); setSearchTerm('');}} className="px-4 py-2.5 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
+                    <div key={item.id} onClick={() => {handleFormClick(item.id); setSearchTerm('');}} className="px-4 py-2 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-slate-800 text-[12px]">{item.label_fa}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">{item.fullPath}</div>
+                        <div className="font-bold text-slate-800 text-[11px]">{item.label_fa}</div>
+                        <div className="text-[9px] text-slate-400 mt-0.5">{item.fullPath}</div>
                       </div>
-                      <ArrowLeft size={14} className="text-slate-300" />
+                      <ArrowLeft size={12} className="text-slate-300" />
                     </div>
-                  )) : <div className="p-6 text-center text-slate-400 text-[11px]">نتیجه‌ای یافت نشد.</div>}
+                  )) : <div className="p-4 text-center text-slate-400 text-[10px]">نتیجه‌ای یافت نشد.</div>}
                 </div>
               )}
             </div>
@@ -422,26 +421,26 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
           <div className="flex items-center gap-3">
             {activeDomainId !== 'HOME_FAV' && (
-              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+              <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200">
                 <button 
                   onClick={() => setViewMode('tree')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  <ListTree size={14} /><span>درختی</span>
+                  <ListTree size={12} /><span>درختی</span>
                 </button>
                 <button 
                   onClick={() => setViewMode('tile')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                 >
-                  <LayoutGrid size={14} /><span>کاشی</span>
+                  <LayoutGrid size={12} /><span>کاشی</span>
                 </button>
               </div>
             )}
             
-            <div className="w-px h-5 bg-slate-200 mx-1"></div>
-            <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 relative transition-all">
-              <Bell size={18} strokeWidth={2} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            <div className="w-px h-4 bg-slate-200 mx-1"></div>
+            <button className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 relative transition-all">
+              <Bell size={16} strokeWidth={2} />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
           </div>
         </header>
@@ -449,11 +448,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {activeDomainId === 'HOME_FAV' ? renderHomeView() : viewMode === 'tile' ? renderFioriTiles() : (
             <div className="h-full flex flex-col items-center justify-center text-center p-12">
-              <div className="w-24 h-24 bg-white border border-slate-200 rounded-full mb-6 flex items-center justify-center shadow-sm">
-                <Monitor size={40} className="text-slate-300" strokeWidth={1.5} />
+              <div className="w-20 h-20 bg-white border border-slate-200 rounded-full mb-6 flex items-center justify-center shadow-sm">
+                <Monitor size={32} className="text-slate-300" strokeWidth={1.5} />
               </div>
-              <h2 className="text-xl font-black text-slate-700">ناحیه کاری {domains.find(d => d.id === activeDomainId)?.label_fa}</h2>
-              <p className="text-slate-500 text-[12px] mt-3 max-w-sm leading-relaxed">
+              <h2 className="text-lg font-black text-slate-700">ناحیه کاری {domains.find(d => d.id === activeDomainId)?.label_fa}</h2>
+              <p className="text-slate-500 text-[11px] mt-2 max-w-sm leading-relaxed">
                 جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.
               </p>
             </div>
