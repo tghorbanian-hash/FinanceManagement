@@ -4,7 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { 
   Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
   ListTree, FileText, Bell, Monitor, Clock,
-  Settings, ArrowLeft, ChevronDown
+  Settings, ArrowLeft, ChevronDown, Folder, FolderOpen
 } from 'lucide-react';
 
 const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
@@ -23,6 +23,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   
   const [activeDomainId, setActiveDomainId] = useState('HOME_FAV');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeFormId, setActiveFormId] = useState(null);
 
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -85,6 +86,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   };
 
   const handleFormClick = (formId) => {
+    setActiveFormId(formId);
     const newRecents = [formId, ...recents.filter(id => id !== formId)].slice(0, 10);
     setRecents(newRecents);
     localStorage.setItem('sys_recents', JSON.stringify(newRecents));
@@ -151,33 +153,48 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     const isExpanded = expandedNodes[node.id];
     const isForm = node.menu_type === 'form';
     const isFav = isForm && favorites.has(node.id);
+    const isSelected = activeFormId === node.id;
 
     return (
       <div key={node.id} className="select-none">
         <div 
-          className={`flex items-center gap-2 py-2 px-3 mx-2 my-0.5 cursor-pointer rounded-lg transition-all group ${depth === 0 ? 'font-bold text-slate-800 hover:bg-slate-100' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700'}`}
-          style={{ paddingRight: `${depth * 14 + 10}px` }}
+          className={`flex items-center gap-2.5 py-1.5 px-3 mx-2 rounded-lg cursor-pointer transition-all group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
           onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node.id); }}
         >
           {hasChildren ? (
-            <div className={`transition-transform duration-200 ${isExpanded ? '-rotate-90 text-indigo-500' : 'text-slate-400'}`}>
-              <ChevronLeft size={16} strokeWidth={2.5} />
+            <div className={`transition-transform duration-200 shrink-0 ${isExpanded ? '-rotate-90 text-indigo-500' : 'text-slate-400 group-hover:text-indigo-400'}`}>
+              <ChevronLeft size={14} strokeWidth={2.5} />
             </div>
-          ) : <div className="w-4" />}
+          ) : <div className="w-[14px] shrink-0" />}
           
-          <span className={`flex-1 truncate ${depth === 0 ? 'text-[14px]' : 'text-[13px]'}`}>{node.label_fa}</span>
+          {hasChildren ? (
+            isExpanded ? (
+              <FolderOpen size={16} className="text-indigo-500 shrink-0" fill="currentColor" fillOpacity={0.15} strokeWidth={2} />
+            ) : (
+              <Folder size={16} className="text-slate-400 group-hover:text-indigo-500 shrink-0" strokeWidth={2} />
+            )
+          ) : (
+            <div className="flex items-center justify-center w-4 shrink-0">
+              <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isSelected ? 'bg-indigo-600 scale-[1.5] ring-[3px] ring-indigo-100' : 'bg-transparent border border-slate-400 group-hover:border-indigo-400 group-hover:bg-indigo-100'}`} />
+            </div>
+          )}
+
+          <span className={`flex-1 truncate ${depth === 0 ? 'text-[13px]' : 'text-[12px]'} ${isSelected ? 'font-black' : ''}`}>
+            {node.label_fa}
+          </span>
           
           {isForm && (
             <button 
               onClick={(e) => toggleFavorite(e, node.id)}
-              className={`transition-all p-1 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
+              className={`transition-all p-1 shrink-0 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
             >
-              <Star size={16} fill={isFav ? "currentColor" : "none"} />
+              <Star size={14} fill={isFav ? "currentColor" : "none"} />
             </button>
           )}
         </div>
+        
         {hasChildren && isExpanded && (
-          <div className="animate-in slide-in-from-top-1 duration-200">
+          <div className="border-r-2 border-slate-100 mr-[22px] pr-2 my-0.5 space-y-0.5 animate-in slide-in-from-top-1 duration-200">
             {node.children.map(child => renderSidebarNode(child, depth + 1))}
           </div>
         )}
@@ -404,7 +421,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
-            <div className="space-y-1">{activeTree.map(node => renderSidebarNode(node))}</div>
+            <div className="space-y-0.5">{activeTree.map(node => renderSidebarNode(node))}</div>
           </div>
         </aside>
       )}
