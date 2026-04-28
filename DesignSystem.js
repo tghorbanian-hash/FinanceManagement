@@ -5,7 +5,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 // ==========================================
 // 1. Button Component
 // ==========================================
-export const Button = ({
+const Button = ({
   children,
   variant = 'primary', // primary, secondary, outline, danger, ghost
   size = 'md', // sm, md, lg
@@ -62,7 +62,7 @@ export const Button = ({
 // ==========================================
 // 2. TextField Component
 // ==========================================
-export const TextField = ({
+const TextField = ({
   label,
   error,
   hint,
@@ -128,7 +128,7 @@ export const TextField = ({
 // ==========================================
 // 3. Card Component
 // ==========================================
-export const Card = ({ title, action, children, className = '', noPadding = false }) => {
+const Card = ({ title, action, children, className = '', noPadding = false }) => {
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
       {(title || action) && (
@@ -147,7 +147,7 @@ export const Card = ({ title, action, children, className = '', noPadding = fals
 // ==========================================
 // 4. Badge Component
 // ==========================================
-export const Badge = ({ children, variant = 'gray', className = '' }) => {
+const Badge = ({ children, variant = 'gray', className = '' }) => {
   const variants = {
     gray: "bg-slate-100 text-slate-600 border border-slate-200",
     success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
@@ -166,7 +166,7 @@ export const Badge = ({ children, variant = 'gray', className = '' }) => {
 // ==========================================
 // 5. SelectField (Native Dropdown) Component
 // ==========================================
-export const SelectField = ({
+const SelectField = ({
   label,
   error,
   options = [],
@@ -228,4 +228,13 @@ export const SelectField = ({
       )}
     </div>
   );
+};
+
+// اتصال به ویندوز برای دسترسی در کل سیستم
+window.DesignSystem = {
+  Button,
+  TextField,
+  Card,
+  Badge,
+  SelectField
 };

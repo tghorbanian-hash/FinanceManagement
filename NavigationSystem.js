@@ -7,47 +7,32 @@ import {
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
 
-// لود کردن سایدبار به صورت Lazy با آدرس‌دهی مستقیم از روت برای جلوگیری از تداخل HTML 404
-const NotificationSidebar = lazy(() => import('./NotificationSidebar.js').catch(err => {
-    console.error("Critical: Could not load NotificationSidebar.js", err);
-    return { default: () => null };
-}));
+// لود کردن سایدبار (تغییر یافته به حالت سازگار با Babel-standalone)
+const NotificationSidebar = window.NotificationSidebar || (() => null);
 
 // سیستم بارگذاری پویای فرم‌ها
 const FormLoader = ({ path, language }) => {
   if (!path) return null;
 
-  const LazyComponent = useMemo(() => {
-    return lazy(() => 
-      import(`./${path}.js`).catch((err) => {
-        console.error("DYNAMIC IMPORT FAILED:", err);
-        return {
-          default: () => (
-            <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-in fade-in">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
-                <FileWarning size={32} />
-              </div>
-              <h3 className="text-[16px] font-black text-slate-800 mb-2">خطا در بارگذاری فرم</h3>
-              <p className="text-[13px] text-slate-500 max-w-xs leading-relaxed border border-red-100 bg-red-50 p-3 rounded-lg mt-2 font-sans">
-                فایلی با آدرس <br/><strong className="text-red-600 font-mono">./{path}.js</strong><br/> یافت نشد.
-              </p>
-            </div>
-          )
-        };
-      })
-    );
-  }, [path]);
+  // در معماری No-build ما فایل‌ها را از طریق index.html به window متصل می‌کنیم
+  const componentName = path.split('/').pop();
+  const DynamicComponent = window[componentName];
 
-  return (
-    <Suspense fallback={
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 font-sans">
-        <Loader2 className="animate-spin text-indigo-600" size={32} />
-        <span className="text-[12px] font-bold">در حال بارگذاری فرم...</span>
+  if (!DynamicComponent) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-in fade-in">
+        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
+          <FileWarning size={32} />
+        </div>
+        <h3 className="text-[16px] font-black text-slate-800 mb-2">خطا در بارگذاری فرم</h3>
+        <p className="text-[13px] text-slate-500 max-w-xs leading-relaxed border border-red-100 bg-red-50 p-3 rounded-lg mt-2 font-sans">
+          کامپوننت <br/><strong className="text-red-600 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً آن را در فایل index.html اضافه کنید).
+        </p>
       </div>
-    }>
-      <LazyComponent language={language} />
-    </Suspense>
-  );
+    );
+  }
+
+  return <DynamicComponent language={language} />;
 };
 
 const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
@@ -456,12 +441,9 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </main>
 
-      <Suspense fallback={null}>
-        <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
-      </Suspense>
+      <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
     </div>
   );
 };
 
 window.NavigationSystem = NavigationSystem;
-export default NavigationSystem;

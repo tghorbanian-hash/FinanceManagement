@@ -1,9 +1,9 @@
 /* Filename: NotificationSidebar.js */
 import React, { useState, useEffect } from 'react';
 import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Trash, Loader2 } from 'lucide-react';
-import { Button } from './DesignSystem';
 
 const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
+  const { Button } = window.DesignSystem; // جایگزین import شد
   const isRtl = language === 'fa';
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -137,4 +137,4 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
   );
 };
 
-export default NotificationSidebar;
+window.NotificationSidebar = NotificationSidebar;
