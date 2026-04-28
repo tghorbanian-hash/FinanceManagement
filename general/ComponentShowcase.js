@@ -1,6 +1,6 @@
 /* Filename: ComponentShowcase.js */
 import React, { useState } from 'react';
-import { Button, TextField, Card, Badge, SelectField } from './DesignSystem';
+import { Button, TextField, Card, Badge, SelectField } from '../DesignSystem';
 import { Search, Save, Trash2, Mail, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
