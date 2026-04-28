@@ -1,15 +1,56 @@
 /* Filename: NavigationSystem.js */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { 
   Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
   ListTree, FileText, Bell, Monitor, Clock,
-  Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe
+  Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
+
+// ایمپورت سایدبار نوتیفیکیشن
+import NotificationSidebar from './NotificationSidebar';
+
+// --- سیستم بارگذاری پویای فرم‌ها ---
+const FormLoader = ({ path, language }) => {
+  if (!path) return null;
+
+  const LazyComponent = useMemo(() => {
+    return lazy(() => 
+      import(`../${path}.js`).catch((err) => {
+        console.error("DYNAMIC IMPORT FAILED:", err);
+        return {
+          default: () => (
+            <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-in fade-in">
+              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
+                <FileWarning size={32} />
+              </div>
+              <h3 className="text-[16px] font-black text-slate-800 mb-2">خطا در بارگذاری فرم</h3>
+              <p className="text-[13px] text-slate-500 max-w-xs leading-relaxed border border-red-100 bg-red-50 p-3 rounded-lg mt-2 font-sans">
+                فایلی با آدرس <br/><strong className="text-red-600 font-mono">../{path}.js</strong><br/> یافت نشد.
+              </p>
+            </div>
+          )
+        };
+      })
+    );
+  }, [path]);
+
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 font-sans">
+        <Loader2 className="animate-spin text-indigo-600" size={32} />
+        <span className="text-[12px] font-bold">در حال بارگذاری فرم...</span>
+      </div>
+    }>
+      <LazyComponent language={language} />
+    </Suspense>
+  );
+};
 
 const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   const supabase = window.supabase;
 
+  // --- States ---
   const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
   const isRtl = currentLanguage === 'fa';
   
@@ -28,10 +69,13 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   
   const [activeDomainId, setActiveDomainId] = useState('HOME_FAV');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeForm, setActiveForm] = useState(null);
   const [activeFormId, setActiveFormId] = useState(null);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
 
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
+  // --- Effects ---
   useEffect(() => {
     fetchMenuData();
     fetchFavorites();
@@ -46,6 +90,7 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     setCollapsedModules({});
   }, [activeDomainId]);
 
+  // --- API Calls ---
   const fetchMenuData = async () => {
     setLoading(true);
     try {
@@ -74,6 +119,7 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     } catch(err) {}
   };
 
+  // --- Handlers ---
   const toggleFavorite = async (e, id) => {
     e.stopPropagation();
     const node = menuData.find(m => m.id === id);
@@ -90,13 +136,15 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     } catch (err) {}
   };
 
-  const handleFormClick = (formId) => {
-    setActiveFormId(formId);
-    const newRecents = [formId, ...recents.filter(id => id !== formId)].slice(0, 10);
+  const handleFormClick = (item) => {
+    setActiveForm(item);
+    setActiveFormId(item.id);
+    const newRecents = [item.id, ...recents.filter(id => id !== item.id)].slice(0, 10);
     setRecents(newRecents);
     localStorage.setItem('sys_recents', JSON.stringify(newRecents));
   };
 
+  // --- Data Processing ---
   const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
   
   const buildTree = (items, parentId = null) => {
@@ -142,16 +190,16 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   };
 
   const toggleNode = (id) => setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
-  
   const toggleModuleCollapse = (id) => setCollapsedModules(prev => ({ ...prev, [id]: !prev[id] }));
 
-  const DynamicIcon = ({ name, size = 18, className = "" }) => {
+  const DynamicIcon = ({ name, size = 18 }) => {
     const Icon = LucideIcons[name] || FileText;
-    return <Icon size={size} className={className} />;
+    return <Icon size={size} />;
   };
 
   const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';
 
+  // --- Render Components ---
   const renderSidebarNode = (node, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes[node.id];
@@ -166,7 +214,7 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         <div 
           className={`flex items-center py-1 my-[2px] rounded-md cursor-pointer transition-colors group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
           style={{ paddingInlineStart: `${depth * 20 + 8}px`, paddingInlineEnd: '8px' }}
-          onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node.id); }}
+          onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node); }}
         >
           {hasChildren ? (
             <>
@@ -212,7 +260,7 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
               className="absolute top-0 bottom-0 w-px bg-slate-200" 
               style={{ [isRtl ? 'right' : 'left']: `${guideLinePos}px` }} 
             />
-            <div className="space-y-[2px] animate-in slide-in-from-top-1 duration-200 pt-0.5 pb-1 relative z-10">
+            <div className="space-y-[2px] animate-in slide-in-from-top-1 duration-200 pt-0.5 pb-1 relative z-10 font-sans">
               {node.children.map(child => renderSidebarNode(child, depth + 1))}
             </div>
           </div>
@@ -227,7 +275,7 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     return (
       <div 
         key={item.id}
-        onClick={() => handleFormClick(item.id)}
+        onClick={() => handleFormClick(item)}
         className="w-[100px] h-[100px] shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
       >
         <div className="flex items-start justify-between z-10">
@@ -260,81 +308,57 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     });
 
     return (
-      <div className="p-8 space-y-10 animate-in fade-in duration-300">
-        
+      <div className="p-8 space-y-10 animate-in fade-in duration-300 font-sans">
         {directForms.length > 0 && (
           <section className="space-y-4">
-            <div 
-              className="flex items-center gap-2 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md"
-              onClick={() => toggleModuleCollapse('direct_forms')}
-            >
+            <div className="flex items-center gap-2 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md font-sans" onClick={() => toggleModuleCollapse('direct_forms')}>
               <div className="text-slate-400">
                 {collapsedModules['direct_forms'] ? (isRtl ? <ChevronLeft size={18} strokeWidth={2.5}/> : <ChevronRight size={18} strokeWidth={2.5}/>) : <ChevronDown size={18} strokeWidth={2.5} />}
               </div>
               <h3 className="text-[16px] font-black text-slate-800">{t('فرم‌های مستقل', 'Independent Forms')}</h3>
             </div>
-            
-            {!collapsedModules['direct_forms'] && (
-              <div className="flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">
-                {directForms.map(renderTileCard)}
-              </div>
-            )}
+            {!collapsedModules['direct_forms'] && <div className="flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">{directForms.map(renderTileCard)}</div>}
           </section>
         )}
 
         {groupedModules.map(moduleNode => {
           const sections = [];
           const moduleDirectForms = [];
-
           (moduleNode.children || []).forEach(child => {
             if (child.menu_type === 'form') moduleDirectForms.push(child);
             else sections.push(child);
           });
-
           const allNested = getAllForms(moduleNode);
           if (allNested.length === 0) return null;
           const isCollapsed = collapsedModules[moduleNode.id];
 
           return (
-            <section key={moduleNode.id} className="space-y-4">
-              <div 
-                className="flex items-center gap-3 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md select-none"
-                onClick={() => toggleModuleCollapse(moduleNode.id)}
-              >
+            <section key={moduleNode.id} className="space-y-4 font-sans">
+              <div className="flex items-center gap-3 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md select-none font-sans" onClick={() => toggleModuleCollapse(moduleNode.id)}>
                 <div className="text-slate-400">
                   {isCollapsed ? (isRtl ? <ChevronLeft size={18} strokeWidth={2.5}/> : <ChevronRight size={18} strokeWidth={2.5}/>) : <ChevronDown size={18} strokeWidth={2.5} />}
                 </div>
                 <h3 className="text-[16px] font-black text-slate-800">{getLabel(moduleNode)}</h3>
-                <span className="bg-slate-100 text-slate-500 text-[12px] px-2.5 py-0.5 rounded-full font-bold">
-                  {allNested.length} {t('فرم', 'Forms')}
-                </span>
+                <span className="bg-slate-100 text-slate-500 text-[12px] px-2.5 py-0.5 rounded-full font-bold">{allNested.length} {t('فرم', 'Forms')}</span>
               </div>
-              
               {!isCollapsed && (
                 <div className="space-y-4 pt-1 animate-in slide-in-from-top-1 duration-200">
                   {moduleDirectForms.length > 0 && (
                     <div className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
-                      <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 text-[13px] uppercase tracking-wider">
-                        {t('عمومی', 'General')}
-                      </div>
-                      <div className="flex-1 flex flex-wrap gap-3">
-                        {moduleDirectForms.map(renderTileCard)}
-                      </div>
+                      <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 text-[13px] uppercase tracking-wider">{t('عمومی', 'General')}</div>
+                      <div className="flex-1 flex flex-wrap gap-3">{moduleDirectForms.map(renderTileCard)}</div>
                     </div>
                   )}
-
                   {sections.map(section => {
                     const sectionForms = getAllForms(section);
                     if (sectionForms.length === 0) return null;
                     return (
-                      <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
+                      <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4 font-sans">
                         <div className="w-24 shrink-0 pt-1.5 flex items-center gap-1.5 font-black text-slate-700 text-[13px]">
                           <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></div>
                           <span className="leading-tight">{getLabel(section)}</span>
                         </div>
-                        <div className="flex-1 flex flex-wrap gap-3">
-                          {sectionForms.map(renderTileCard)}
-                        </div>
+                        <div className="flex-1 flex flex-wrap gap-3">{sectionForms.map(renderTileCard)}</div>
                       </div>
                     );
                   })}
@@ -343,10 +367,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
             </section>
           );
         })}
-
-        {activeTree.length === 0 && (
-          <div className="text-center text-slate-400 py-10 text-[13px]">{t('فرمی جهت نمایش وجود ندارد.', 'No forms to display.')}</div>
-        )}
       </div>
     );
   };
@@ -354,179 +374,115 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   const renderHomeView = () => {
     const favItems = menuData.filter(m => favorites.has(m.id) && m.menu_type === 'form');
     const recentItems = recents.map(id => menuData.find(m => m.id === id)).filter(Boolean);
-
     return (
-      <div className="p-8 space-y-10 animate-in fade-in">
+      <div className="p-8 space-y-10 animate-in fade-in font-sans">
         <section>
           <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
             <Clock size={18} className="text-indigo-500" strokeWidth={2.5} />
             <h2 className="text-[16px] font-black text-slate-800">{t('بازدیدهای اخیر', 'Recent Visits')}</h2>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {recentItems.length > 0 ? recentItems.map(renderTileCard) : (
-              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
-                {t('شما هنوز از فرمی بازدید نکرده‌اید.', 'You have not visited any forms yet.')}
-              </div>
-            )}
-          </div>
+          <div className="flex flex-wrap gap-3">{recentItems.length > 0 ? recentItems.map(renderTileCard) : <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px] font-sans">{t('شما هنوز از فرمی بازدید نکرده‌اید.', 'You have not visited any forms yet.')}</div>}</div>
         </section>
-
         <section>
           <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
             <Star size={18} className="text-amber-500" fill="currentColor" />
             <h2 className="text-[16px] font-black text-slate-800">{t('فرم‌های منتخب (علاقه‌مندی‌ها)', 'Favorite Forms')}</h2>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {favItems.length > 0 ? favItems.map(renderTileCard) : (
-              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
-                {t('فرمی به علاقه‌مندی‌ها اضافه نشده است.', 'No forms added to favorites.')}
-              </div>
-            )}
-          </div>
+          <div className="flex flex-wrap gap-3">{favItems.length > 0 ? favItems.map(renderTileCard) : <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px] font-sans">{t('فرمی به علاقه‌مندی‌ها اضافه نشده است.', 'No forms added to favorites.')}</div>}</div>
         </section>
       </div>
     );
   };
 
-  if (loading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]">
-        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  if (loading) return <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
 
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      <nav className={`w-16 bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
-        <button
-          onClick={() => setActiveDomainId('HOME_FAV')}
-          className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
-        >
-          <Star size={20} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
-          <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg`}>
-            {t('میز کار و علاقه‌مندی‌ها', 'Workspace & Favorites')}
-          </div>
+      {/* 1. Domain Bar (نوار حوزه‌ها) */}
+      <nav className={`w-[60px] bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
+        <button onClick={() => { setActiveDomainId('HOME_FAV'); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+          <Star size={18} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
+          <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{t('میز کار و علاقه‌مندی‌ها', 'Workspace & Favorites')}</div>
         </button>
-
         {domains.map(domain => (
-          <button
-            key={domain.id}
-            onClick={() => setActiveDomainId(domain.id)}
-            className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
-          >
-            <DynamicIcon name={domain.icon} size={20} strokeWidth={activeDomainId === domain.id ? 2.5 : 1.5} />
-            <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg`}>
-              {getLabel(domain)}
-            </div>
+          <button key={domain.id} onClick={() => { setActiveDomainId(domain.id); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <DynamicIcon name={domain.icon} size={18} />
+            <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{getLabel(domain)}</div>
           </button>
         ))}
-
         <div className="mt-auto flex flex-col items-center gap-5">
-          <button className="text-slate-400 hover:text-slate-600 transition-colors"><Settings size={20} /></button>
+          <button className="text-slate-400 hover:text-slate-600 transition-colors"><Settings size={18} /></button>
           <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-black text-[11px] cursor-pointer hover:bg-slate-200 transition-colors">PM</div>
         </div>
       </nav>
 
+      {/* 2. Tree Menu Sidebar */}
       {showSidebar && (
         <aside className={`bg-white border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden opacity-0'} ${isRtl ? 'border-l' : 'border-r'}`}>
-          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 shrink-0">
-            <h2 className="font-black text-slate-800 tracking-tight text-[14px] truncate flex-1">
-              {getLabel(domains.find(d => d.id === activeDomainId) || {label_fa: '', label_en: ''})}
-            </h2>
-            <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
-              {isRtl ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            </button>
+          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 shrink-0 font-sans">
+            <h2 className="font-black text-slate-800 tracking-tight text-[14px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">{isRtl ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</button>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2">
-            <div className="space-y-[2px]">{activeTree.map(node => renderSidebarNode(node))}</div>
-          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans"><div className="space-y-[2px]">{activeTree.map(node => renderSidebarNode(node))}</div></div>
         </aside>
       )}
 
-      <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-20">
+      {/* 3. Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative font-sans">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-20 font-sans">
           <div className="flex items-center gap-5 w-full max-w-3xl">
-            {showSidebar && !sidebarOpen && (
-              <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-95 shrink-0">
-                {isRtl ? <ChevronLeft size={18} strokeWidth={2.5} /> : <ChevronRight size={18} strokeWidth={2.5} />}
-              </button>
-            )}
-
+            {showSidebar && !sidebarOpen && <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-95 shrink-0">{isRtl ? <ChevronLeft size={18} strokeWidth={2.5} /> : <ChevronRight size={18} strokeWidth={2.5} />}</button>}
+            
             {activeDomainId !== 'HOME_FAV' && (
               <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
-                <button 
-                  onClick={() => setViewMode('tree')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[12px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <ListTree size={16} /><span>{t('درختی', 'Tree')}</span>
-                </button>
-                <button 
-                  onClick={() => setViewMode('tile')}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[12px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                >
-                  <LayoutGrid size={16} /><span>{t('کاشی', 'Tile')}</span>
-                </button>
+                <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[12px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><ListTree size={16} /><span>{t('درختی', 'Tree')}</span></button>
+                <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[12px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={16} /><span>{t('کاشی', 'Tile')}</span></button>
               </div>
             )}
             
             <div className="relative w-full">
               <Search size={16} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-4' : 'left-4'} text-slate-400`} />
-              <input 
-                placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')}
-                className={`w-full h-11 bg-slate-50 border border-slate-200 rounded-lg text-[13px] ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'} focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400 text-slate-700`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-11 bg-slate-50 border border-slate-200 rounded-lg text-[13px] ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'} focus:bg-white focus:border-indigo-300 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               {searchTerm && (
-                <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50">
+                <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50 font-sans">
                   {filteredItems.length > 0 ? filteredItems.map(item => (
-                    <div key={item.id} onClick={() => {handleFormClick(item.id); setSearchTerm('');}} className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-slate-800 text-[13px]">{getLabel(item)}</div>
-                        <div className="text-[12px] text-slate-400 mt-1">{item.fullPath}</div>
-                      </div>
+                    <div key={item.id} onClick={() => { handleFormClick(item); setSearchTerm(''); }} className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
+                      <div><div className="font-bold text-slate-800 text-[13px] font-sans">{getLabel(item)}</div><div className="text-[12px] text-slate-400 mt-1 font-sans">{item.fullPath}</div></div>
                       {isRtl ? <ArrowLeft size={16} className="text-slate-300" /> : <ArrowRight size={16} className="text-slate-300" />}
                     </div>
-                  )) : <div className="p-5 text-center text-slate-400 text-[12px]">{t('نتیجه‌ای یافت نشد.', 'No results found.')}</div>}
+                  )) : <div className="p-5 text-center text-slate-400 text-[12px] font-sans">{t('نتیجه‌ای یافت نشد.', 'No results found.')}</div>}
                 </div>
               )}
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Language Toggle Button */}
-            <button 
-              onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')}
-              className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-slate-100 rounded-lg text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50"
-              title="Change Language"
-            >
-              <Globe size={14} className="text-indigo-500" />
-              <span>{isRtl ? 'EN' : 'فا'}</span>
+            <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1.5 px-3 py-1.5 hover:bg-slate-100 rounded-lg text-slate-600 font-bold text-[12px] transition-colors border border-slate-200 bg-slate-50 font-sans" title="Change Language">
+              <Globe size={14} className="text-indigo-500" /><span>{isRtl ? 'EN' : 'فا'}</span>
             </button>
             <div className="w-px h-5 bg-slate-200"></div>
-            <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 relative transition-all">
-              <Bell size={20} strokeWidth={2} />
-              <span className={`absolute top-2 ${isRtl ? 'right-2' : 'left-2'} w-2 h-2 bg-red-500 rounded-full border-2 border-white`}></span>
+            <button onClick={() => setIsNotifOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 relative transition-all">
+              <Bell size={20} /><span className={`absolute top-2 ${isRtl ? 'right-2' : 'left-2'} w-2 h-2 bg-red-500 rounded-full border-2 border-white`}></span>
             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {activeDomainId === 'HOME_FAV' ? renderHomeView() : viewMode === 'tile' ? renderFioriTiles() : (
-            <div className="h-full flex flex-col items-center justify-center text-center p-12">
-              <div className="w-24 h-24 bg-white border border-slate-200 rounded-full mb-6 flex items-center justify-center shadow-sm">
-                <Monitor size={40} className="text-slate-300" strokeWidth={1.5} />
-              </div>
-              <h2 className="text-xl font-black text-slate-700">{t('ناحیه کاری ', 'Workspace ')} {getLabel(domains.find(d => d.id === activeDomainId) || {label_fa: '', label_en: ''})}</h2>
-              <p className="text-slate-500 text-[13px] mt-3 max-w-sm leading-relaxed">
-                {t('جهت باز کردن فرم‌ها، از منوی درختی استفاده نمایید.', 'Use the tree menu to open forms.')}
-              </p>
+        {/* Viewport Area */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar font-sans">
+          {activeForm && activeForm.component_path ? (
+            <FormLoader path={activeForm.component_path} language={currentLanguage} />
+          ) : activeDomainId === 'HOME_FAV' ? renderHomeView() : viewMode === 'tile' ? renderFioriTiles() : (
+            <div className="h-full flex flex-col items-center justify-center text-center p-12 font-sans">
+              <Monitor size={40} className="text-slate-300 mb-4" strokeWidth={1.5} />
+              <h2 className="text-xl font-black text-slate-700 font-sans">{t('ناحیه کاری ', 'Workspace ')} {getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
+              <p className="text-slate-500 text-[13px] mt-3 max-w-sm leading-relaxed font-sans">{t('جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.', 'Use the tree menu to open forms.')}</p>
             </div>
           )}
         </div>
       </main>
+
+      <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
     </div>
   );
 };
