@@ -3,20 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Trash, Loader2 } from 'lucide-react';
 
 const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
-  const { Button } = window.DesignSystem; // جایگزین import شد
+  // دریافت امن از روی window هنگام رندر
+  const { Button } = window.DesignSystem || {};
+  
   const isRtl = language === 'fa';
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const itemsPerPage = 20; // صفحه‌بندی برای پرفورمنس بهتر
+  const itemsPerPage = 20;
 
   const t = (fa, en) => isRtl ? fa : en;
 
-  // شبیه‌سازی دریافت دیتا (در آینده به دیتابیس وصل می‌شود)
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      // ایجاد ۱۰۰ نوتیفیکیشن تستی
       const mockData = Array.from({ length: 100 }).map((_, i) => ({
         id: i,
         title: `${t('اعلان شماره', 'Notification #')}${i + 1}`,
@@ -27,7 +27,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
       setNotifications(mockData);
       setLoading(false);
     }
-  }, [isOpen]);
+  }, [isOpen, t, isRtl]);
 
   const deleteOne = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
@@ -39,7 +39,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
     }
   };
 
-  // محاسبات صفحه‌بندی
   const totalPages = Math.ceil(notifications.length / itemsPerPage);
   const currentData = notifications.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
@@ -47,7 +46,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
 
   return (
     <>
-      {/* Overlay برای بستن با کلیک روی فضای خالی */}
       <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] transition-opacity" onClick={onClose} />
       
       <aside 
@@ -56,7 +54,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
         }`}
         dir={isRtl ? 'rtl' : 'ltr'}
       >
-        {/* Header */}
         <div className="h-16 border-b border-slate-100 flex items-center justify-between px-6 shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-2">
             <Bell size={20} className="text-indigo-600" />
@@ -70,7 +67,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
           </button>
         </div>
 
-        {/* Action Bar */}
         {notifications.length > 0 && (
           <div className="px-6 py-3 border-b border-slate-50 flex justify-end">
             <button 
@@ -83,7 +79,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
           </div>
         )}
 
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
           {loading ? (
             <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>
@@ -116,8 +111,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
           )}
         </div>
 
-        {/* Pagination Footer */}
-        {totalPages > 1 && (
+        {totalPages > 1 && Button && (
           <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
             <Button 
               size="sm" variant="outline" disabled={page === 1}

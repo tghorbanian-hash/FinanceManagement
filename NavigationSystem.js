@@ -1,5 +1,5 @@
 /* Filename: NavigationSystem.js */
-import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { 
   Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
@@ -7,14 +7,10 @@ import {
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
 
-// لود کردن سایدبار (تغییر یافته به حالت سازگار با Babel-standalone)
-const NotificationSidebar = window.NotificationSidebar || (() => null);
-
-// سیستم بارگذاری پویای فرم‌ها
+// سیستم بارگذاری پویای فرم‌ها از روی window
 const FormLoader = ({ path, language }) => {
   if (!path) return null;
 
-  // در معماری No-build ما فایل‌ها را از طریق index.html به window متصل می‌کنیم
   const componentName = path.split('/').pop();
   const DynamicComponent = window[componentName];
 
@@ -26,7 +22,7 @@ const FormLoader = ({ path, language }) => {
         </div>
         <h3 className="text-[16px] font-black text-slate-800 mb-2">خطا در بارگذاری فرم</h3>
         <p className="text-[13px] text-slate-500 max-w-xs leading-relaxed border border-red-100 bg-red-50 p-3 rounded-lg mt-2 font-sans">
-          کامپوننت <br/><strong className="text-red-600 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً آن را در فایل index.html اضافه کنید).
+          کامپوننت <br/><strong className="text-red-600 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که در فایل index.html آپلود شده باشد).
         </p>
       </div>
     );
@@ -363,6 +359,9 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     </div>
   );
 
+  // دریافت کامپوننت سایدبار از ویندوز به صورت داینامیک
+  const NotificationSidebarComponent = window.NotificationSidebar;
+
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
       <nav className={`w-[60px] bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
@@ -441,7 +440,10 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </main>
 
-      <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+      {/* رندر داینامیک و امن سایدبار نوتیفیکیشن‌ها */}
+      {NotificationSidebarComponent && (
+        <NotificationSidebarComponent isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+      )}
     </div>
   );
 };

@@ -1,12 +1,13 @@
-/* Filename: ComponentShowcase.js */
+/* Filename: general/ComponentShowcase.js */
 import React, { useState } from 'react';
-import { Button, TextField, Card, Badge, SelectField } from '../DesignSystem';
 import { Search, Save, Trash2, Mail, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
+  // دریافت امن کامپوننت‌ها از DesignSystem
+  const { Button, TextField, Card, Badge, SelectField } = window.DesignSystem || {};
+  
   const isRtl = language === 'fa';
   
-  // استیت‌های تستی برای فرم
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -21,10 +22,14 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const t = (fa, en) => isRtl ? fa : en;
 
+  // بررسی لود شدن DesignSystem برای جلوگیری از Crash
+  if (!window.DesignSystem) {
+    return <div className="p-10 text-center text-slate-500">در حال بارگذاری کامپوننت‌های پایه...</div>;
+  }
+
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto pb-20 animate-in fade-in duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-2xl font-black text-slate-800 mb-1">
@@ -44,9 +49,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* ==========================================
-            1. سیستم دکمه‌ها (Buttons)
-        ========================================== */}
         <Card title={t('انواع دکمه‌ها (Buttons)', 'Button Variants')}>
           <div className="space-y-6">
             <div className="flex flex-wrap items-center gap-3">
@@ -74,9 +76,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
           </div>
         </Card>
 
-        {/* ==========================================
-            2. نشانگرها (Badges)
-        ========================================== */}
         <Card title={t('وضعیت‌ها و نشانگرها (Badges)', 'Status & Badges')}>
           <div className="flex flex-wrap gap-4">
             <Badge variant="gray">{t('پیش‌نویس', 'Draft')}</Badge>
@@ -92,13 +91,9 @@ const ComponentShowcase = ({ language = 'fa' }) => {
           </div>
         </Card>
 
-        {/* ==========================================
-            3. فیلدهای ورودی (Form Elements)
-        ========================================== */}
         <Card className="lg:col-span-2" title={t('فیلدهای فرم (Form Controls)', 'Form Controls')}>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             
-            {/* Standard Input */}
             <TextField 
               label={t('نام کاربری', 'Username')}
               placeholder={t('مثال: admin_user', 'e.g., admin_user')}
@@ -109,7 +104,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               onChange={(e) => setFormData({...formData, username: e.target.value})}
             />
 
-            {/* Input with Hint */}
             <TextField 
               label={t('آدرس ایمیل', 'Email Address')}
               type="email"
@@ -121,7 +115,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               onChange={(e) => setFormData({...formData, email: e.target.value})}
             />
 
-            {/* Standard Select */}
             <SelectField 
               label={t('سطح دسترسی (نقش)', 'Role Level')}
               required
@@ -135,7 +128,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               ]}
             />
 
-            {/* Input with Error */}
             <TextField 
               label={t('کد پرسنلی', 'Personnel Code')}
               isRtl={isRtl}
@@ -143,7 +135,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               error={t('کد پرسنلی فقط باید شامل اعداد باشد.', 'Personnel code must contain numbers only.')}
             />
 
-            {/* Select with Error */}
             <SelectField 
               label={t('واحد سازمانی', 'Department')}
               isRtl={isRtl}
@@ -151,7 +142,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               options={[]}
             />
 
-            {/* Disabled Input */}
             <TextField 
               label={t('تاریخ ثبت (سیستمی)', 'Creation Date')}
               isRtl={isRtl}
@@ -161,10 +151,9 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
           </div>
         </Card>
-
       </div>
     </div>
   );
 };
 
-export default ComponentShowcase;
+window.ComponentShowcase = ComponentShowcase;
