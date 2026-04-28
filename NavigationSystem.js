@@ -148,7 +148,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
   const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';
 
-  // --- سیستم محاسبه دقیق و پیکسلی تورفتگی منوی درختی ---
   const renderSidebarNode = (node, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes[node.id];
@@ -156,25 +155,22 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     const isFav = isForm && favorites.has(node.id);
     const isSelected = activeFormId === node.id;
 
-    // محاسبه خط راهنما بر اساس عمق (پیکسل دقیق برای اتصال خط از وسط فلش)
     const guideLineRightPos = depth * 20 + 26; 
 
     return (
       <div key={node.id} className="select-none relative">
         <div 
-          className={`flex items-center py-1.5 mx-2 my-0.5 rounded-md cursor-pointer transition-colors group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
-          style={{ paddingRight: `${depth * 20 + 8}px` }} // هر لایه دقیقاً 20 پیکسل (عرض فلش) جلو می‌رود
+          className={`flex items-center py-1 mx-2 my-px rounded-md cursor-pointer transition-colors group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
+          style={{ paddingRight: `${depth * 20 + 8}px` }}
           onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node.id); }}
         >
           {hasChildren ? (
             <>
-              {/* باکس فلش - عرض ثابت 20 پیکسل */}
               <div className="flex items-center justify-center w-5 shrink-0">
                 <div className={`transition-transform duration-200 ${isExpanded ? '-rotate-90 text-indigo-500' : 'text-slate-400 group-hover:text-indigo-400'}`}>
                   <ChevronLeft size={14} strokeWidth={2.5} />
                 </div>
               </div>
-              {/* باکس فولدر - عرض ثابت 24 پیکسل */}
               <div className="flex items-center justify-center w-6 shrink-0">
                 {isExpanded ? (
                   <FolderOpen size={15} className="text-indigo-500" fill="currentColor" fillOpacity={0.15} strokeWidth={2} />
@@ -185,9 +181,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
             </>
           ) : (
             <>
-              {/* فضای خالی نامرئی به جای فلش تا نقطه فرم دقیقاً بیفتد زیر فولدر! */}
               <div className="w-5 shrink-0" />
-              {/* باکس نقطه فرم - عرض ثابت 24 پیکسل */}
               <div className="flex items-center justify-center w-6 shrink-0">
                 <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isSelected ? 'bg-indigo-600 scale-[1.5] ring-[3px] ring-indigo-100' : 'bg-slate-300 group-hover:bg-indigo-400 group-hover:scale-125'}`} />
               </div>
@@ -210,7 +204,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         
         {hasChildren && isExpanded && (
           <div className="relative">
-            {/* خط عمودی راهنما برای نشان دادن زیرمجموعه‌ها */}
             <div 
               className="absolute top-0 bottom-0 w-px bg-slate-200" 
               style={{ right: `${guideLineRightPos}px` }} 
@@ -442,7 +435,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
               <ChevronRight size={18} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
+          <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2">
             <div className="space-y-px">{activeTree.map(node => renderSidebarNode(node))}</div>
           </div>
         </aside>
