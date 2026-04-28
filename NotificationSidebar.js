@@ -2,49 +2,98 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Trash, Loader2 } from 'lucide-react';
 
-const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
+const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
   const { Button } = window.DesignSystem || {};
+  const supabase = window.supabase;
+  
+  // آی‌دی کاربر تستی که در سیستم شما فعلاً هاردکد شده است
+  const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
   
   const isRtl = language === 'fa';
   const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [hasInitialized, setHasInitialized] = useState(false); // جلوگیری از تولید مجدد دیتا
   const itemsPerPage = 20;
 
   const t = (fa, en) => isRtl ? fa : en;
 
-  // شبیه‌سازی دریافت دیتا فقط برای اولین بار
+  // واکشی اطلاعات و اتصال به سوکت‌های بلادرنگ سوپابیس
   useEffect(() => {
-    if (isOpen && !hasInitialized) {
-      setLoading(true);
-      const mockData = Array.from({ length: 100 }).map((_, i) => ({
-        id: i,
-        title: `${t('اعلان شماره', 'Notification #')}${i + 1}`,
-        message: t('این یک پیام سیستم برای تست اسکرول و صفحه‌بندی است.', 'This is a system message to test scrolling and pagination.'),
-        type: i % 3 === 0 ? 'info' : i % 3 === 1 ? 'success' : 'error',
-        time: new Date(Date.now() - i * 3600000).toLocaleTimeString(isRtl ? 'fa-IR' : 'en-US')
-      }));
-      setNotifications(mockData);
-      setHasInitialized(true);
-      setLoading(false);
-    }
-  }, [isOpen, hasInitialized, t, isRtl]);
+    if (!supabase) return;
 
-  const deleteOne = (id) => {
+    const fetchNotifications = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('system_notifications')
+        .select('*')
+        .eq('user_id', MOCK_USER_ID)
+        .order('created_at', { ascending: false });
+        
+      if (!error && data) {
+        setNotifications(data);
+        if (onUpdateUnread) onUpdateUnread(data.length); 
+      }
+      setLoading(false);
+    };
+
+    fetchNotifications();
+
+    // ایجاد کانال Real-time برای دریافت آپدیت‌ها در لحظه
+    const channel = supabase.channel('realtime_notifications')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'system_notifications',
+        filter: `user_id=eq.${MOCK_USER_ID}`
+      }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setNotifications(prev => {
+            const newData = [payload.new, ...prev];
+            if (onUpdateUnread) onUpdateUnread(newData.length);
+            return newData;
+          });
+        } else if (payload.eventType === 'DELETE') {
+          setNotifications(prev => {
+            const newData = prev.filter(n => n.id !== payload.old.id);
+            if (onUpdateUnread) onUpdateUnread(newData.length);
+            return newData;
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, onUpdateUnread]);
+
+  const deleteOne = async (id) => {
+    // آپدیت آنی در رابط کاربری (Optimistic UI)
     setNotifications(prev => prev.filter(n => n.id !== id));
+    // ارسال درخواست حذف به دیتابیس
+    await supabase.from('system_notifications').delete().eq('id', id);
   };
 
-  const deleteAll = () => {
+  const deleteAll = async () => {
     if (window.confirm(t('آیا از حذف تمام اعلان‌ها اطمینان دارید؟', 'Are you sure you want to delete all notifications?'))) {
       setNotifications([]);
-      setPage(1); // برگشت به صفحه اول بعد از حذف
+      setPage(1);
+      await supabase.from('system_notifications').delete().eq('user_id', MOCK_USER_ID);
     }
+  };
+
+  const formatTime = (isoString) => {
+    try {
+      return new Date(isoString).toLocaleString(isRtl ? 'fa-IR' : 'en-US', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    } catch(e) { return isoString; }
   };
 
   const totalPages = Math.ceil(notifications.length / itemsPerPage);
   const currentData = notifications.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
+  // برای زنده ماندن سوکت‌ها، در صورت بسته بودن سایدبار فقط UI مخفی می‌شود و هوک‌ها به کارشان ادامه می‌دهند
   if (!isOpen) return null;
 
   return (
@@ -52,26 +101,26 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
       <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] transition-opacity" onClick={onClose} />
       
       <aside 
-        className={`fixed top-0 bottom-0 w-full max-w-[400px] bg-white shadow-2xl z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 w-full max-w-[380px] bg-white shadow-2xl z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
           isRtl ? 'left-0 animate-slide-in-left' : 'right-0 animate-slide-in-right'
         }`}
         dir={isRtl ? 'rtl' : 'ltr'}
       >
-        <div className="h-16 border-b border-slate-100 flex items-center justify-between px-6 shrink-0 bg-slate-50/50">
+        <div className="h-14 border-b border-slate-100 flex items-center justify-between px-5 shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-2">
-            <Bell size={20} className="text-indigo-600" />
+            <Bell size={18} className="text-indigo-600" />
             <span className="font-black text-slate-800 text-[14px]">{t('اعلان‌های سیستم', 'System Notifications')}</span>
             <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
               {notifications.length}
             </span>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-md text-slate-400 transition-colors">
             <X size={18} />
           </button>
         </div>
 
         {notifications.length > 0 && (
-          <div className="px-5 py-2.5 border-b border-slate-50 flex justify-end">
+          <div className="px-4 py-2 border-b border-slate-50 flex justify-end">
             <button 
               onClick={deleteAll}
               className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1.5 transition-colors bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-md"
@@ -95,7 +144,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa' }) => {
                   <div className="flex-1 min-w-0">
                     <h4 className="text-[12px] font-bold text-slate-800 mb-1 leading-tight">{notif.title}</h4>
                     <p className="text-[11px] text-slate-500 leading-relaxed mb-1.5 line-clamp-2">{notif.message}</p>
-                    <span className="text-[9px] text-slate-400 font-medium">{notif.time}</span>
+                    <span className="text-[9px] text-slate-400 font-medium">{formatTime(notif.created_at)}</span>
                   </div>
                   <button 
                     onClick={() => deleteOne(notif.id)}

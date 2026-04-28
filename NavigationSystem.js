@@ -7,7 +7,6 @@ import {
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
 
-// سیستم بارگذاری پویای فرم‌ها از روی window
 const FormLoader = ({ path, language }) => {
   if (!path) return null;
 
@@ -54,7 +53,9 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeForm, setActiveForm] = useState(null);
   const [activeFormId, setActiveFormId] = useState(null);
+  
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -359,7 +360,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     </div>
   );
 
-  // دریافت کامپوننت سایدبار از ویندوز به صورت داینامیک
   const NotificationSidebarComponent = window.NotificationSidebar;
 
   return (
@@ -422,7 +422,11 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
             </button>
             <div className="w-px h-5 bg-slate-200"></div>
             <button onClick={() => setIsNotifOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 relative transition-all">
-              <Bell size={20} /><span className={`absolute top-2 ${isRtl ? 'right-2' : 'left-2'} w-2 h-2 bg-red-500 rounded-full border-2 border-white`}></span>
+              <Bell size={20} />
+              {/* نمایش پویای تعداد اعلان‌ها یا نقطه قرمز رنگ روی زنگوله */}
+              {unreadNotifCount > 0 && (
+                <span className={`absolute top-1.5 ${isRtl ? 'right-1.5' : 'left-1.5'} flex h-2.5 w-2.5 items-center justify-center rounded-full bg-red-500 border-2 border-white`}></span>
+              )}
             </button>
           </div>
         </header>
@@ -440,9 +444,14 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </main>
 
-      {/* رندر داینامیک و امن سایدبار نوتیفیکیشن‌ها */}
+      {/* پاس دادن کالبک به NotificationSidebar جهت آپدیت تعداد نوتیف‌های ناخوانده در هدر */}
       {NotificationSidebarComponent && (
-        <NotificationSidebarComponent isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+        <NotificationSidebarComponent 
+          isOpen={isNotifOpen} 
+          onClose={() => setIsNotifOpen(false)} 
+          language={currentLanguage} 
+          onUpdateUnread={setUnreadNotifCount}
+        />
       )}
     </div>
   );
