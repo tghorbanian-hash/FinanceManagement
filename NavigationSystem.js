@@ -181,7 +181,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     );
   };
 
-  // کاشی فیکس شده Fiori با سایز دقیق (128x128 پیکسل)
   const renderTileCard = (item) => {
     const isFav = favorites.has(item.id);
 
@@ -189,22 +188,21 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       <div 
         key={item.id}
         onClick={() => handleFormClick(item.id)}
-        className="w-32 h-32 shrink-0 bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
+        className="w-24 h-24 shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
       >
         <div className="flex items-start justify-between z-10">
-          <div className="p-1.5 rounded-lg transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
-            <DynamicIcon name={item.icon || 'FileText'} size={20} strokeWidth={2} />
+          <div className="p-1 rounded-lg transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+            <DynamicIcon name={item.icon || 'FileText'} size={16} strokeWidth={2} />
           </div>
           <button 
             onClick={(e) => toggleFavorite(e, item.id)}
             className={`z-20 p-1 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
           >
-            <Star size={16} fill={isFav ? "currentColor" : "none"} />
+            <Star size={14} fill={isFav ? "currentColor" : "none"} />
           </button>
         </div>
-        <div className="z-10 mt-auto pt-2">
-          {/* پشتیبانی از خطوط طولانی با break-words */}
-          <div className="text-[12px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
+        <div className="z-10 mt-auto pt-1">
+          <div className="text-[11px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
             {item.label_fa}
           </div>
         </div>
@@ -222,14 +220,14 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     });
 
     return (
-      <div className="p-8 space-y-12 animate-in fade-in duration-300">
+      <div className="p-8 space-y-10 animate-in fade-in duration-300">
         
         {directForms.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
               <h3 className="text-[15px] font-black text-slate-800">فرم‌های مستقل</h3>
             </div>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-3">
               {directForms.map(renderTileCard)}
             </div>
           </section>
@@ -248,21 +246,21 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
           if (allNested.length === 0) return null;
 
           return (
-            <section key={moduleNode.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                <h3 className="text-[16px] font-black text-slate-800">{moduleNode.label_fa}</h3>
-                <span className="bg-indigo-50 text-indigo-600 text-[11px] px-2.5 py-1 rounded-md font-bold">
+            <section key={moduleNode.id} className="space-y-4">
+              <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
+                <h3 className="text-[15px] font-black text-slate-800">{moduleNode.label_fa}</h3>
+                <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
                   {allNested.length} فرم
                 </span>
               </div>
               
-              <div className="space-y-6">
+              <div className="space-y-3 pt-1">
                 {moduleDirectForms.length > 0 && (
                   <div className="flex flex-col md:flex-row md:items-start gap-4">
-                    <div className="w-32 shrink-0 pt-2 font-bold text-slate-400 text-[12px] uppercase tracking-wider">
+                    <div className="w-28 shrink-0 pt-1.5 font-bold text-slate-400 text-[11px] uppercase tracking-wider">
                       عمومی
                     </div>
-                    <div className="flex-1 flex flex-wrap gap-4">
+                    <div className="flex-1 flex flex-wrap gap-3">
                       {moduleDirectForms.map(renderTileCard)}
                     </div>
                   </div>
@@ -273,12 +271,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
                   if (sectionForms.length === 0) return null;
                   return (
                     <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4">
-                      {/* نام بخش در سمت راست قبل از کاشی‌ها */}
-                      <div className="w-32 shrink-0 pt-2 flex items-center gap-2 font-bold text-slate-700 text-[13px]">
-                        <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></div>
+                      <div className="w-28 shrink-0 pt-1.5 flex items-center gap-1.5 font-bold text-slate-700 text-[12px]">
+                        <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
                         <span className="leading-tight">{section.label_fa}</span>
                       </div>
-                      <div className="flex-1 flex flex-wrap gap-4">
+                      <div className="flex-1 flex flex-wrap gap-3">
                         {sectionForms.map(renderTileCard)}
                       </div>
                     </div>
@@ -301,13 +298,13 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     const recentItems = recents.map(id => menuData.find(m => m.id === id)).filter(Boolean);
 
     return (
-      <div className="p-8 space-y-12 animate-in fade-in">
+      <div className="p-8 space-y-10 animate-in fade-in">
         <section>
-          <div className="flex items-center gap-2 mb-6 px-1 border-b border-slate-200 pb-3">
-            <Clock size={20} className="text-indigo-500" strokeWidth={2.5} />
-            <h2 className="text-[16px] font-black text-slate-800">بازدیدهای اخیر</h2>
+          <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
+            <Clock size={18} className="text-indigo-500" strokeWidth={2.5} />
+            <h2 className="text-[15px] font-black text-slate-800">بازدیدهای اخیر</h2>
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3">
             {recentItems.length > 0 ? recentItems.map(renderTileCard) : (
               <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
                 شما هنوز از فرمی بازدید نکرده‌اید.
@@ -317,11 +314,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-6 px-1 border-b border-slate-200 pb-3">
-            <Star size={20} className="text-amber-500" fill="currentColor" />
-            <h2 className="text-[16px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
+          <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
+            <Star size={18} className="text-amber-500" fill="currentColor" />
+            <h2 className="text-[15px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
           </div>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3">
             {favItems.length > 0 ? favItems.map(renderTileCard) : (
               <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
                 فرمی به علاقه‌مندی‌ها اضافه نشده است.
