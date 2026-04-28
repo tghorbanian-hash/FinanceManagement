@@ -11,12 +11,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const supabase = window.supabase;
 
-  // --- States ---
   const [menuData, setMenuData] = useState([]);
   const [favorites, setFavorites] = useState(new Set());
   const [recents, setRecents] = useState([]);
   
-  const [viewMode, setViewMode] = useState('tile'); // 'tree' or 'tile'
+  const [viewMode, setViewMode] = useState('tile');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState({});
   const [loading, setLoading] = useState(true);
@@ -26,7 +25,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-  // --- Effects ---
   useEffect(() => {
     fetchMenuData();
     fetchFavorites();
@@ -37,12 +35,10 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     }
   }, []);
 
-  // بسته شدن خودکار نودهای درخت هنگام تغییر حوزه
   useEffect(() => {
     setExpandedNodes({});
   }, [activeDomainId]);
 
-  // --- API Calls ---
   const fetchMenuData = async () => {
     setLoading(true);
     try {
@@ -71,11 +67,9 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     } catch(err) {}
   };
 
-  // --- Handlers ---
   const toggleFavorite = async (e, id) => {
     e.stopPropagation();
     
-    // اعتبارسنجی امنیتی: فقط فرم‌ها قابل ستاره‌دار شدن هستند
     const node = menuData.find(m => m.id === id);
     if (!node || node.menu_type !== 'form') return;
 
@@ -105,7 +99,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     console.log("Opening form:", formId);
   };
 
-  // --- Data Processing ---
   const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
   
   const buildTree = (items, parentId = null) => {
@@ -145,7 +138,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     return buildTree(menuData, activeDomainId);
   }, [menuData, activeDomainId]);
 
-  // تابعی برای استخراج تمام "فرم‌ها" از زیرمجموعه یک ماژول (برای نمایش Fiori)
   const getAllForms = (node) => {
     let forms = [];
     if (node.menu_type === 'form') forms.push(node);
@@ -164,15 +156,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     return <Icon size={size} className={className} />;
   };
 
-  // منطق نمایش سایدبار: سایدبار فقط در حالت درختی و وقتی در میز کار نیستیم نمایش داده می‌شود
   const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';
 
-  // --- Render Components ---
   const renderSidebarNode = (node, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes[node.id];
     const isForm = node.menu_type === 'form';
-    // اطمینان از اینکه فقط فرم‌ها ستاره‌دار باشند
     const isFav = isForm && favorites.has(node.id);
 
     return (
@@ -224,10 +213,10 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       <div 
         key={item.id}
         onClick={() => handleFormClick(item.id)}
-        className="h-24 bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
+        className="aspect-square bg-white border border-slate-200 rounded-xl p-3 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
       >
         <div className="flex items-start justify-between z-10">
-          <div className="p-1.5 rounded-lg transition-colors bg-slate-50 text-slate-500 group-hover:text-indigo-600">
+          <div className="p-1.5 rounded-lg transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
             <DynamicIcon name={item.icon || 'FileText'} size={18} strokeWidth={2} />
           </div>
           <button 
@@ -237,8 +226,8 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
             <Star size={16} fill={isFav ? "currentColor" : "none"} />
           </button>
         </div>
-        <div className="z-10 mt-2">
-          <div className="text-[12px] font-bold text-slate-700 leading-tight group-hover:text-indigo-700 line-clamp-2">
+        <div className="z-10 mt-auto pt-2">
+          <div className="text-[11px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words">
             {item.label_fa}
           </div>
         </div>
@@ -246,12 +235,10 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     );
   };
 
-  // رندر کاشی‌ها با گروه‌بندی مستقیم (حذف کامل Drill-down)
   const renderFioriTiles = () => {
     const directForms = [];
     const groupedModules = [];
 
-    // تفکیک فرم‌های مستقیم از ماژول‌ها در لایه اول درخت
     activeTree.forEach(node => {
       if (node.menu_type === 'form') directForms.push(node);
       else groupedModules.push(node);
@@ -260,33 +247,63 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     return (
       <div className="p-8 space-y-10 animate-in fade-in duration-300">
         
-        {/* فرم‌هایی که مستقیماً زیر خود حوزه هستند */}
         {directForms.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
               <h3 className="text-[15px] font-black text-slate-800">فرم‌های مستقل</h3>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
               {directForms.map(renderTileCard)}
             </div>
           </section>
         )}
 
-        {/* ماژول‌ها و بخش‌ها (نمایش فرم‌های زیرمجموعه) */}
         {groupedModules.map(moduleNode => {
-          const forms = getAllForms(moduleNode);
-          if (forms.length === 0) return null;
+          const sections = [];
+          const moduleDirectForms = [];
+
+          (moduleNode.children || []).forEach(child => {
+            if (child.menu_type === 'form') moduleDirectForms.push(child);
+            else sections.push(child);
+          });
+
+          const allNested = getAllForms(moduleNode);
+          if (allNested.length === 0) return null;
 
           return (
-            <section key={moduleNode.id} className="space-y-4">
+            <section key={moduleNode.id} className="space-y-5">
               <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
                 <h3 className="text-[15px] font-black text-slate-800">{moduleNode.label_fa}</h3>
                 <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                  {forms.length} فرم
+                  {allNested.length} فرم
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                {forms.map(form => renderTileCard(form))}
+              
+              <div className="space-y-4 pt-1">
+                {moduleDirectForms.length > 0 && (
+                  <div className="flex flex-col sm:flex-row items-start gap-4">
+                    <div className="w-28 shrink-0 pt-2 font-bold text-slate-500 text-[12px]">عمومی</div>
+                    <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+                      {moduleDirectForms.map(renderTileCard)}
+                    </div>
+                  </div>
+                )}
+
+                {sections.map(section => {
+                  const sectionForms = getAllForms(section);
+                  if (sectionForms.length === 0) return null;
+                  return (
+                    <div key={section.id} className="flex flex-col sm:flex-row items-start gap-4">
+                      <div className="w-28 shrink-0 pt-2 font-bold text-slate-600 text-[12px] flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-indigo-300 rounded-full"></div>
+                        <span className="leading-tight">{section.label_fa}</span>
+                      </div>
+                      <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+                        {sectionForms.map(renderTileCard)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           );
@@ -300,18 +317,17 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   };
 
   const renderHomeView = () => {
-    // اعمال فیلتر سفت‌وسخت برای نمایش علاقه‌مندی‌ها
     const favItems = menuData.filter(m => favorites.has(m.id) && m.menu_type === 'form');
     const recentItems = recents.map(id => menuData.find(m => m.id === id)).filter(Boolean);
 
     return (
       <div className="p-8 space-y-10 animate-in fade-in">
         <section>
-          <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
             <Clock size={18} className="text-indigo-500" strokeWidth={2.5} />
             <h2 className="text-[15px] font-black text-slate-800">بازدیدهای اخیر</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
             {recentItems.length > 0 ? recentItems.map(renderTileCard) : (
               <div className="col-span-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[12px]">
                 شما هنوز از فرمی بازدید نکرده‌اید.
@@ -321,11 +337,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
             <Star size={18} className="text-amber-500" fill="currentColor" />
             <h2 className="text-[15px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
             {favItems.length > 0 ? favItems.map(renderTileCard) : (
               <div className="col-span-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[12px]">
                 فرمی به علاقه‌مندی‌ها اضافه نشده است.
@@ -348,7 +364,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      {/* 1. Domain Bar */}
       <nav className="w-16 bg-white border-l border-slate-200 flex flex-col items-center py-4 gap-3 shrink-0 z-40 shadow-sm relative">
         <button
           onClick={() => setActiveDomainId('HOME_FAV')}
@@ -385,13 +400,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         </div>
       </nav>
 
-      {/* 2. Main Sidebar Tree (انحصاری: فقط اگر viewMode روی درختی باشد رندر می‌شود) */}
       {showSidebar && (
         <aside 
           className={`bg-white border-l border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-0 border-l-0 overflow-hidden opacity-0'}`}
         >
           <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100 shrink-0">
-            {/* دکمه جمع کردن درخت منتقل شد به سمت چپ بالا */}
             <h2 className="font-black text-slate-800 tracking-tight text-[13px] truncate flex-1">
               {domains.find(d => d.id === activeDomainId)?.label_fa}
             </h2>
@@ -412,12 +425,10 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         </aside>
       )}
 
-      {/* 3. Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-20">
           <div className="flex items-center gap-4 w-full max-w-2xl">
             
-            {/* اگر سایدبار بسته بود، دکمه باز کردن اینجا نمایش داده می‌شود */}
             {showSidebar && !sidebarOpen && (
               <button 
                 onClick={() => setSidebarOpen(true)} 
@@ -453,7 +464,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Toggle View Mode Buttons */}
             {activeDomainId !== 'HOME_FAV' && (
               <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
                 <button 
@@ -481,7 +491,6 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
           </div>
         </header>
 
-        {/* Viewport - Mutually Exclusive */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {activeDomainId === 'HOME_FAV' ? (
             renderHomeView()
