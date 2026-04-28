@@ -158,7 +158,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     return (
       <div key={node.id} className="select-none">
         <div 
-          className={`flex items-center gap-2.5 py-1.5 px-3 mx-2 rounded-lg cursor-pointer transition-all group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
+          className={`flex items-center gap-2 py-1.5 px-2 mx-1 rounded-lg cursor-pointer transition-all group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
           onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node.id); }}
         >
           {hasChildren ? (
@@ -174,7 +174,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
               <Folder size={16} className="text-slate-400 group-hover:text-indigo-500 shrink-0" strokeWidth={2} />
             )
           ) : (
-            <div className="flex items-center justify-center w-4 shrink-0">
+            <div className="flex items-center justify-center w-[14px] shrink-0">
               <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isSelected ? 'bg-indigo-600 scale-[1.5] ring-[3px] ring-indigo-100' : 'bg-transparent border border-slate-400 group-hover:border-indigo-400 group-hover:bg-indigo-100'}`} />
             </div>
           )}
@@ -194,7 +194,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         </div>
         
         {hasChildren && isExpanded && (
-          <div className="border-r-2 border-slate-100 mr-[22px] pr-2 my-0.5 space-y-0.5 animate-in slide-in-from-top-1 duration-200">
+          <div className="border-r-2 border-slate-100 mr-[19px] pr-1.5 my-0.5 space-y-0.5 animate-in slide-in-from-top-1 duration-200">
             {node.children.map(child => renderSidebarNode(child, depth + 1))}
           </div>
         )}
