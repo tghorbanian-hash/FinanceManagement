@@ -4,7 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { 
   Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
   ListTree, FileText, Bell, Monitor, Clock,
-  Settings, ArrowLeft
+  Settings, ArrowLeft, ChevronDown
 } from 'lucide-react';
 
 const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
@@ -18,6 +18,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   const [viewMode, setViewMode] = useState('tile');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedNodes, setExpandedNodes] = useState({});
+  const [collapsedModules, setCollapsedModules] = useState({});
   const [loading, setLoading] = useState(true);
   
   const [activeDomainId, setActiveDomainId] = useState('HOME_FAV');
@@ -36,6 +37,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
   useEffect(() => {
     setExpandedNodes({});
+    setCollapsedModules({});
   }, [activeDomainId]);
 
   const fetchMenuData = async () => {
@@ -134,6 +136,8 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   };
 
   const toggleNode = (id) => setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
+  
+  const toggleModuleCollapse = (id) => setCollapsedModules(prev => ({ ...prev, [id]: !prev[id] }));
 
   const DynamicIcon = ({ name, size = 18, className = "" }) => {
     const Icon = LucideIcons[name] || FileText;
@@ -157,18 +161,18 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         >
           {hasChildren ? (
             <div className={`transition-transform duration-200 ${isExpanded ? '-rotate-90 text-indigo-500' : 'text-slate-400'}`}>
-              <ChevronLeft size={14} strokeWidth={2.5} />
+              <ChevronLeft size={16} strokeWidth={2.5} />
             </div>
-          ) : <div className="w-3.5" />}
+          ) : <div className="w-4" />}
           
-          <span className={`flex-1 truncate ${depth === 0 ? 'text-[13px]' : 'text-[12px]'}`}>{node.label_fa}</span>
+          <span className={`flex-1 truncate ${depth === 0 ? 'text-[14px]' : 'text-[13px]'}`}>{node.label_fa}</span>
           
           {isForm && (
             <button 
               onClick={(e) => toggleFavorite(e, node.id)}
               className={`transition-all p-1 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
             >
-              <Star size={14} fill={isFav ? "currentColor" : "none"} />
+              <Star size={16} fill={isFav ? "currentColor" : "none"} />
             </button>
           )}
         </div>
@@ -191,18 +195,18 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         className="w-[100px] h-[100px] shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
       >
         <div className="flex items-start justify-between z-10">
-          <div className="p-1 rounded-md transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
-            <DynamicIcon name={item.icon || 'FileText'} size={16} strokeWidth={2.5} />
+          <div className="p-1.5 rounded-md transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+            <DynamicIcon name={item.icon || 'FileText'} size={18} strokeWidth={2.5} />
           </div>
           <button 
             onClick={(e) => toggleFavorite(e, item.id)}
             className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
           >
-            <Star size={14} fill={isFav ? "currentColor" : "none"} />
+            <Star size={16} fill={isFav ? "currentColor" : "none"} />
           </button>
         </div>
         <div className="z-10 mt-auto pt-1">
-          <div className="text-[11px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
+          <div className="text-[12px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
             {item.label_fa}
           </div>
         </div>
@@ -224,12 +228,21 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         
         {directForms.length > 0 && (
           <section className="space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
-              <h3 className="text-[14px] font-black text-slate-800">فرم‌های مستقل</h3>
+            <div 
+              className="flex items-center gap-2 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md"
+              onClick={() => toggleModuleCollapse('direct_forms')}
+            >
+              <div className="text-slate-400">
+                {collapsedModules['direct_forms'] ? <ChevronLeft size={18} strokeWidth={2.5} /> : <ChevronDown size={18} strokeWidth={2.5} />}
+              </div>
+              <h3 className="text-[16px] font-black text-slate-800">فرم‌های مستقل</h3>
             </div>
-            <div className="flex flex-wrap gap-3">
-              {directForms.map(renderTileCard)}
-            </div>
+            
+            {!collapsedModules['direct_forms'] && (
+              <div className="flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">
+                {directForms.map(renderTileCard)}
+              </div>
+            )}
           </section>
         )}
 
@@ -244,45 +257,59 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
           const allNested = getAllForms(moduleNode);
           if (allNested.length === 0) return null;
+          const isCollapsed = collapsedModules[moduleNode.id];
 
           return (
             <section key={moduleNode.id} className="space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-200 pb-2">
-                <h3 className="text-[14px] font-black text-slate-800">{moduleNode.label_fa}</h3>
-                <span className="bg-slate-100 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
+              <div 
+                className="flex items-center gap-3 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md select-none"
+                onClick={() => toggleModuleCollapse(moduleNode.id)}
+              >
+                <div className="text-slate-400">
+                  {isCollapsed ? <ChevronLeft size={18} strokeWidth={2.5} /> : <ChevronDown size={18} strokeWidth={2.5} />}
+                </div>
+                <h3 className="text-[16px] font-black text-slate-800">{moduleNode.label_fa}</h3>
+                <span className="bg-slate-100 text-slate-500 text-[12px] px-2.5 py-0.5 rounded-full font-bold">
                   {allNested.length} فرم
                 </span>
               </div>
               
-              <div className="space-y-4 pt-1">
-                {moduleDirectForms.length > 0 && (
-                  <div className="flex flex-wrap gap-3 mb-4">
-                    {moduleDirectForms.map(renderTileCard)}
-                  </div>
-                )}
-
-                {sections.map(section => {
-                  const sectionForms = getAllForms(section);
-                  if (sectionForms.length === 0) return null;
-                  return (
-                    <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
-                      <div className="w-24 shrink-0 pt-1 flex items-center gap-1.5 font-bold text-slate-700 text-[11px]">
-                        <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
-                        <span className="leading-tight">{section.label_fa}</span>
+              {!isCollapsed && (
+                <div className="space-y-4 pt-1 animate-in slide-in-from-top-1 duration-200">
+                  {moduleDirectForms.length > 0 && (
+                    <div className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
+                      <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 text-[13px] uppercase tracking-wider">
+                        عمومی
                       </div>
                       <div className="flex-1 flex flex-wrap gap-3">
-                        {sectionForms.map(renderTileCard)}
+                        {moduleDirectForms.map(renderTileCard)}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+
+                  {sections.map(section => {
+                    const sectionForms = getAllForms(section);
+                    if (sectionForms.length === 0) return null;
+                    return (
+                      <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
+                        <div className="w-24 shrink-0 pt-1.5 flex items-center gap-1.5 font-black text-slate-700 text-[13px]">
+                          <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></div>
+                          <span className="leading-tight">{section.label_fa}</span>
+                        </div>
+                        <div className="flex-1 flex flex-wrap gap-3">
+                          {sectionForms.map(renderTileCard)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           );
         })}
 
         {activeTree.length === 0 && (
-          <div className="text-center text-slate-400 py-10 text-[12px]">فرمی جهت نمایش وجود ندارد.</div>
+          <div className="text-center text-slate-400 py-10 text-[13px]">فرمی جهت نمایش وجود ندارد.</div>
         )}
       </div>
     );
@@ -296,12 +323,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
       <div className="p-8 space-y-10 animate-in fade-in">
         <section>
           <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
-            <Clock size={16} className="text-indigo-500" strokeWidth={2.5} />
-            <h2 className="text-[14px] font-black text-slate-800">بازدیدهای اخیر</h2>
+            <Clock size={18} className="text-indigo-500" strokeWidth={2.5} />
+            <h2 className="text-[16px] font-black text-slate-800">بازدیدهای اخیر</h2>
           </div>
           <div className="flex flex-wrap gap-3">
             {recentItems.length > 0 ? recentItems.map(renderTileCard) : (
-              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[12px]">
+              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
                 شما هنوز از فرمی بازدید نکرده‌اید.
               </div>
             )}
@@ -310,12 +337,12 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
 
         <section>
           <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
-            <Star size={16} className="text-amber-500" fill="currentColor" />
-            <h2 className="text-[14px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
+            <Star size={18} className="text-amber-500" fill="currentColor" />
+            <h2 className="text-[16px] font-black text-slate-800">فرم‌های منتخب (علاقه‌مندی‌ها)</h2>
           </div>
           <div className="flex flex-wrap gap-3">
             {favItems.length > 0 ? favItems.map(renderTileCard) : (
-              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[12px]">
+              <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px]">
                 فرمی به علاقه‌مندی‌ها اضافه نشده است.
               </div>
             )}
@@ -328,7 +355,7 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]">
-        <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -336,13 +363,13 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      <nav className="w-16 bg-white border-l border-slate-200 flex flex-col items-center py-4 gap-3 shrink-0 z-40 shadow-sm relative">
+      <nav className="w-20 bg-white border-l border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative">
         <button
           onClick={() => setActiveDomainId('HOME_FAV')}
-          className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
+          className={`relative group flex items-center justify-center w-12 h-12 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'}`}
         >
-          <Star size={20} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
-          <div className="absolute right-full mr-3 px-2 py-1 bg-slate-800 text-white text-[11px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
+          <Star size={24} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
+          <div className="absolute right-full mr-3 px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg">
             میز کار و علاقه‌مندی‌ها
           </div>
         </button>
@@ -351,90 +378,91 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
           <button
             key={domain.id}
             onClick={() => setActiveDomainId(domain.id)}
-            className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
+            className={`relative group flex items-center justify-center w-12 h-12 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}`}
           >
-            <DynamicIcon name={domain.icon} size={20} strokeWidth={activeDomainId === domain.id ? 2.5 : 1.5} />
-            <div className="absolute right-full mr-3 px-2 py-1 bg-slate-800 text-white text-[11px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
+            <DynamicIcon name={domain.icon} size={24} strokeWidth={activeDomainId === domain.id ? 2.5 : 1.5} />
+            <div className="absolute right-full mr-3 px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg">
               {domain.label_fa}
             </div>
           </button>
         ))}
 
-        <div className="mt-auto flex flex-col items-center gap-4">
-          <button className="text-slate-400 hover:text-slate-600 transition-colors"><Settings size={18} /></button>
-          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-black text-[10px] cursor-pointer hover:bg-slate-200 transition-colors">PM</div>
+        <div className="mt-auto flex flex-col items-center gap-6">
+          <button className="text-slate-400 hover:text-slate-600 transition-colors"><Settings size={22} /></button>
+          <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-black text-[12px] cursor-pointer hover:bg-slate-200 transition-colors">PM</div>
         </div>
       </nav>
 
       {showSidebar && (
-        <aside className={`bg-white border-l border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-0 border-l-0 overflow-hidden opacity-0'}`}>
-          <div className="h-14 flex items-center justify-between px-5 border-b border-slate-100 shrink-0">
-            <h2 className="font-black text-slate-800 tracking-tight text-[12px] truncate flex-1">
+        <aside className={`bg-white border-l border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 border-l-0 overflow-hidden opacity-0'}`}>
+          <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 shrink-0">
+            <h2 className="font-black text-slate-800 tracking-tight text-[14px] truncate flex-1">
               {domains.find(d => d.id === activeDomainId)?.label_fa}
             </h2>
-            <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-slate-100 rounded text-slate-400 transition-colors">
-              <ChevronRight size={16} />
+            <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 transition-colors">
+              <ChevronRight size={18} />
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar py-2">
-            <div className="space-y-0.5">{activeTree.map(node => renderSidebarNode(node))}</div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
+            <div className="space-y-1">{activeTree.map(node => renderSidebarNode(node))}</div>
           </div>
         </aside>
       )}
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative">
-        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-20">
-          <div className="flex items-center gap-4 w-full max-w-2xl">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-20">
+          <div className="flex items-center gap-5 w-full max-w-3xl">
             {showSidebar && !sidebarOpen && (
-              <button onClick={() => setSidebarOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-95">
-                <ChevronLeft size={16} strokeWidth={2.5} />
+              <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 transition-all active:scale-95 shrink-0">
+                <ChevronLeft size={18} strokeWidth={2.5} />
               </button>
+            )}
+
+            {activeDomainId !== 'HOME_FAV' && (
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 shrink-0">
+                <button 
+                  onClick={() => setViewMode('tree')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[12px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <ListTree size={16} /><span>درختی</span>
+                </button>
+                <button 
+                  onClick={() => setViewMode('tile')}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-[12px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                >
+                  <LayoutGrid size={16} /><span>کاشی</span>
+                </button>
+              </div>
             )}
             
             <div className="relative w-full">
-              <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400`} />
+              <Search size={16} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-4' : 'left-4'} text-slate-400`} />
               <input 
                 placeholder="جستجو در تمام فرم‌ها..."
-                className={`w-full h-9 bg-slate-50 border border-slate-200 rounded-lg text-[11px] ${isRtl ? 'pr-9 pl-4' : 'pl-9 pr-4'} focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400 text-slate-700`}
+                className={`w-full h-11 bg-slate-50 border border-slate-200 rounded-lg text-[13px] ${isRtl ? 'pr-11 pl-4' : 'pl-11 pr-4'} focus:bg-white focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400 text-slate-700`}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
                 <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50">
                   {filteredItems.length > 0 ? filteredItems.map(item => (
-                    <div key={item.id} onClick={() => {handleFormClick(item.id); setSearchTerm('');}} className="px-4 py-2 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
+                    <div key={item.id} onClick={() => {handleFormClick(item.id); setSearchTerm('');}} className="px-5 py-3 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-slate-800 text-[11px]">{item.label_fa}</div>
-                        <div className="text-[9px] text-slate-400 mt-0.5">{item.fullPath}</div>
+                        <div className="font-bold text-slate-800 text-[13px]">{item.label_fa}</div>
+                        <div className="text-[12px] text-slate-400 mt-1">{item.fullPath}</div>
                       </div>
-                      <ArrowLeft size={12} className="text-slate-300" />
+                      <ArrowLeft size={16} className="text-slate-300" />
                     </div>
-                  )) : <div className="p-4 text-center text-slate-400 text-[10px]">نتیجه‌ای یافت نشد.</div>}
+                  )) : <div className="p-5 text-center text-slate-400 text-[12px]">نتیجه‌ای یافت نشد.</div>}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex bg-slate-100 p-1 rounded-md border border-slate-200">
-              <button 
-                onClick={() => setViewMode('tree')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <ListTree size={12} /><span>درختی</span>
-              </button>
-              <button 
-                onClick={() => setViewMode('tile')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-              >
-                <LayoutGrid size={12} /><span>کاشی</span>
-              </button>
-            </div>
-            
-            <div className="w-px h-4 bg-slate-200 mx-1"></div>
-            <button className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 relative transition-all">
-              <Bell size={16} strokeWidth={2} />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full border-2 border-white"></span>
+          <div className="flex items-center gap-4">
+            <button className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 relative transition-all">
+              <Bell size={20} strokeWidth={2} />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
           </div>
         </header>
@@ -442,11 +470,11 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {activeDomainId === 'HOME_FAV' ? renderHomeView() : viewMode === 'tile' ? renderFioriTiles() : (
             <div className="h-full flex flex-col items-center justify-center text-center p-12">
-              <div className="w-20 h-20 bg-white border border-slate-200 rounded-full mb-6 flex items-center justify-center shadow-sm">
-                <Monitor size={32} className="text-slate-300" strokeWidth={1.5} />
+              <div className="w-24 h-24 bg-white border border-slate-200 rounded-full mb-6 flex items-center justify-center shadow-sm">
+                <Monitor size={40} className="text-slate-300" strokeWidth={1.5} />
               </div>
-              <h2 className="text-lg font-black text-slate-700">ناحیه کاری {domains.find(d => d.id === activeDomainId)?.label_fa}</h2>
-              <p className="text-slate-500 text-[11px] mt-2 max-w-sm leading-relaxed">
+              <h2 className="text-xl font-black text-slate-700">ناحیه کاری {domains.find(d => d.id === activeDomainId)?.label_fa}</h2>
+              <p className="text-slate-500 text-[13px] mt-3 max-w-sm leading-relaxed">
                 جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.
               </p>
             </div>
