@@ -155,13 +155,13 @@ const NavigationSystem = ({ isAdmin = true, language = 'fa' }) => {
     const isFav = isForm && favorites.has(node.id);
     const isSelected = activeFormId === node.id;
 
-    const guideLineRightPos = depth * 20 + 26; 
+    const guideLineRightPos = depth * 10 + 26; 
 
     return (
       <div key={node.id} className="select-none relative">
         <div 
           className={`flex items-center py-1 mx-2 my-px rounded-md cursor-pointer transition-colors group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
-          style={{ paddingRight: `${depth * 20 + 8}px` }}
+          style={{ paddingRight: `${depth * 10 + 8}px` }}
           onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node.id); }}
         >
           {hasChildren ? (
