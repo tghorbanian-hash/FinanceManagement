@@ -7,8 +7,10 @@ import {
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
 
-// ایمپورت سایدبار نوتیفیکیشن
-import NotificationSidebar from './NotificationSidebar';
+// بارگذاری تنبل (Lazy) سایدبار نوتیفیکیشن برای جلوگیری از قفل شدن سیستم در صورت نبود فایل
+const NotificationSidebar = lazy(() => import('./NotificationSidebar.js').catch(() => ({
+  default: () => null // اگر فایل پیدا نشد، چیزی نشان نده
+})));
 
 // --- سیستم بارگذاری پویای فرم‌ها ---
 const FormLoader = ({ path, language }) => {
@@ -394,7 +396,14 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     );
   };
 
-  if (loading) return <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]"><div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div></div>;
+  if (loading) return (
+    <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p className="text-[13px] font-bold text-slate-500 font-sans">در حال برقراری ارتباط امن با پایگاه داده...</p>
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -482,7 +491,9 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </main>
 
-      <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+      <Suspense fallback={null}>
+        <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+      </Suspense>
     </div>
   );
 };
