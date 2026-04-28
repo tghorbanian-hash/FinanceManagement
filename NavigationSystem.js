@@ -7,9 +7,9 @@ import {
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
 
-// استفاده از لودینگ تنبل برای سایدبار نوتیفیکیشن جهت جلوگیری از اختلال در اجرای کل سیستم
+// اصلاح آدرس Import برای سایدبار نوتیفیکیشن
 const NotificationSidebar = lazy(() => import('./NotificationSidebar.js').catch((err) => {
-  console.error("Critical: NotificationSidebar.js not found in the same directory.", err);
+  console.error("Critical: NotificationSidebar.js not found.", err);
   return { default: () => null };
 }));
 
@@ -19,7 +19,8 @@ const FormLoader = ({ path, language }) => {
 
   const LazyComponent = useMemo(() => {
     return lazy(() => 
-      import(`./${path}.js`).catch((err) => {
+      // حذف نقطه اضافه و استفاده از مسیر مستقیم برای سازگاری با GitHub Pages
+      import(`../${path}.js`).catch((err) => {
         console.error("DYNAMIC IMPORT FAILED:", err);
         return {
           default: () => (
@@ -29,7 +30,7 @@ const FormLoader = ({ path, language }) => {
               </div>
               <h3 className="text-[16px] font-black text-slate-800 mb-2">خطا در بارگذاری فرم</h3>
               <p className="text-[13px] text-slate-500 max-w-xs leading-relaxed border border-red-100 bg-red-50 p-3 rounded-lg mt-2 font-sans">
-                فایلی با آدرس <br/><strong className="text-red-600 font-mono">./{path}.js</strong><br/> یافت نشد.
+                فایلی با آدرس <br/><strong className="text-red-600 font-mono">{path}.js</strong><br/> یافت نشد.
               </p>
             </div>
           )
@@ -53,7 +54,6 @@ const FormLoader = ({ path, language }) => {
 const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   const supabase = window.supabase;
 
-  // --- States ---
   const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
   const isRtl = currentLanguage === 'fa';
   
@@ -78,7 +78,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
 
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-  // --- Effects ---
   useEffect(() => {
     fetchMenuData();
     fetchFavorites();
@@ -93,7 +92,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     setCollapsedModules({});
   }, [activeDomainId]);
 
-  // --- API Calls ---
   const fetchMenuData = async () => {
     setLoading(true);
     try {
@@ -122,7 +120,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     } catch(err) {}
   };
 
-  // --- Handlers ---
   const toggleFavorite = async (e, id) => {
     e.stopPropagation();
     const node = menuData.find(m => m.id === id);
@@ -147,7 +144,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     localStorage.setItem('sys_recents', JSON.stringify(newRecents));
   };
 
-  // --- Data Processing ---
   const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
   
   const buildTree = (items, parentId = null) => {
@@ -202,7 +198,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
 
   const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';
 
-  // --- Render Components ---
   const renderSidebarNode = (node, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes[node.id];
