@@ -7,16 +7,18 @@ import {
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
 } from 'lucide-react';
 
-// لود کردن نوتیفیکیشن به صورت مستقیم (غیر Lazy) برای اطمینان از عملکرد درست سایدبار
-import NotificationSidebar from './NotificationSidebar.js';
+// لود کردن سایدبار به صورت Lazy با آدرس‌دهی مستقیم از روت برای جلوگیری از تداخل HTML 404
+const NotificationSidebar = lazy(() => import('./NotificationSidebar.js').catch(err => {
+    console.error("Critical: Could not load NotificationSidebar.js", err);
+    return { default: () => null };
+}));
 
-// --- سیستم بارگذاری پویای فرم‌ها با اصلاح آدرس برای GitHub Pages ---
+// سیستم بارگذاری پویای فرم‌ها
 const FormLoader = ({ path, language }) => {
   if (!path) return null;
 
   const LazyComponent = useMemo(() => {
     return lazy(() => 
-      // استفاده از مسیر نسبی مستقیم بدون نیاز به دانستن نام ریپازیتوری
       import(`./${path}.js`).catch((err) => {
         console.error("DYNAMIC IMPORT FAILED:", err);
         return {
@@ -51,7 +53,6 @@ const FormLoader = ({ path, language }) => {
 const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   const supabase = window.supabase;
 
-  // --- States ---
   const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
   const isRtl = currentLanguage === 'fa';
   
@@ -76,7 +77,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
 
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
-  // --- Effects ---
   useEffect(() => {
     fetchMenuData();
     fetchFavorites();
@@ -91,7 +91,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     setCollapsedModules({});
   }, [activeDomainId]);
 
-  // --- API Calls ---
   const fetchMenuData = async () => {
     setLoading(true);
     try {
@@ -120,7 +119,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     } catch(err) {}
   };
 
-  // --- Handlers ---
   const toggleFavorite = async (e, id) => {
     e.stopPropagation();
     const node = menuData.find(m => m.id === id);
@@ -145,7 +143,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     localStorage.setItem('sys_recents', JSON.stringify(newRecents));
   };
 
-  // --- Data Processing ---
   const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
   
   const buildTree = (items, parentId = null) => {
@@ -200,14 +197,12 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
 
   const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';
 
-  // --- Render Components ---
   const renderSidebarNode = (node, depth = 0) => {
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes[node.id];
     const isForm = node.menu_type === 'form';
     const isFav = isForm && favorites.has(node.id);
     const isSelected = activeFormId === node.id;
-
     const guideLinePos = depth * 20 + 26; 
 
     return (
@@ -240,27 +235,18 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
               </div>
             </>
           )}
-
           <span className={`flex-1 truncate ${isRtl ? 'pr-1.5' : 'pl-1.5'} ${depth === 0 ? 'text-[13px]' : 'text-[12px]'} ${isSelected ? 'font-black' : 'font-medium'}`}>
             {getLabel(node)}
           </span>
-          
           {isForm && (
-            <button 
-              onClick={(e) => toggleFavorite(e, node.id)}
-              className={`transition-all p-1 shrink-0 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
-            >
+            <button onClick={(e) => toggleFavorite(e, node.id)} className={`transition-all p-1 shrink-0 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}>
               <Star size={13} fill={isFav ? "currentColor" : "none"} />
             </button>
           )}
         </div>
-        
         {hasChildren && isExpanded && (
           <div className="relative">
-            <div 
-              className="absolute top-0 bottom-0 w-px bg-slate-200" 
-              style={{ [isRtl ? 'right' : 'left']: `${guideLinePos}px` }} 
-            />
+            <div className="absolute top-0 bottom-0 w-px bg-slate-200" style={{ [isRtl ? 'right' : 'left']: `${guideLinePos}px` }} />
             <div className="space-y-[2px] animate-in slide-in-from-top-1 duration-200 pt-0.5 pb-1 relative z-10 font-sans">
               {node.children.map(child => renderSidebarNode(child, depth + 1))}
             </div>
@@ -272,21 +258,13 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
 
   const renderTileCard = (item) => {
     const isFav = favorites.has(item.id);
-
     return (
-      <div 
-        key={item.id}
-        onClick={() => handleFormClick(item)}
-        className="w-[100px] h-[100px] shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden"
-      >
+      <div key={item.id} onClick={() => handleFormClick(item)} className="w-[100px] h-[100px] shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden">
         <div className="flex items-start justify-between z-10">
           <div className="p-1.5 rounded-md transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
             <DynamicIcon name={item.icon || 'FileText'} size={18} strokeWidth={2.5} />
           </div>
-          <button 
-            onClick={(e) => toggleFavorite(e, item.id)}
-            className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}
-          >
+          <button onClick={(e) => toggleFavorite(e, item.id)} className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}>
             <Star size={16} fill={isFav ? "currentColor" : "none"} />
           </button>
         </div>
@@ -302,12 +280,10 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
   const renderFioriTiles = () => {
     const directForms = [];
     const groupedModules = [];
-
     activeTree.forEach(node => {
       if (node.menu_type === 'form') directForms.push(node);
       else groupedModules.push(node);
     });
-
     return (
       <div className="p-8 space-y-10 animate-in fade-in duration-300 font-sans">
         {directForms.length > 0 && (
@@ -321,7 +297,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
             {!collapsedModules['direct_forms'] && <div className="flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">{directForms.map(renderTileCard)}</div>}
           </section>
         )}
-
         {groupedModules.map(moduleNode => {
           const sections = [];
           const moduleDirectForms = [];
@@ -332,7 +307,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
           const allNested = getAllForms(moduleNode);
           if (allNested.length === 0) return null;
           const isCollapsed = collapsedModules[moduleNode.id];
-
           return (
             <section key={moduleNode.id} className="space-y-4 font-sans">
               <div className="flex items-center gap-3 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md select-none font-sans" onClick={() => toggleModuleCollapse(moduleNode.id)}>
@@ -399,15 +373,13 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]">
       <div className="flex flex-col items-center gap-4">
         <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="text-[13px] font-bold text-slate-500 font-sans">در حال برقراری ارتباط امن با پایگاه داده...</p>
+        <p className="text-[13px] font-bold text-slate-500 font-sans">در حال بارگذاری...</p>
       </div>
     </div>
   );
 
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
-      
-      {/* 1. Domain Bar (نوار حوزه‌ها) */}
       <nav className={`w-[60px] bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
         <button onClick={() => { setActiveDomainId('HOME_FAV'); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
           <Star size={18} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
@@ -425,7 +397,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </nav>
 
-      {/* 2. Tree Menu Sidebar */}
       {showSidebar && (
         <aside className={`bg-white border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden opacity-0'} ${isRtl ? 'border-l' : 'border-r'}`}>
           <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 shrink-0 font-sans">
@@ -436,7 +407,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </aside>
       )}
 
-      {/* 3. Main Content Area */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative font-sans">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-20 font-sans">
           <div className="flex items-center gap-5 w-full max-w-3xl">
@@ -486,8 +456,9 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </main>
 
-      {/* نمایش سایدبار نوتیفیکیشن */}
-      <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+      <Suspense fallback={null}>
+        <NotificationSidebar isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} language={currentLanguage} />
+      </Suspense>
     </div>
   );
 };
