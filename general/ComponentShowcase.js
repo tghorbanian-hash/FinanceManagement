@@ -1,17 +1,16 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, Check } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, Check, Settings } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
   const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager } = window.DesignSystem || {};
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
-  const [currentView, setCurrentView] = useState('list'); // 'list' | 'form'
+  const [currentView, setCurrentView] = useState('list'); 
   const [mockData, setMockData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   
-  // Data for Modals & Forms
   const [selectedRow, setSelectedRow] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
@@ -59,6 +58,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         if(val === 'تایید شده') return 'success';
         if(val === 'رد شده') return 'danger';
         if(val === 'در حال بررسی') return 'blue';
+        if(val === 'پیش‌نویس') return 'orange';
         return 'gray';
       }
     },
@@ -120,7 +120,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         breadcrumbs={[{ label: t('میز کار', 'Workspace') }, { label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سیستم طراحی', 'Design System') }]}
       />
 
-      {/* --- نمای لیست (گرید) --- */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
           <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
@@ -134,7 +133,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               onRowDoubleClick={handleOpenForm}
               selectable={true}
               bulkActions={[
-                { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger', onClick: handleBulkDelete },
+                { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: handleBulkDelete },
                 { label: t('تایید اسناد', 'Approve Selected'), icon: Check, variant: 'outline', onClick: () => alert('Approved') }
               ]}
             />
@@ -142,7 +141,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* --- نمای فرم (ایجاد/ویرایش) --- */}
       {currentView === 'form' && selectedRow && (
         <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
           <Card 
@@ -162,7 +160,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
             <div className="flex-1 overflow-y-auto custom-scrollbar p-5 bg-slate-50/50">
               
               <div className="max-w-6xl mx-auto space-y-6">
-                {/* بخش اول: فیلدهای متنی و پایه‌ای */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                   <h4 className="text-[12px] font-black text-indigo-700 mb-4 flex items-center gap-1.5"><FileText size={16}/>{t('اطلاعات اصلی', 'General Info')}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -174,7 +171,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   </div>
                 </div>
 
-                {/* بخش دوم: تنظیمات، تاگل‌ها و چک‌باکس‌ها */}
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                   <h4 className="text-[12px] font-black text-indigo-700 mb-4 flex items-center gap-1.5"><Settings size={16}/>{t('تنظیمات عملیاتی', 'Operational Settings')}</h4>
                   <div className="flex flex-wrap items-center gap-8">
@@ -190,7 +186,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* --- مودال نمایش جزئیات --- */}
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
         {selectedRow && (
           <div className="space-y-4 p-4">
@@ -202,25 +197,44 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 <div className="flex flex-col gap-1.5 justify-center mt-4">
                   <span className="text-[11px] font-bold text-slate-700">{t('وضعیت:', 'Status:')}</span>
                   <div>
-                    <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : 'gray'}>
+                    <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : selectedRow.status === 'پیش‌نویس' ? 'orange' : 'gray'}>
                       {selectedRow.status}
                     </Badge>
                   </div>
                 </div>
                 <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3 lg:col-span-4" />
                 
-                {/* نمایش فیلدهای جدید در مودال به صورت غیرفعال */}
                 <div className="md:col-span-3 lg:col-span-4 flex items-center gap-6 pt-3 border-t border-slate-100">
                   <ToggleField size="sm" label={t('فعال', 'Active')} checked={selectedRow.isActive} disabled isRtl={isRtl} />
                   <CheckboxField size="sm" label={t('کنترل شده', 'Controlled')} checked={selectedRow.isControlled} disabled isRtl={isRtl} />
                 </div>
               </div>
             </Card>
+
+            <div>
+              <h4 className="text-[12px] font-black text-slate-800 mb-2 flex items-center gap-1.5"><Table size={14} className="text-indigo-600" />{t('اقلام سند (ردیف‌ها)', 'Document Line Items')}</h4>
+              <div className="h-[250px] border border-slate-200 rounded-lg overflow-hidden">
+                <DataGrid 
+                  data={[
+                    { rowId: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
+                    { rowId: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
+                  ]}
+                  columns={[
+                    { field: 'rowId', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
+                    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px' },
+                    { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
+                    { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
+                    { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px' },
+                    { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px' }
+                  ]}
+                  language={language}
+                />
+              </div>
+            </div>
           </div>
         )}
       </Modal>
 
-      {/* --- مودال فایل‌های ضمیمه --- */}
       <Modal isOpen={attachModalOpen} onClose={() => setAttachModalOpen(false)} title={`${t('ضمائم سند شماره', 'Attachments for Doc #')} ${selectedRow?.id || ''}`} width="max-w-xl" language={language} showMaximize={false}>
         {selectedRow && (
           <div className="p-4">

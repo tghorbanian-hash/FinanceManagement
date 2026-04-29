@@ -20,6 +20,7 @@ const Button = ({
     secondary: "bg-slate-800 text-white hover:bg-slate-900 focus:ring-slate-700 shadow-sm",
     outline: "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-slate-200",
     danger: "bg-red-500 text-white hover:bg-red-600 focus:ring-red-500 shadow-sm shadow-red-200",
+    'danger-outline': "bg-white text-red-500 border border-red-200 hover:bg-red-50 focus:ring-red-100",
     ghost: "bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-200"
   };
   const sizes = { sm: "text-[11px] h-8 px-3 gap-1.5", md: "text-[12px] h-10 px-4 gap-2", lg: "text-[14px] h-12 px-6 gap-2.5" };
@@ -84,7 +85,7 @@ const SelectField = ({ label, error, options = [], disabled = false, required = 
 const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label, wrapperClassName = '' }) => {
   return (
     <div className={`flex items-center gap-2 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${wrapperClassName}`} onClick={() => !disabled && onChange(!checked)}>
-      <div className={`w-8 h-4 rounded-full relative transition-colors duration-200 ease-in-out ${checked ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+      <div className={`w-8 h-4 rounded-full relative transition-colors duration-200 ease-in-out ${checked ? 'bg-purple-600' : 'bg-slate-300'}`}>
         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all duration-200 ease-in-out ${checked ? (isRtl ? 'left-0.5' : 'right-0.5') : (isRtl ? 'right-0.5' : 'left-0.5')}`}></div>
       </div>
       {label && <span className="text-[11px] font-bold text-slate-700 select-none">{label}</span>}
@@ -124,9 +125,13 @@ const Card = ({ title, action, children, className = '', noPadding = false, head
 
 const Badge = ({ children, variant = 'gray', className = '' }) => {
   const variants = {
-    gray: "bg-slate-100 text-slate-600 border border-slate-200", success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
-    warning: "bg-amber-50 text-amber-600 border border-amber-200", danger: "bg-red-50 text-red-600 border border-red-200", indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200",
-    blue: "bg-blue-50 text-blue-600 border border-blue-200"
+    gray: "bg-slate-100 text-slate-600 border border-slate-200", 
+    success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+    warning: "bg-amber-50 text-amber-600 border border-amber-200", 
+    danger: "bg-red-50 text-red-600 border border-red-200", 
+    indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200",
+    blue: "bg-blue-50 text-blue-600 border border-blue-200",
+    orange: "bg-orange-50 text-orange-600 border border-orange-200"
   };
   return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
 };
@@ -469,12 +474,11 @@ const DataGrid = ({
     const baseZ = isHeader ? 30 : 10;
     if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: baseZ, background: 'inherit' };
     
-    // Select column is always leftmost (or rightmost in RTL)
     if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: baseZ + 1, background: 'inherit' };
 
     if (!pinnedCols.has(field)) return {};
     
-    let offset = selectable ? 40 : 0; // add width of select checkbox column
+    let offset = selectable ? 40 : 0; 
     for (let col of visibleColumns) {
       if (col.field === field) break;
       offset += parseInt(col.width || 100);
@@ -494,7 +498,6 @@ const DataGrid = ({
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
-        {/* Actions / New */}
         <div className="flex items-center shrink-0">
           {onAdd && (
             <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
@@ -503,7 +506,6 @@ const DataGrid = ({
           )}
         </div>
 
-        {/* Grouping Drop Zone OR Bulk Actions */}
         {selectedRows.length > 0 && bulkActions.length > 0 ? (
           <div className="flex-1 flex items-center gap-3 px-4 py-1 border border-indigo-200 bg-indigo-50 rounded-md transition-all animate-in fade-in">
             <span className="text-[11px] font-black text-indigo-800">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
