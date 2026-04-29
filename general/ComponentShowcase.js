@@ -12,7 +12,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [filteredData, setFilteredData] = useState([]);
   const [formData, setFormData] = useState({ username: '', email: '', role: '' });
   
-  // States for View Details Modal
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
 
@@ -163,7 +162,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* مودال نمایش جزئیات سند */}
       <Modal
         isOpen={viewModalOpen}
         onClose={() => setViewModalOpen(false)}
@@ -173,28 +171,25 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         showMaximize={true}
       >
         {selectedRow && (
-          <div className="space-y-6 p-2">
-            {/* بخش اطلاعات کلی (هدر سند) */}
-            <Card title={t('اطلاعات کلی سند', 'General Information')} icon={FileText} noPadding={true}>
-              <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 bg-white">
-                <TextField label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
-                <TextField label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} dir="ltr" />
-                <TextField label={t('واحد سازمانی', 'Department')} value={selectedRow.department} disabled isRtl={isRtl} />
-                <TextField label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} dir="ltr" />
-                <TextField label={t('ماهیت', 'Type')} value={selectedRow.type} disabled isRtl={isRtl} />
-                <TextField label={t('وضعیت', 'Status')} value={selectedRow.status} disabled isRtl={isRtl} />
-                <TextField label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
+          <div className="space-y-4 p-4">
+            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true}>
+              <div className="p-3 grid grid-cols-1 md:grid-cols-3 gap-3 bg-white">
+                <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
+                <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} dir="ltr" />
+                <TextField size="sm" label={t('واحد سازمانی', 'Department')} value={selectedRow.department} disabled isRtl={isRtl} />
+                <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} dir="ltr" />
+                <TextField size="sm" label={t('ماهیت', 'Type')} value={selectedRow.type} disabled isRtl={isRtl} />
+                <TextField size="sm" label={t('وضعیت', 'Status')} value={selectedRow.status} disabled isRtl={isRtl} />
+                <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
               </div>
             </Card>
 
-            {/* بخش اقلام (جدول داخلی) */}
             <div>
-              <h4 className="text-[13px] font-black text-slate-800 mb-3 flex items-center gap-2">
-                <Table size={16} className="text-indigo-600" />
+              <h4 className="text-[12px] font-black text-slate-800 mb-2 flex items-center gap-1.5">
+                <Table size={14} className="text-indigo-600" />
                 {t('اقلام سند (ردیف‌ها)', 'Document Line Items')}
               </h4>
               <div className="h-[250px] border border-slate-200 rounded-lg overflow-hidden">
-                {/* یک گرید مینیاتوری فقط برای نمایش داخل مودال */}
                 <DataGrid 
                   data={[
                     { rowId: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
