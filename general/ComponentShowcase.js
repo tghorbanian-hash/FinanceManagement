@@ -24,19 +24,19 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   // Tree Showcase State
   const [treeMode, setTreeMode] = useState('standard'); // 'standard' or 'grid'
   const [treeData, setTreeData] = useState([
-    { id: 1, parentId: null, code: '1', title: 'دارایی‌ها', nature: 'بدهکار' },
-    { id: 2, parentId: 1, code: '11', title: 'دارایی‌های جاری', nature: 'بدهکار' },
-    { id: 3, parentId: 2, code: '1101', title: 'موجودی نقد و بانک', nature: 'بدهکار' },
-    { id: 4, parentId: 2, code: '1102', title: 'حساب‌های دریافتنی', nature: 'بدهکار' },
-    { id: 5, parentId: 1, code: '12', title: 'دارایی‌های غیرجاری', nature: 'بدهکار' },
-    { id: 6, parentId: null, code: '2', title: 'بدهی‌ها', nature: 'بستانکار' },
-    { id: 7, parentId: 6, code: '21', title: 'بدهی‌های جاری', nature: 'بستانکار' },
-    { id: 8, parentId: 7, code: '2101', title: 'حساب‌های پرداختنی', nature: 'بستانکار' },
+    { id: 1, parentId: null, code: '1', title: 'دارایی‌ها', nature: 'بدهکار', isActive: true },
+    { id: 2, parentId: 1, code: '11', title: 'دارایی‌های جاری', nature: 'بدهکار', isActive: true },
+    { id: 3, parentId: 2, code: '1101', title: 'موجودی نقد و بانک', nature: 'بدهکار', isActive: true },
+    { id: 4, parentId: 2, code: '1102', title: 'حساب‌های دریافتنی', nature: 'بدهکار', isActive: false },
+    { id: 5, parentId: 1, code: '12', title: 'دارایی‌های غیرجاری', nature: 'بدهکار', isActive: true },
+    { id: 6, parentId: null, code: '2', title: 'بدهی‌ها', nature: 'بستانکار', isActive: true },
+    { id: 7, parentId: 6, code: '21', title: 'بدهی‌های جاری', nature: 'بستانکار', isActive: true },
+    { id: 8, parentId: 7, code: '2101', title: 'حساب‌های پرداختنی', nature: 'بستانکار', isActive: false },
   ]);
   
   // States for Standard Tree
   const [selectedTreeNodeId, setSelectedTreeNodeId] = useState(null);
-  const [treeFormData, setTreeFormData] = useState({ code: '', title: '', nature: '' });
+  const [treeFormData, setTreeFormData] = useState({ code: '', title: '', nature: '', isActive: true });
   const [isCreatingNode, setIsCreatingNode] = useState(false);
   const [newTargetParentId, setNewTargetParentId] = useState(null);
   
@@ -269,14 +269,14 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const handleAddTreeRoot = () => {
     setSelectedTreeNodeId(null);
-    setTreeFormData({ code: '', title: '', nature: '' });
+    setTreeFormData({ code: '', title: '', nature: 'بدهکار', isActive: true });
     setIsCreatingNode(true);
     setNewTargetParentId(null);
   };
 
   const handleAddTreeChild = (parentNode) => {
     setSelectedTreeNodeId(parentNode.id);
-    setTreeFormData({ code: '', title: '', nature: parentNode.nature });
+    setTreeFormData({ code: '', title: '', nature: parentNode.nature, isActive: true });
     setIsCreatingNode(true);
     setNewTargetParentId(parentNode.id);
   };
@@ -358,7 +358,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const handleAddTreeGridChild = (row) => {
      const newId = Date.now();
-     const newNode = { id: newId, parentId: row.id, code: '', title: '', nature: row.nature };
+     const newNode = { id: newId, parentId: row.id, code: '', title: '', nature: row.nature, isActive: true };
      setTreeData(prev => [...prev, newNode]);
      setTreeGridEditingId(newId);
      setTreeGridEditData(newNode);
@@ -366,7 +366,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const handleAddTreeGridRoot = () => {
      const newId = Date.now();
-     const newNode = { id: newId, parentId: null, code: '', title: '', nature: 'بدهکار' };
+     const newNode = { id: newId, parentId: null, code: '', title: '', nature: 'بدهکار', isActive: true };
      setTreeData(prev => [...prev, newNode]);
      setTreeGridEditingId(newId);
      setTreeGridEditData(newNode);
@@ -496,7 +496,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               <div className="w-full md:w-[40%] h-full min-h-0 shadow-sm overflow-auto">
                 <Tree 
                   data={treeData}
-                  idField="id" parentField="parentId" displayField="title" secondaryField="code"
+                  idField="id" parentField="parentId" displayField="title" secondaryField="code" activeField="isActive"
                   selectedId={selectedTreeNodeId}
                   onSelect={handleSelectTreeNode}
                   onAddChild={handleAddTreeChild}
@@ -524,15 +524,16 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   {(selectedTreeNodeId || isCreatingNode) ? (
                     <div className="flex flex-col h-full">
                       <div className="flex-1 space-y-4">
-                        <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
-                        <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
-                        <SelectField size="sm" label={t('ماهیت حساب', 'Account Nature')} value={treeFormData.nature || ''} onChange={(e) => setTreeFormData({...treeFormData, nature: e.target.value})} options={[{value:'بدهکار',label:'بدهکار'}, {value:'بستانکار',label:'بستانکار'}]} isRtl={isRtl} />
                         {isCreatingNode && newTargetParentId && (
-                          <div className="mt-4 p-2 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 flex items-center gap-1.5">
+                          <div className="p-2 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 flex items-center gap-1.5 mb-4">
                             <Layers size={14}/>
                             <span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
                           </div>
                         )}
+                        <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
+                        <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
+                        <SelectField size="sm" label={t('ماهیت حساب', 'Account Nature')} value={treeFormData.nature || ''} onChange={(e) => setTreeFormData({...treeFormData, nature: e.target.value})} options={[{value:'بدهکار',label:'بدهکار'}, {value:'بستانکار',label:'بستانکار'}]} isRtl={isRtl} />
+                        <ToggleField size="sm" label={t('وضعیت فعال بودن (نمایش در سیستم)', 'Active Status')} checked={treeFormData.isActive !== false} onChange={(v) => setTreeFormData({...treeFormData, isActive: v})} isRtl={isRtl} wrapperClassName="pt-2" />
                       </div>
                       <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
                         <Button size="sm" variant="ghost" onClick={handleCancelTreeForm}>{t('لغو', 'Cancel')}</Button>
@@ -561,7 +562,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 columns={[
                   { field: 'title', header_fa: 'عنوان حساب', header_en: 'Title', width: '300px', editable: true, type: 'text' },
                   { field: 'code', header_fa: 'کد حساب', header_en: 'Code', width: '150px', editable: true, type: 'text' },
-                  { field: 'nature', header_fa: 'ماهیت', header_en: 'Nature', width: '150px', editable: true, type: 'select', options: [{value:'بدهکار', label:'بدهکار'}, {value:'بستانکار', label:'بستانکار'}], render: (val) => <Badge variant={val === 'بدهکار' ? 'indigo' : 'orange'}>{val}</Badge> }
+                  { field: 'nature', header_fa: 'ماهیت', header_en: 'Nature', width: '150px', editable: true, type: 'select', options: [{value:'بدهکار', label:'بدهکار'}, {value:'بستانکار', label:'بستانکار'}], render: (val) => <Badge variant={val === 'بدهکار' ? 'indigo' : 'orange'}>{val}</Badge> },
+                  { field: 'isActive', header_fa: 'وضعیت', header_en: 'Status', width: '90px', editable: true, type: 'toggle', render: (val) => <ToggleField checked={!!val} disabled isRtl={isRtl} wrapperClassName="justify-start" /> }
                 ]}
                 actions={[
                   { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleStartTreeGridEdit(row), className: 'hover:text-emerald-600' }

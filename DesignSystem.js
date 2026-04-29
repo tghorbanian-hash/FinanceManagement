@@ -724,7 +724,7 @@ const HighlightText = ({ text, term }) => {
   );
 };
 
-const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
+const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
@@ -797,6 +797,7 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
     const isExpanded = expandedIds.has(node[idField]);
     const isSelected = selectedId === node[idField];
     const hasChildren = node.children && node.children.length > 0;
+    const isNodeActive = node[activeField] !== false;
 
     return (
       <div key={node[idField]} className="select-none relative">
@@ -825,12 +826,12 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
           )}
 
           {/* Node Icon */}
-          <div className={`${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
+          <div className={`${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0 ${!isNodeActive ? 'opacity-60' : ''}`}>
             {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
           </div>
 
           {/* Node Content */}
-          <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+          <div className={`flex items-center gap-2 truncate flex-1 min-w-0 ${!isNodeActive ? 'opacity-60' : ''}`}>
              {secondaryField && node[secondaryField] && (
                 <span className="font-mono text-[11px] font-bold bg-white/60 border border-slate-200/50 px-1 rounded shrink-0">
                   <HighlightText text={node[secondaryField]} term={searchTerm} />
@@ -839,6 +840,11 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
              <span className={`text-[12px] truncate ${isSelected ? 'font-bold' : ''}`}>
                 <HighlightText text={node[displayField]} term={searchTerm} />
              </span>
+             {!isNodeActive && (
+               <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200/50 text-slate-500 border border-slate-300 shrink-0 font-bold mx-1">
+                 {t('غیرفعال', 'Inactive')}
+               </span>
+             )}
           </div>
 
           {/* Actions */}
@@ -860,8 +866,8 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
-      <div className="flex flex-wrap items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-1 shrink-0">
           {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
           <div className="w-px h-5 bg-slate-200 mx-1"></div>
           <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Maximize2 size={14}/></button>
@@ -1005,8 +1011,8 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
-      <div className="flex flex-wrap items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-1 shrink-0">
           {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
           <div className="w-px h-5 bg-slate-200 mx-1"></div>
           <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Maximize2 size={14}/></button>
@@ -1121,6 +1127,7 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
                              </div>
                           )}
                           
+                          {/* Node Icon */}
                           <div className={`${isSelectedRow ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
                             {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                           </div>
@@ -1148,6 +1155,8 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
                               <option value="">...</option>
                               {col.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                             </select>
+                          ) : col.type === 'toggle' ? (
+                            <ToggleField checked={!!editData[col.field]} onChange={(val) => onEditFieldChange(col.field, val)} isRtl={isRtl} wrapperClassName="justify-start" />
                           ) : (
                             <input 
                               value={editData[col.field] || ''} 
@@ -1173,7 +1182,7 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-center gap-0.5 opacity-100">
                           {onAddChild && (
                             <button onClick={(e) => { e.stopPropagation(); onAddChild(row); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all">
                               <Plus size={14} strokeWidth={2} />
