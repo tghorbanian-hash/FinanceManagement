@@ -38,16 +38,18 @@ const Button = ({
 // ==========================================
 // 2. TextField Component
 // ==========================================
-const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', isRtl = true, ...props }) => {
+const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+  
   return (
-    <div className={`flex flex-col gap-1.5 w-full ${wrapperClassName}`}>
+    <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label htmlFor={inputId} className="text-[12px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative flex items-center">
-        {Icon && <div className={`absolute ${isRtl ? 'right-3' : 'left-3'} text-slate-400 pointer-events-none`}><Icon size={16} /></div>}
+        {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
         <input
           id={inputId} type={type} disabled={disabled}
-          className={`w-full h-10 bg-white border rounded-lg text-[13px] text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-10 pl-3' : 'pl-10 pr-3') : 'px-3'} ${className}`}
+          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
           dir={isRtl ? 'rtl' : 'ltr'} {...props}
         />
       </div>
@@ -59,21 +61,23 @@ const TextField = ({ label, error, hint, icon: Icon, disabled = false, required 
 // ==========================================
 // 3. SelectField Component
 // ==========================================
-const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, isRtl = true, ...props }) => {
+const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, ...props }) => {
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+  const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+
   return (
-    <div className={`flex flex-col gap-1.5 w-full ${wrapperClassName}`}>
+    <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label htmlFor={selectId} className="text-[12px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative">
         <select
           id={selectId} disabled={disabled}
-          className={`w-full h-10 bg-white border rounded-lg text-[13px] text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-10 pr-3' : 'pr-10 pl-3'} ${className}`}
+          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : ''} ${error ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-8 pr-2.5' : 'pr-8 pl-2.5'} ${className}`}
           dir={isRtl ? 'rtl' : 'ltr'} {...props}
         >
           <option value="" disabled hidden>انتخاب کنید...</option>
           {options.map((opt, idx) => <option key={idx} value={opt.value}>{opt.label}</option>)}
         </select>
-        <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-3' : 'right-3'} pointer-events-none text-slate-400`}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-2.5' : 'right-2.5'} pointer-events-none text-slate-400`}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
       </div>
       {error && <div className="flex items-center gap-1 text-red-500 text-[11px] font-bold mt-0.5"><AlertCircle size={12} /><span>{error}</span></div>}
     </div>
@@ -133,7 +137,7 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
 };
 
 // ==========================================
-// 6. AdvancedFilter Component (NEW)
+// 6. AdvancedFilter Component
 // ==========================================
 const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
@@ -142,45 +146,30 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
   const [values, setValues] = useState({});
 
   const handleChange = (name, val) => setValues(prev => ({ ...prev, [name]: val }));
-  
-  const handleClear = () => {
-    setValues({});
-    if (onClear) onClear();
-  };
+  const handleClear = () => { setValues({}); if (onClear) onClear(); };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-4 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
-      {/* هدر فیلتر */}
-      <div 
-        className="h-10 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-lg transition-colors select-none"
-        onClick={() => setIsOpen(!isOpen)}
-      >
+    <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-3 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-lg transition-colors select-none" onClick={() => setIsOpen(!isOpen)}>
         <div className="flex items-center gap-2 text-indigo-600">
           <Filter size={14} strokeWidth={2.5} />
           <span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span>
         </div>
-        <div className="text-slate-400">
-          {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-        </div>
+        <div className="text-slate-400">{isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
       </div>
       
-      {/* بدنه فرم فیلتر */}
       {isOpen && (
-        <div className="p-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="p-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+          {/* استفاده از سایز فشرده (sm) برای فیلدها */}
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {fields.map((f, idx) => {
               if (f.type === 'select') {
-                return (
-                  <SelectField 
-                    key={idx} label={f.label} isRtl={isRtl} options={f.options}
-                    value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)}
-                  />
-                );
+                return <SelectField key={idx} size="sm" label={f.label} isRtl={isRtl} options={f.options} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} />;
               }
               return (
                 <TextField 
-                  key={idx} label={f.label} isRtl={isRtl}
-                  type={f.type === 'date' ? 'text' : f.type}
+                  key={idx} size="sm" label={f.label} isRtl={isRtl}
+                  type={f.type} 
                   placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''}
                   value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)}
                   dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
@@ -188,9 +177,10 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
               );
             })}
           </div>
-          <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-slate-50">
+          {/* حذف خط بالایی دکمه‌ها و فشرده‌سازی فاصله */}
+          <div className="flex items-center justify-end gap-2 mt-3">
             <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
-            <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو و اعمال فیلتر', 'Search')}</Button>
+            <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
           </div>
         </div>
       )}
@@ -331,15 +321,16 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `template.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
-  const getStickyStyles = (field, isAction = false) => {
-    if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: 20 };
+  const getStickyStyles = (field, isAction = false, isHeader = false) => {
+    const baseZ = isHeader ? 30 : 10;
+    if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: baseZ, background: 'inherit' };
     if (!pinnedCols.has(field)) return {};
     let offset = 0;
     for (let col of visibleColumns) {
       if (col.field === field) break;
       offset += parseInt(col.width || 100);
     }
-    return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: 10 };
+    return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: baseZ, background: 'inherit' };
   };
 
   return (
@@ -348,24 +339,12 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
       {/* Unified Toolbar */}
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
         
-        {/* Settings Menu */}
-        <div className="relative flex items-center" ref={colMenuRef}>
-          <button onClick={() => setShowColMenu(!showColMenu)} className="flex items-center justify-center gap-1.5 h-full px-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-md hover:bg-slate-100 hover:text-indigo-600 text-[11px] font-bold transition-all">
-            <Settings size={14} />
-            <span className="hidden sm:inline">{t('ستون‌ها', 'Columns')}</span>
-          </button>
-          {showColMenu && (
-            <div className="absolute top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
-              <div className="text-[12px] font-black text-slate-800 mb-2 pb-2 border-b border-slate-100 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
-              <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
-                {columns.map(c => (
-                  <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 rounded-md text-[11px] font-bold text-slate-600 transition-colors">
-                    <input type="checkbox" checked={!hiddenCols.has(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
-                    {t(c.header_fa, c.header_en)}
-                  </label>
-                ))}
-              </div>
-            </div>
+        {/* Action Buttons (New) - جابجا شده به سمت راست/ابتدای هدر */}
+        <div className="flex items-center shrink-0">
+          {onAdd && (
+            <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
+              {t('جدید', 'New')}
+            </Button>
           )}
         </div>
 
@@ -397,26 +376,39 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {onAdd && (
-            <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3 text-[11px]">
-              {t('جدید', 'New')}
-            </Button>
-          )}
-          <div className="w-px h-6 bg-slate-200 mx-0.5 hidden sm:block"></div>
-          <button onClick={() => getTemplate()} title={t('دریافت نمونه فایل', 'Template')} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all h-full flex items-center justify-center"><Download size={16} /></button>
-          <button onClick={() => document.getElementById('grid-import-input').click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
+        {/* Tools Menu (Columns, Import, Export) - جابجا شده به انتهای هدر */}
+        <div className="flex items-center gap-1 shrink-0">
+          <div className="relative flex items-center h-full" ref={colMenuRef}>
+            <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center">
+              <Settings size={16} />
+            </button>
+            {showColMenu && (
+              <div className="absolute top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
+                <div className="text-[12px] font-black text-slate-800 mb-2 pb-2 border-b border-slate-100 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
+                <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
+                  {columns.map(c => (
+                    <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 rounded-md text-[11px] font-bold text-slate-600 transition-colors">
+                      <input type="checkbox" checked={!hiddenCols.has(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
+                      {t(c.header_fa, c.header_en)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+          <button onClick={() => getTemplate()} title={t('دریافت نمونه فایل', 'Template')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Download size={16} /></button>
+          <button onClick={() => document.getElementById('grid-import-input').click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
           <input id="grid-import-input" type="file" className="hidden" accept=".csv" />
-          <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-all h-full flex items-center justify-center"><Printer size={16} /></button>
+          <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Printer size={16} /></button>
         </div>
       </div>
 
       {/* Grid Container */}
       <div className="overflow-auto custom-scrollbar flex-1 relative bg-white">
-        <table className="w-full text-start border-collapse table-fixed min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
-          {/* IMPORTANT: bg-slate-200 on thead fixes the 1px transparent gap bug in sticky headers */}
-          <thead className="sticky top-0 z-40 bg-slate-200 shadow-sm">
+        {/* رفع باگ نشت بک‌گراند: استفاده از border-separate بجای border-collapse */}
+        <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
+          <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
             <tr>
               {visibleColumns.map((col, index) => {
                 const actualIndex = columnOrder.indexOf(col.field);
@@ -450,21 +442,21 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
               )}
             </tr>
 
-            {/* Filter Row */}
             <tr>
               {visibleColumns.map((col) => {
-                const isDate = col.type === 'date';
                 const isPinned = pinnedCols.has(col.field);
                 const filterZIndex = isPinned ? 35 : 30;
                 return (
                   <td key={`filter-${col.field}`} style={{...getStickyStyles(col.field, false), zIndex: filterZIndex}} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                     <div className="relative">
-                      <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl && !isDate ? 'right-1.5' : 'left-1.5'} text-slate-400`} />
+                      {/* تقویم بازگردانده شد و دکمه سرچ در تقویم پنهان است */}
+                      {col.type !== 'date' && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
                       <input 
-                        type={col.type === 'number' ? 'number' : 'text'} dir={isDate || !isRtl ? 'ltr' : 'rtl'}
+                        type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+                        dir={col.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
                         value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
-                        placeholder={isDate ? 'YYYY/MM/DD' : t('جستجو...', 'Search...')}
-                        className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isDate || !isRtl ? 'pl-5 pr-1' : 'pr-5 pl-1'}`}
+                        placeholder={col.type === 'date' ? '' : t('جستجو...', 'Search...')}
+                        className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${col.type === 'date' ? 'px-1' : (isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1')}`}
                       />
                     </div>
                   </td>
@@ -493,7 +485,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
               }
 
               return (
-                <tr key={row.id || rowIndex} className="bg-white hover:bg-slate-50/80 border-b border-slate-100 transition-colors group">
+                <tr key={row.id || rowIndex} className="bg-white hover:bg-slate-50 border-b border-slate-100 transition-colors group">
                   {visibleColumns.map((col) => (
                     <td key={`${row.id || rowIndex}-${col.field}`} style={getStickyStyles(col.field)} className={`p-1.5 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
                       {row[col.field]}
@@ -501,7 +493,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
                   ))}
                   
                   {actions.length > 0 && (
-                    <td style={getStickyStyles('ACTIONS', true)} className="p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-inherit relative z-20">
+                    <td style={getStickyStyles('ACTIONS', true)} className="p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-inherit relative z-20 border-slate-100">
                       <div className="flex items-center justify-center gap-0.5">
                         {actions.map((act, i) => (
                           <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 bg-white border border-transparent hover:border-slate-200 hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600'}`}>
@@ -547,7 +539,4 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   );
 };
 
-// ==========================================
-// Export to Window Design System
-// ==========================================
 window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, AdvancedFilter, DataGrid };

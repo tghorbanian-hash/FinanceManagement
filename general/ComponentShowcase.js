@@ -9,12 +9,10 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const [activeTab, setActiveTab] = useState('grid'); 
   const [mockData, setMockData] = useState([]);
-  // دیتای فیلتر شده اولیه (برابر با کل دیتا)
   const [filteredData, setFilteredData] = useState([]);
-  
   const [formData, setFormData] = useState({ username: '', email: '', role: '' });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // تولید ۱۰۰ دیتای نمونه
   useEffect(() => {
     const data = [];
     const departments = ['مالی', 'فروش', 'تدارکات', 'منابع انسانی', 'مدیریت'];
@@ -36,7 +34,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const gridColumns = [
     { field: 'id', header_fa: 'شماره سند', header_en: 'Doc ID', type: 'number', width: '90px' },
-    { field: 'docDate', header_fa: 'تاریخ ثبت', header_en: 'Date', type: 'date', width: '100px' },
+    { field: 'docDate', header_fa: 'تاریخ ثبت', header_en: 'Date', type: 'date', width: '110px' },
     { field: 'department', header_fa: 'واحد سازمانی', header_en: 'Department', type: 'text', width: '130px' },
     { field: 'description', header_fa: 'شرح سند', header_en: 'Description', type: 'text', width: '300px' },
     { field: 'type', header_fa: 'ماهیت', header_en: 'Type', type: 'text', width: '100px' },
@@ -45,14 +43,13 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   ];
 
   const gridActions = [
-    { icon: Eye, tooltip: t('مشاهده جزئیات', 'View Details'), onClick: (row) => alert(`${t('مشاهده', 'View')} ID: ${row.id}`), className: 'text-slate-400 hover:text-blue-600 hover:border-blue-200' },
-    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => alert(`${t('ویرایش', 'Edit')} ID: ${row.id}`), className: 'text-slate-400 hover:text-emerald-600 hover:border-emerald-200' },
-    { icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (row) => alert(`${t('ضمائم', 'Attachments')} ID: ${row.id}`), className: 'text-slate-400 hover:text-indigo-600 hover:border-indigo-200' },
-    { icon: Printer, tooltip: t('چاپ', 'Print'), onClick: (row) => alert(`${t('چاپ', 'Print')} ID: ${row.id}`), className: 'text-slate-400 hover:text-slate-800 hover:border-slate-300' },
-    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => alert(`${t('حذف', 'Delete')} ID: ${row.id}`), className: 'text-slate-400 hover:text-red-600 hover:border-red-200' },
+    { icon: Eye, tooltip: t('مشاهده جزئیات', 'View Details'), onClick: (row) => alert(`${t('مشاهده', 'View')} ID: ${row.id}`), className: 'text-slate-400 hover:text-blue-600' },
+    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => alert(`${t('ویرایش', 'Edit')} ID: ${row.id}`), className: 'text-slate-400 hover:text-emerald-600' },
+    { icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (row) => alert(`${t('ضمائم', 'Attachments')} ID: ${row.id}`), className: 'text-slate-400 hover:text-indigo-600' },
+    { icon: Printer, tooltip: t('چاپ', 'Print'), onClick: (row) => alert(`${t('چاپ', 'Print')} ID: ${row.id}`), className: 'text-slate-400 hover:text-slate-800' },
+    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => alert(`${t('حذف', 'Delete')} ID: ${row.id}`), className: 'text-slate-400 hover:text-red-600' },
   ];
 
-  // تنظیمات فیلتر پیشرفته
   const advancedFilterFields = [
     { name: 'id', label: t('شماره سند', 'Doc ID'), type: 'number' },
     { name: 'docDate', label: t('تاریخ سند', 'Date'), type: 'date' },
