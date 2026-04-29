@@ -811,7 +811,7 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
         >
           {hasChildren ? (
             <div 
-              className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors z-10 bg-white rounded border border-slate-200 shadow-sm shrink-0"
+              className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors z-10 bg-white rounded border border-slate-200 shadow-sm shrink-0 cursor-pointer"
               onClick={(e) => { e.stopPropagation(); toggleExpand(node[idField], e); }}
             >
                <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
@@ -901,12 +901,23 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
   );
 };
 
-const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
+const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
   const isRtl = language === 'fa';
   const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState('');
+  const [hiddenCols, setHiddenCols] = useState(new Set());
+  const [showColMenu, setShowColMenu] = useState(false);
+  const [selectedRowId, setSelectedRowId] = useState(null);
+  
+  const colMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => { if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false); };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const buildTree = (nodes) => {
     const map = {};
@@ -962,6 +973,10 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
 
   const flatData = useMemo(() => flattenTree(treeData), [treeData, expandedIds, idField]);
 
+  const visibleColumns = useMemo(() => {
+    return columns.filter(c => !hiddenCols.has(c.field));
+  }, [columns, hiddenCols]);
+
   const toggleExpand = (id, e) => {
     if (e) e.stopPropagation();
     const newExpanded = new Set(expandedIds);
@@ -982,7 +997,7 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
     else onSelectChange && onSelectChange([]);
   };
 
-  const handleSelectRow = (id) => {
+  const handleSelectCheckbox = (id) => {
     if (!onSelectChange) return;
     if (selectedIds.includes(id)) onSelectChange(selectedIds.filter(rowId => rowId !== id));
     else onSelectChange([...selectedIds, id]);
@@ -1007,7 +1022,33 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
               className={`w-48 h-8 text-[11px] font-bold bg-white border border-slate-200 rounded-md outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
             />
           </div>
+          
           <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+          
+          <div className="relative flex items-center h-full" ref={colMenuRef}>
+            <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Settings size={14} /></button>
+            {showColMenu && (
+              <div className="absolute top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
+                <div className="text-[12px] font-black text-slate-800 mb-2 pb-2 border-b border-slate-100 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
+                <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
+                  {columns.map(c => (
+                    <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 rounded-md text-[11px] font-bold text-slate-600 transition-colors">
+                      <input type="checkbox" checked={!hiddenCols.has(c.field)} onChange={() => {
+                          const newHidden = new Set(hiddenCols);
+                          if (newHidden.has(c.field)) newHidden.delete(c.field);
+                          else newHidden.add(c.field);
+                          setHiddenCols(newHidden);
+                      }} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
+                      {t(c.header_fa, c.header_en)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+
           {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileDown size={14} /></button>}
           {onImport && (
             <>
@@ -1028,7 +1069,7 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
                   <input type="checkbox" onChange={handleSelectAll} checked={flatData.length > 0 && selectedIds.length === flatData.length} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                 </th>
               )}
-              {columns.map((col, index) => (
+              {visibleColumns.map((col, index) => (
                 <th key={col.field} style={{ width: col.width || '150px' }} className={`p-2 border-b border-slate-200 text-[11px] font-black text-slate-700 bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}>
                   {t(col.header_fa, col.header_en)}
                 </th>
@@ -1042,19 +1083,27 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
           </thead>
           <tbody className="z-10 relative">
             {flatData.length > 0 ? flatData.map((row, rowIndex) => {
-              const isSelected = selectedIds.includes(row[idField]);
+              const isSelectedCheckbox = selectedIds.includes(row[idField]);
+              const isSelectedRow = selectedRowId === row[idField];
+              const isEditing = editingId === row[idField];
               const hasChildren = row.children && row.children.length > 0;
               const isExpanded = expandedIds.has(row[idField]);
 
               return (
-                <tr key={row[idField]} className={`bg-white hover:bg-slate-50 border-b border-slate-100 transition-colors group ${isSelected ? 'bg-indigo-50/30' : ''}`}>
+                <tr 
+                  key={row[idField]} 
+                  onClick={() => setSelectedRowId(row[idField])}
+                  className={`bg-white transition-colors group border-b border-slate-100 
+                    ${isSelectedRow || isEditing ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
+                >
                   {selectable && (
                     <td className={`p-1.5 text-center bg-inherit sticky ${isRtl ? 'right-0' : 'left-0'} z-20 ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
-                      <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(row[idField])} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                      <input type="checkbox" checked={isSelectedCheckbox} onChange={() => handleSelectCheckbox(row[idField])} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                     </td>
                   )}
-                  {columns.map((col, colIndex) => (
+                  {visibleColumns.map((col, colIndex) => (
                     <td key={col.field} className={`py-1 px-2 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
+                      
                       {colIndex === 0 ? (
                         <div className="flex items-center gap-2 relative" style={{ paddingInlineStart: `${row._depth * 20}px` }}>
                           {hasChildren ? (
@@ -1072,39 +1121,76 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
                              </div>
                           )}
                           
-                          {/* Node Icon */}
-                          <div className={`${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
+                          <div className={`${isSelectedRow ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
                             {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                           </div>
                           
-                          <span className={`text-[12px] truncate ${isSelected ? 'font-bold text-indigo-900' : 'text-slate-800'}`}>
-                            <HighlightText text={row[col.field]} term={searchTerm} />
-                          </span>
+                          {isEditing && col.editable ? (
+                            <input 
+                              value={editData[col.field] || ''} 
+                              onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
+                              className="h-7 text-xs border border-indigo-300 focus:ring-1 focus:ring-indigo-300 rounded px-1 w-full"
+                            />
+                          ) : (
+                            <span className={`text-[12px] truncate ${isSelectedRow ? 'font-bold text-indigo-900' : 'text-slate-800'}`}>
+                              <HighlightText text={row[col.field]} term={searchTerm} />
+                            </span>
+                          )}
                         </div>
                       ) : (
-                        col.render ? col.render(row[col.field], row) : <HighlightText text={row[col.field]} term={searchTerm} />
+                        isEditing && col.editable ? (
+                          col.type === 'select' ? (
+                            <select 
+                              value={editData[col.field] || ''} 
+                              onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
+                              className="h-7 text-xs border border-indigo-300 focus:ring-1 focus:ring-indigo-300 rounded px-1 w-full outline-none"
+                            >
+                              <option value="">...</option>
+                              {col.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                            </select>
+                          ) : (
+                            <input 
+                              value={editData[col.field] || ''} 
+                              onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
+                              className="h-7 text-xs border border-indigo-300 focus:ring-1 focus:ring-indigo-300 rounded px-1 w-full outline-none"
+                            />
+                          )
+                        ) : (
+                          col.render ? col.render(row[col.field], row) : <HighlightText text={row[col.field]} term={searchTerm} />
+                        )
                       )}
                     </td>
                   ))}
                   {actions.length > 0 && (
                     <td className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-inherit sticky ${isRtl ? 'left-0' : 'right-0'} z-20 border-slate-100`}>
-                      <div className="flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {onAddChild && (
-                          <button onClick={() => onAddChild(row)} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all">
-                            <Plus size={14} strokeWidth={2} />
+                      {isEditing ? (
+                        <div className="flex items-center justify-center gap-1 opacity-100">
+                          <button onClick={(e) => { e.stopPropagation(); onSaveEdit(row); }} title={t('ذخیره', 'Save')} className="p-1.5 rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                            <Check size={14} strokeWidth={2} />
                           </button>
-                        )}
-                        {actions.map((act, i) => (
-                          <button key={i} onClick={() => act.onClick(row, rowIndex)} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 border border-transparent hover:border-slate-200 hover:bg-white hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600'}`}>
-                            <act.icon size={14} strokeWidth={2} />
+                          <button onClick={(e) => { e.stopPropagation(); onCancelEdit(); }} title={t('انصراف', 'Cancel')} className="p-1.5 rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-all">
+                            <X size={14} strokeWidth={2} />
                           </button>
-                        ))}
-                        {onDelete && (
-                          <button onClick={() => onDelete(row)} title={t('حذف', 'Delete')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-red-600 hover:shadow-sm transition-all">
-                            <Trash2 size={14} strokeWidth={2} />
-                          </button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {onAddChild && (
+                            <button onClick={(e) => { e.stopPropagation(); onAddChild(row); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all">
+                              <Plus size={14} strokeWidth={2} />
+                            </button>
+                          )}
+                          {actions.map((act, i) => (
+                            <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 border border-transparent hover:border-slate-200 hover:bg-white hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600'}`}>
+                              <act.icon size={14} strokeWidth={2} />
+                            </button>
+                          ))}
+                          {onDelete && (
+                            <button onClick={(e) => { e.stopPropagation(); onDelete(row); }} title={t('حذف', 'Delete')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-red-600 hover:shadow-sm transition-all">
+                              <Trash2 size={14} strokeWidth={2} />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   )}
                 </tr>

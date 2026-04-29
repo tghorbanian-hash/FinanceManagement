@@ -33,11 +33,17 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     { id: 7, parentId: 6, code: '21', title: 'بدهی‌های جاری', nature: 'بستانکار' },
     { id: 8, parentId: 7, code: '2101', title: 'حساب‌های پرداختنی', nature: 'بستانکار' },
   ]);
+  
+  // States for Standard Tree
   const [selectedTreeNodeId, setSelectedTreeNodeId] = useState(null);
   const [treeFormData, setTreeFormData] = useState({ code: '', title: '', nature: '' });
   const [isCreatingNode, setIsCreatingNode] = useState(false);
   const [newTargetParentId, setNewTargetParentId] = useState(null);
+  
+  // States for TreeGrid Editing
   const [selectedTreeGridIds, setSelectedTreeGridIds] = useState([]);
+  const [treeGridEditingId, setTreeGridEditingId] = useState(null);
+  const [treeGridEditData, setTreeGridEditData] = useState({});
 
   const showcaseTabs = [
     { id: 'grid_form', label: t('امکانات گرید و فرم', 'Grid & Form Features'), icon: Table },
@@ -253,7 +259,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setLineItems(reordered);
   };
 
-  // --- Tree Event Handlers ---
+  // --- STANDARD Tree Event Handlers ---
   const handleSelectTreeNode = (node) => {
     setSelectedTreeNodeId(node.id);
     setTreeFormData({ ...node });
@@ -269,8 +275,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   };
 
   const handleAddTreeChild = (parentNode) => {
-    setSelectedTreeNodeId(parentNode.id); // visually selecting parent
-    setTreeFormData({ code: '', title: '', nature: parentNode.nature }); // Default to parent's nature
+    setSelectedTreeNodeId(parentNode.id);
+    setTreeFormData({ code: '', title: '', nature: parentNode.nature });
     setIsCreatingNode(true);
     setNewTargetParentId(parentNode.id);
   };
@@ -332,6 +338,38 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       const originalNode = treeData.find(n => n.id === selectedTreeNodeId);
       if (originalNode) setTreeFormData({ ...originalNode });
     }
+  };
+
+  // --- TREE GRID Inline Edit Handlers ---
+  const handleStartTreeGridEdit = (row) => {
+    setTreeGridEditingId(row.id);
+    setTreeGridEditData({ ...row });
+  };
+
+  const handleSaveTreeGridEdit = (row) => {
+    setTreeData(prev => prev.map(n => n.id === treeGridEditingId ? { ...n, ...treeGridEditData } : n));
+    setTreeGridEditingId(null);
+  };
+
+  const handleCancelTreeGridEdit = () => {
+    setTreeGridEditingId(null);
+    setTreeGridEditData({});
+  };
+
+  const handleAddTreeGridChild = (row) => {
+     const newId = Date.now();
+     const newNode = { id: newId, parentId: row.id, code: '', title: '', nature: row.nature };
+     setTreeData(prev => [...prev, newNode]);
+     setTreeGridEditingId(newId);
+     setTreeGridEditData(newNode);
+  };
+
+  const handleAddTreeGridRoot = () => {
+     const newId = Date.now();
+     const newNode = { id: newId, parentId: null, code: '', title: '', nature: 'بدهکار' };
+     setTreeData(prev => [...prev, newNode]);
+     setTreeGridEditingId(newId);
+     setTreeGridEditData(newNode);
   };
 
   if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
@@ -454,8 +492,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
           </div>
 
           {treeMode === 'standard' ? (
-            <div className="flex-1 flex gap-4 min-h-0">
-              <div className="w-1/2 md:w-2/3 h-full min-h-0 shadow-sm">
+            <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
+              <div className="w-full md:w-[40%] h-full min-h-0 shadow-sm overflow-auto">
                 <Tree 
                   data={treeData}
                   idField="id" parentField="parentId" displayField="title" secondaryField="code"
@@ -470,7 +508,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   language={language}
                 />
               </div>
-              <div className="w-1/2 md:w-1/3 h-full min-h-0 flex flex-col">
+              <div className="w-full md:w-[60%] h-full min-h-0 flex flex-col">
                 <Card 
                   title={isCreatingNode ? (newTargetParentId ? t('ایجاد زیرمجموعه جدید', 'Create New Child') : t('ایجاد ریشه جدید', 'Create New Root')) : (selectedTreeNodeId ? t('ویرایش اطلاعات', 'Edit Information') : t('اطلاعات جزئی', 'Details'))}
                   className="h-full border border-slate-200 shadow-sm"
@@ -515,19 +553,24 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               <TreeGrid 
                 data={treeData}
                 idField="id" parentField="parentId"
+                editingId={treeGridEditingId}
+                editData={treeGridEditData}
+                onEditFieldChange={(field, val) => setTreeGridEditData(prev => ({...prev, [field]: val}))}
+                onSaveEdit={handleSaveTreeGridEdit}
+                onCancelEdit={handleCancelTreeGridEdit}
                 columns={[
-                  { field: 'title', header_fa: 'عنوان حساب', header_en: 'Title', width: '300px' },
-                  { field: 'code', header_fa: 'کد حساب', header_en: 'Code', width: '150px' },
-                  { field: 'nature', header_fa: 'ماهیت', header_en: 'Nature', width: '150px', render: (val) => <Badge variant={val === 'بدهکار' ? 'indigo' : 'orange'}>{val}</Badge> }
+                  { field: 'title', header_fa: 'عنوان حساب', header_en: 'Title', width: '300px', editable: true, type: 'text' },
+                  { field: 'code', header_fa: 'کد حساب', header_en: 'Code', width: '150px', editable: true, type: 'text' },
+                  { field: 'nature', header_fa: 'ماهیت', header_en: 'Nature', width: '150px', editable: true, type: 'select', options: [{value:'بدهکار', label:'بدهکار'}, {value:'بستانکار', label:'بستانکار'}], render: (val) => <Badge variant={val === 'بدهکار' ? 'indigo' : 'orange'}>{val}</Badge> }
                 ]}
                 actions={[
-                  { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setTreeMode('standard'); handleSelectTreeNode(row); }, className: 'hover:text-emerald-600' }
+                  { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleStartTreeGridEdit(row), className: 'hover:text-emerald-600' }
                 ]}
                 selectable={true}
                 selectedIds={selectedTreeGridIds}
                 onSelectChange={setSelectedTreeGridIds}
-                onAddChild={(row) => { setTreeMode('standard'); handleAddTreeChild(row); }}
-                onAddRoot={() => { setTreeMode('standard'); handleAddTreeRoot(); }}
+                onAddChild={handleAddTreeGridChild}
+                onAddRoot={handleAddTreeGridRoot}
                 onDelete={handleDeleteTreeNode}
                 onExport={() => alert(t('خروجی اکسل درخت-جدول', 'Export TreeGrid Excel'))}
                 onImport={(file) => alert(`${t('فایل انتخاب شد:', 'File selected:')} ${file.name}`)}
