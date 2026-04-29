@@ -799,38 +799,58 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
     const hasChildren = node.children && node.children.length > 0;
 
     return (
-      <div key={node[idField]} className="flex flex-col">
+      <div key={node[idField]} className="select-none relative">
         <div 
           onClick={() => onSelect && onSelect(node)}
-          className={`flex items-center group py-1.5 px-2 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-indigo-100/80 border border-indigo-200 shadow-sm' : 'hover:bg-slate-50 border border-transparent'}`}
-          style={{ paddingInlineStart: `${depth * 20 + 8}px` }}
+          className={`flex items-center gap-2 py-1 px-2 my-0.5 cursor-pointer rounded-lg transition-all border border-transparent group
+            ${isSelected ? 'bg-indigo-50 text-indigo-700 font-bold border-indigo-200 shadow-sm' : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200'}`}
+          style={{ 
+             paddingInlineStart: `${depth * 20 + 8}px`,
+             paddingInlineEnd: '8px'
+          }}
         >
-          <div onClick={(e) => hasChildren && toggleExpand(node[idField], e)} className={`p-0.5 rounded transition-colors ${hasChildren ? 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer' : 'text-transparent cursor-default'}`}>
-            {isRtl ? (isExpanded ? <ChevronDown size={16}/> : <ChevronLeft size={16}/>) : (isExpanded ? <ChevronDown size={16}/> : <ChevronRight size={16}/>)}
-          </div>
-          
-          <div className={`mr-1.5 ml-1.5 shrink-0 ${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'}`}>
-            {hasChildren ? (isExpanded ? <FolderOpen size={16} /> : <Folder size={16} />) : <File size={16} />}
+          {hasChildren ? (
+            <div 
+              className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors z-10 bg-white rounded border border-slate-200 shadow-sm shrink-0"
+              onClick={(e) => { e.stopPropagation(); toggleExpand(node[idField], e); }}
+            >
+               <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
+                 <ChevronDown size={12} />
+               </div>
+            </div>
+          ) : (
+             <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+             </div>
+          )}
+
+          {/* Node Icon */}
+          <div className={`${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
+            {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
           </div>
 
-          <div className="flex flex-col min-w-0 flex-1 ml-1 mr-1">
-            <span className={`text-[12px] truncate ${isSelected ? 'font-black text-indigo-900' : 'font-bold text-slate-700'}`}>
-              <HighlightText text={node[displayField]} term={searchTerm} />
-            </span>
-            {secondaryField && node[secondaryField] && (
-              <span className="text-[10px] text-slate-400 font-medium truncate mt-0.5">
-                <HighlightText text={node[secondaryField]} term={searchTerm} />
-              </span>
-            )}
+          {/* Node Content */}
+          <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+             {secondaryField && node[secondaryField] && (
+                <span className="font-mono text-[11px] font-bold bg-white/60 border border-slate-200/50 px-1 rounded shrink-0">
+                  <HighlightText text={node[secondaryField]} term={searchTerm} />
+                </span>
+             )}
+             <span className={`text-[12px] truncate ${isSelected ? 'font-bold' : ''}`}>
+                <HighlightText text={node[displayField]} term={searchTerm} />
+             </span>
           </div>
 
+          {/* Actions */}
           <div className={`flex items-center gap-0.5 shrink-0 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
             {onAddChild && <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"><Plus size={14}/></button>}
             {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} title={t('حذف', 'Delete')} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 size={14}/></button>}
           </div>
         </div>
+
         {hasChildren && isExpanded && (
-          <div className="flex flex-col relative">
+          <div className="overflow-hidden relative">
+            <div className={`absolute top-0 bottom-2 w-px bg-slate-200`} style={{ [isRtl ? 'right' : 'left']: `${depth * 20 + 17}px` }}></div>
             {node.children.map(child => renderNode(child, depth + 1))}
           </div>
         )}
@@ -1004,7 +1024,7 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
           <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
             <tr>
               {selectable && (
-                <th className={`p-1.5 border-b border-slate-200 text-center bg-slate-100 w10 sticky ${isRtl ? 'right-0' : 'left-0'} z-50 ${isRtl ? 'border-l' : 'border-r'}`}>
+                <th className={`p-1.5 border-b border-slate-200 text-center bg-slate-100 w-10 sticky ${isRtl ? 'right-0' : 'left-0'} z-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                   <input type="checkbox" onChange={handleSelectAll} checked={flatData.length > 0 && selectedIds.length === flatData.length} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                 </th>
               )}
@@ -1034,13 +1054,30 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
                     </td>
                   )}
                   {columns.map((col, colIndex) => (
-                    <td key={col.field} className={`p-2 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
+                    <td key={col.field} className={`py-1 px-2 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
                       {colIndex === 0 ? (
-                        <div className="flex items-center" style={{ paddingInlineStart: `${row._depth * 20}px` }}>
-                          <div onClick={(e) => hasChildren && toggleExpand(row[idField], e)} className={`p-0.5 mr-1 ml-1 rounded transition-colors ${hasChildren ? 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer' : 'text-transparent cursor-default'}`}>
-                            {isRtl ? (isExpanded ? <ChevronDown size={14}/> : <ChevronLeft size={14}/>) : (isExpanded ? <ChevronDown size={14}/> : <ChevronRight size={14}/>)}
+                        <div className="flex items-center gap-2 relative" style={{ paddingInlineStart: `${row._depth * 20}px` }}>
+                          {hasChildren ? (
+                            <div 
+                              className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors z-10 bg-white rounded border border-slate-200 shadow-sm shrink-0 cursor-pointer"
+                              onClick={(e) => toggleExpand(row[idField], e)}
+                            >
+                               <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
+                                 <ChevronDown size={12} />
+                               </div>
+                            </div>
+                          ) : (
+                             <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                             </div>
+                          )}
+                          
+                          {/* Node Icon */}
+                          <div className={`${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
+                            {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                           </div>
-                          <span className="font-bold text-slate-800">
+                          
+                          <span className={`text-[12px] truncate ${isSelected ? 'font-bold text-indigo-900' : 'text-slate-800'}`}>
                             <HighlightText text={row[col.field]} term={searchTerm} />
                           </span>
                         </div>
