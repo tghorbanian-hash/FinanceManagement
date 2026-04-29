@@ -1,13 +1,13 @@
 /* Filename: general/ComponentShowcase.js */
-import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, FileDown, Layers } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, FileDown, Layers, ListTree } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager, Tabs } = window.DesignSystem || {};
+  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid } = window.DesignSystem || {};
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
-  const [activeShowcaseTab, setActiveShowcaseTab] = useState('grid_form');
+  const [activeShowcaseTab, setActiveShowcaseTab] = useState('tree');
   const [currentView, setCurrentView] = useState('list'); 
   const [mockData, setMockData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -21,9 +21,27 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Tree Showcase State
+  const [treeMode, setTreeMode] = useState('standard'); // 'standard' or 'grid'
+  const [treeData, setTreeData] = useState([
+    { id: 1, parentId: null, code: '1', title: 'دارایی‌ها', nature: 'بدهکار' },
+    { id: 2, parentId: 1, code: '11', title: 'دارایی‌های جاری', nature: 'بدهکار' },
+    { id: 3, parentId: 2, code: '1101', title: 'موجودی نقد و بانک', nature: 'بدهکار' },
+    { id: 4, parentId: 2, code: '1102', title: 'حساب‌های دریافتنی', nature: 'بدهکار' },
+    { id: 5, parentId: 1, code: '12', title: 'دارایی‌های غیرجاری', nature: 'بدهکار' },
+    { id: 6, parentId: null, code: '2', title: 'بدهی‌ها', nature: 'بستانکار' },
+    { id: 7, parentId: 6, code: '21', title: 'بدهی‌های جاری', nature: 'بستانکار' },
+    { id: 8, parentId: 7, code: '2101', title: 'حساب‌های پرداختنی', nature: 'بستانکار' },
+  ]);
+  const [selectedTreeNodeId, setSelectedTreeNodeId] = useState(null);
+  const [treeFormData, setTreeFormData] = useState({ code: '', title: '', nature: '' });
+  const [isCreatingNode, setIsCreatingNode] = useState(false);
+  const [newTargetParentId, setNewTargetParentId] = useState(null);
+  const [selectedTreeGridIds, setSelectedTreeGridIds] = useState([]);
+
   const showcaseTabs = [
     { id: 'grid_form', label: t('امکانات گرید و فرم', 'Grid & Form Features'), icon: Table },
-    { id: 'tree', label: t('درخت', 'Tree'), icon: Layers },
+    { id: 'tree', label: t('درخت', 'Tree'), icon: ListTree },
     { id: 'components', label: t('کامپوننت‌های کوچک', 'Small Components'), icon: BoxSelect }
   ];
 
@@ -235,7 +253,88 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setLineItems(reordered);
   };
 
-  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+  // --- Tree Event Handlers ---
+  const handleSelectTreeNode = (node) => {
+    setSelectedTreeNodeId(node.id);
+    setTreeFormData({ ...node });
+    setIsCreatingNode(false);
+    setNewTargetParentId(null);
+  };
+
+  const handleAddTreeRoot = () => {
+    setSelectedTreeNodeId(null);
+    setTreeFormData({ code: '', title: '', nature: '' });
+    setIsCreatingNode(true);
+    setNewTargetParentId(null);
+  };
+
+  const handleAddTreeChild = (parentNode) => {
+    setSelectedTreeNodeId(parentNode.id); // visually selecting parent
+    setTreeFormData({ code: '', title: '', nature: parentNode.nature }); // Default to parent's nature
+    setIsCreatingNode(true);
+    setNewTargetParentId(parentNode.id);
+  };
+
+  const getDescendantIds = (nodes, parentId) => {
+    let ids = [];
+    const children = nodes.filter(n => n.parentId === parentId);
+    children.forEach(child => {
+      ids.push(child.id);
+      ids = ids.concat(getDescendantIds(nodes, child.id));
+    });
+    return ids;
+  };
+
+  const handleDeleteTreeNode = (node) => {
+    const descendants = getDescendantIds(treeData, node.id);
+    if (descendants.length > 0) {
+      if (!window.confirm(t('این نود دارای زیرمجموعه است. آیا از حذف آن و تمامی زیرمجموعه‌ها اطمینان دارید؟', 'This node has children. Are you sure you want to delete it and all its descendants?'))) return;
+    } else {
+      if (!window.confirm(t('آیا از حذف این مورد اطمینان دارید؟', 'Are you sure you want to delete this item?'))) return;
+    }
+    
+    const idsToDelete = [node.id, ...descendants];
+    const newTreeData = treeData.filter(n => !idsToDelete.includes(n.id));
+    setTreeData(newTreeData);
+    
+    if (selectedTreeNodeId === node.id || idsToDelete.includes(selectedTreeNodeId)) {
+      if (node.parentId) {
+        const parent = newTreeData.find(n => n.id === node.parentId);
+        if (parent) handleSelectTreeNode(parent);
+        else { setSelectedTreeNodeId(null); setTreeFormData({}); setIsCreatingNode(false); }
+      } else {
+        setSelectedTreeNodeId(null); setTreeFormData({}); setIsCreatingNode(false);
+      }
+    }
+  };
+
+  const handleSaveTreeForm = () => {
+    if (isCreatingNode) {
+      const newNode = { ...treeFormData, id: Date.now(), parentId: newTargetParentId };
+      setTreeData([...treeData, newNode]);
+      setIsCreatingNode(false);
+      handleSelectTreeNode(newNode);
+    } else {
+      setTreeData(treeData.map(n => n.id === selectedTreeNodeId ? { ...n, ...treeFormData } : n));
+    }
+  };
+
+  const handleCancelTreeForm = () => {
+    if (isCreatingNode) {
+      setIsCreatingNode(false);
+      if (newTargetParentId) {
+        const parent = treeData.find(n => n.id === newTargetParentId);
+        if (parent) handleSelectTreeNode(parent);
+      } else {
+        setSelectedTreeNodeId(null); setTreeFormData({});
+      }
+    } else {
+      const originalNode = treeData.find(n => n.id === selectedTreeNodeId);
+      if (originalNode) setTreeFormData({ ...originalNode });
+    }
+  };
+
+  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
   return (
     <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -342,8 +441,101 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       )}
 
       {activeShowcaseTab === 'tree' && (
-        <div className="flex-1 flex items-center justify-center bg-white border border-slate-200 rounded-lg shadow-sm border-dashed">
-          <span className="text-slate-400 font-bold">{t('محل قرارگیری کامپوننت درخت...', 'Tree component placeholder...')}</span>
+        <div className="flex-1 flex flex-col animate-in fade-in min-h-0">
+          <div className="flex items-center justify-between mb-3 shrink-0 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-md"><ListTree size={18}/></div>
+              <span className="text-[13px] font-black text-slate-800">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+              <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درختی', 'Tree View')}</button>
+              <button onClick={() => setTreeMode('grid')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
+            </div>
+          </div>
+
+          {treeMode === 'standard' ? (
+            <div className="flex-1 flex gap-4 min-h-0">
+              <div className="w-1/2 md:w-2/3 h-full min-h-0 shadow-sm">
+                <Tree 
+                  data={treeData}
+                  idField="id" parentField="parentId" displayField="title" secondaryField="code"
+                  selectedId={selectedTreeNodeId}
+                  onSelect={handleSelectTreeNode}
+                  onAddChild={handleAddTreeChild}
+                  onAddRoot={handleAddTreeRoot}
+                  onDelete={handleDeleteTreeNode}
+                  onExport={() => alert(t('خروجی اکسل درخت', 'Export Tree Excel'))}
+                  onImport={(file) => alert(`${t('فایل انتخاب شد:', 'File selected:')} ${file.name}`)}
+                  onDownloadSample={() => alert(t('دانلود نمونه فایل درخت', 'Download Tree Sample Excel'))}
+                  language={language}
+                />
+              </div>
+              <div className="w-1/2 md:w-1/3 h-full min-h-0 flex flex-col">
+                <Card 
+                  title={isCreatingNode ? (newTargetParentId ? t('ایجاد زیرمجموعه جدید', 'Create New Child') : t('ایجاد ریشه جدید', 'Create New Root')) : (selectedTreeNodeId ? t('ویرایش اطلاعات', 'Edit Information') : t('اطلاعات جزئی', 'Details'))}
+                  className="h-full border border-slate-200 shadow-sm"
+                  headerClassName="bg-slate-50/80"
+                  action={
+                    (selectedTreeNodeId || isCreatingNode) && (
+                      <div className="flex gap-1.5">
+                        <Button size="sm" variant="ghost" icon={Trash2} className="!text-red-500 hover:!bg-red-50" onClick={() => !isCreatingNode && handleDeleteTreeNode(treeData.find(n => n.id === selectedTreeNodeId))} disabled={isCreatingNode} title={t('حذف', 'Delete')}/>
+                      </div>
+                    )
+                  }
+                >
+                  {(selectedTreeNodeId || isCreatingNode) ? (
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1 space-y-4">
+                        <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
+                        <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
+                        <SelectField size="sm" label={t('ماهیت حساب', 'Account Nature')} value={treeFormData.nature || ''} onChange={(e) => setTreeFormData({...treeFormData, nature: e.target.value})} options={[{value:'بدهکار',label:'بدهکار'}, {value:'بستانکار',label:'بستانکار'}]} isRtl={isRtl} />
+                        {isCreatingNode && newTargetParentId && (
+                          <div className="mt-4 p-2 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 flex items-center gap-1.5">
+                            <Layers size={14}/>
+                            <span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
+                        <Button size="sm" variant="ghost" onClick={handleCancelTreeForm}>{t('لغو', 'Cancel')}</Button>
+                        <Button size="sm" variant="primary" icon={Save} onClick={handleSaveTreeForm}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 text-[12px] font-medium">
+                      <div className="p-3 bg-slate-50 rounded-full"><ListTree size={24} className="text-slate-300"/></div>
+                      <span>{t('نودی انتخاب نشده است', 'No node selected')}</span>
+                    </div>
+                  )}
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 shadow-sm border border-slate-200 rounded-lg bg-white p-1">
+              <TreeGrid 
+                data={treeData}
+                idField="id" parentField="parentId"
+                columns={[
+                  { field: 'title', header_fa: 'عنوان حساب', header_en: 'Title', width: '300px' },
+                  { field: 'code', header_fa: 'کد حساب', header_en: 'Code', width: '150px' },
+                  { field: 'nature', header_fa: 'ماهیت', header_en: 'Nature', width: '150px', render: (val) => <Badge variant={val === 'بدهکار' ? 'indigo' : 'orange'}>{val}</Badge> }
+                ]}
+                actions={[
+                  { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setTreeMode('standard'); handleSelectTreeNode(row); }, className: 'hover:text-emerald-600' }
+                ]}
+                selectable={true}
+                selectedIds={selectedTreeGridIds}
+                onSelectChange={setSelectedTreeGridIds}
+                onAddChild={(row) => { setTreeMode('standard'); handleAddTreeChild(row); }}
+                onAddRoot={() => { setTreeMode('standard'); handleAddTreeRoot(); }}
+                onDelete={handleDeleteTreeNode}
+                onExport={() => alert(t('خروجی اکسل درخت-جدول', 'Export TreeGrid Excel'))}
+                onImport={(file) => alert(`${t('فایل انتخاب شد:', 'File selected:')} ${file.name}`)}
+                onDownloadSample={() => alert(t('دانلود نمونه فایل', 'Download Sample Excel'))}
+                language={language}
+              />
+            </div>
+          )}
         </div>
       )}
 
