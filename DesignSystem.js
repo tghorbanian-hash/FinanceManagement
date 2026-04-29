@@ -7,12 +7,9 @@ import {
   Layers, X, Maximize2, Minimize2, Plus, Home, Filter, UploadCloud, FileText, Check
 } from 'lucide-react';
 
-// ==========================================
-// 1. Button Component
-// ==========================================
 const Button = ({
   children, variant = 'primary', size = 'md', isLoading = false, disabled = false,
-  icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', ...props
+  icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props
 }) => {
   const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
   const variants = {
@@ -23,22 +20,27 @@ const Button = ({
     'danger-outline': "bg-white text-red-500 border border-red-200 hover:bg-red-50 focus:ring-red-100",
     ghost: "bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-200"
   };
-  const sizes = { sm: "text-[11px] h-8 px-3 gap-1.5", md: "text-[12px] h-10 px-4 gap-2", lg: "text-[14px] h-12 px-6 gap-2.5" };
+  
+  const hasText = React.Children.count(children) > 0;
+  
+  const sizes = { 
+    sm: `h-8 ${hasText ? 'px-3 gap-1.5 text-[11px]' : 'w-8'}`, 
+    md: `h-10 ${hasText ? 'px-4 gap-2 text-[12px]' : 'w-10'}`, 
+    lg: `h-12 ${hasText ? 'px-6 gap-2.5 text-[14px]' : 'w-12'}` 
+  };
+  
   const iconSizes = { sm: 14, md: 16, lg: 18 };
 
   return (
-    <button type={type} className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} disabled={disabled || isLoading} onClick={onClick} {...props}>
+    <button type={type} title={title} className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} disabled={disabled || isLoading} onClick={onClick} {...props}>
       {isLoading && <Loader2 size={iconSizes[size]} className="animate-spin shrink-0" />}
       {!isLoading && Icon && iconPosition === 'right' && <Icon size={iconSizes[size]} className="shrink-0" />}
-      <span className="truncate">{children}</span>
+      {hasText && <span className="truncate">{children}</span>}
       {!isLoading && Icon && iconPosition === 'left' && <Icon size={iconSizes[size]} className="shrink-0" />}
     </button>
   );
 };
 
-// ==========================================
-// 2. Form Input Components (Text, Select, Toggle, Checkbox, LOV)
-// ==========================================
 const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
@@ -133,20 +135,36 @@ const LOVField = ({ label, displayValue, onChange, data, columns, disabled = fal
   );
 };
 
-// ==========================================
-// 3. Card & Badge Component
-// ==========================================
-const Card = ({ title, action, children, className = '', noPadding = false, headerClassName = '' }) => (
-  <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
-    {(title || action) && (
-      <div className={`h-10 border-b border-slate-100 flex items-center justify-between px-3 bg-slate-50/50 shrink-0 ${headerClassName}`}>
-        <h3 className="font-black text-[12px] text-slate-800 flex-1">{title}</h3>
-        {action && <div className="shrink-0">{action}</div>}
-      </div>
-    )}
-    <div className={`flex-1 ${noPadding ? '' : 'p-3'}`}>{children}</div>
-  </div>
-);
+const Card = ({ title, action, children, className = '', noPadding = false, headerClassName = '', isCollapsible = false, defaultCollapsed = false, language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  
+  return (
+    <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all ${className}`}>
+      {(title || action) && (
+        <div 
+          className={`h-10 border-b border-slate-100 flex items-center justify-between px-3 bg-slate-50/50 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50' : ''} ${headerClassName}`}
+          onClick={() => isCollapsible && setCollapsed(!collapsed)}
+        >
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {isCollapsible && (
+              <span className="text-slate-400 shrink-0 transition-transform">
+                {collapsed ? (isRtl ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>) : <ChevronDown size={16}/>}
+              </span>
+            )}
+            <h3 className="font-black text-[12px] text-slate-800 truncate">{title}</h3>
+          </div>
+          {action && <div className="shrink-0" onClick={e => e.stopPropagation()}>{action}</div>}
+        </div>
+      )}
+      {!collapsed && (
+        <div className={`flex flex-col flex-1 min-h-0 ${noPadding ? '' : 'p-3'}`}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Badge = ({ children, variant = 'gray', className = '' }) => {
   const variants = {
@@ -161,9 +179,6 @@ const Badge = ({ children, variant = 'gray', className = '' }) => {
   return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
 };
 
-// ==========================================
-// 4. PageHeader Component
-// ==========================================
 const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) => {
   const isRtl = language === 'fa';
   return (
@@ -190,9 +205,6 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
   );
 };
 
-// ==========================================
-// 5. Modal Component
-// ==========================================
 const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
   const isRtl = language === 'fa';
   const [isMaximized, setIsMaximized] = useState(false);
@@ -227,7 +239,7 @@ const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/30 flex flex-col">
+        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/30 flex flex-col min-h-0">
           {children}
         </div>
       </div>
@@ -235,9 +247,6 @@ const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 
   );
 };
 
-// ==========================================
-// 6. AdvancedFilter Component
-// ==========================================
 const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
@@ -283,9 +292,6 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
   );
 };
 
-// ==========================================
-// 7. AttachmentManager Component
-// ==========================================
 const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
@@ -350,9 +356,6 @@ const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnl
   );
 };
 
-// ==========================================
-// 8. DataGrid Component (Advanced with Reorder & Inline Edit)
-// ==========================================
 const DataGrid = ({ 
   data = [], columns = [], actions = [], language = 'fa', 
   onAdd, onRowDoubleClick, selectable = false, bulkActions = [],
@@ -453,7 +456,6 @@ const DataGrid = ({
   const togglePin = (field) => { const newPinned = new Set(pinnedCols); if (newPinned.has(field)) newPinned.delete(field); else newPinned.add(field); setPinnedCols(newPinned); };
   const toggleVisibility = (field) => { const newHidden = new Set(hiddenCols); if (newHidden.has(field)) newHidden.delete(field); else newHidden.add(field); setHiddenCols(newHidden); };
 
-  // Column Drag & Drop
   const handleColDragStart = (e, position, field) => { dragColItem.current = position; e.dataTransfer.setData('colField', field); };
   const handleColDragEnter = (e, position) => { dragOverColItem.current = position; };
   const handleColDragEnd = () => {
@@ -467,7 +469,6 @@ const DataGrid = ({
     dragColItem.current = null; dragOverColItem.current = null;
   };
 
-  // Row Drag & Drop
   const handleRowDragStart = (e, index) => { dragRowItem.current = index; e.dataTransfer.effectAllowed = 'move'; };
   const handleRowDragEnter = (e, index) => { dragOverRowItem.current = index; };
   const handleRowDragEnd = () => {
@@ -509,23 +510,24 @@ const DataGrid = ({
   };
 
   const getStickyStyles = (field, isAction = false, isHeader = false) => {
-    const baseZ = isHeader ? 30 : 10;
-    if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: baseZ, background: 'inherit' };
+    const baseZ = isHeader ? 30 : 1;
+    if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader ? 50 : 20, background: 'inherit' };
     
-    if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: baseZ + 2, background: 'inherit' };
-    if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: baseZ + 1, background: 'inherit' };
+    if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : 15, background: 'inherit' };
+    if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : 15, background: 'inherit' };
 
-    if (!pinnedCols.has(field)) return {};
+    if (!pinnedCols.has(field)) return { zIndex: isHeader ? 30 : 1 };
+    
     let offset = (rowReorderable ? 30 : 0) + (selectable ? 40 : 0); 
     for (let col of visibleColumns) {
       if (col.field === field) break;
       offset += parseInt(col.width || 100);
     }
-    return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: baseZ, background: 'inherit' };
+    return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader ? 40 : 10, background: 'inherit' };
   };
 
   const renderCellContent = (col, row, rowIndex) => {
-    if (col.render) return col.render(row[col.field], row, rowIndex); // Custom render for inline edit
+    if (col.render) return col.render(row[col.field], row, rowIndex);
     const val = row[col.field];
     if (col.type === 'toggle') return <ToggleField checked={!!val} disabled isRtl={isRtl} />;
     if (col.type === 'checkbox') return <CheckboxField checked={!!val} disabled isRtl={isRtl} />;
@@ -598,6 +600,8 @@ const DataGrid = ({
             )}
           </div>
           <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+          <button onClick={() => document.getElementById('grid-import-input').click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
+          <input id="grid-import-input" type="file" className="hidden" accept=".csv" />
           <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Printer size={16} /></button>
         </div>
       </div>
@@ -619,7 +623,7 @@ const DataGrid = ({
                   <th 
                     key={col.field} draggable
                     onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
-                    style={{ width: col.width || '150px', ...getStickyStyles(col.field, false), zIndex: isPinned ? 35 : 30 }}
+                    style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
                     className={`p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 select-none bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}
                   >
                     <div className="flex items-center justify-between gap-1 group">
@@ -636,19 +640,18 @@ const DataGrid = ({
                 )
               })}
               {actions.length > 0 && (
-                <th style={{...getStickyStyles('ACTIONS', true), zIndex: 40}} className="p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 w-[120px] bg-slate-100 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
+                <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 w-[120px] bg-slate-100 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
                   {t('عملیات', 'Actions')}
                 </th>
               )}
             </tr>
 
             <tr>
-              {rowReorderable && <td style={{...getStickyStyles('ROW_REORDER_COL', false), zIndex: 36}} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
-              {selectable && <td style={{...getStickyStyles('SELECT_COL', false), zIndex: 35}} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+              {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+              {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
               {visibleColumns.map((col) => {
-                const isPinned = pinnedCols.has(col.field);
                 return (
-                  <td key={`filter-${col.field}`} style={{...getStickyStyles(col.field, false), zIndex: isPinned ? 35 : 30}} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
+                  <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                     <div className="relative">
                       {(col.type === 'text' || col.type === 'number') && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
                       {col.type !== 'toggle' && col.type !== 'checkbox' && (
@@ -664,7 +667,7 @@ const DataGrid = ({
                   </td>
                 );
               })}
-              {actions.length > 0 && <td style={{...getStickyStyles('ACTIONS', true), zIndex: 40}} className="border-b border-slate-200 bg-slate-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]"></td>}
+              {actions.length > 0 && <td style={getStickyStyles('ACTIONS', true, true)} className="border-b border-slate-200 bg-slate-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]"></td>}
             </tr>
           </thead>
 
@@ -687,7 +690,7 @@ const DataGrid = ({
               }
 
               const isSelected = selectedRows.includes(row.id);
-              const isDragging = rowReorderable; // enables row drag
+              const isDragging = rowReorderable;
 
               return (
                 <tr 
@@ -698,30 +701,30 @@ const DataGrid = ({
                   className={`bg-white hover:bg-slate-50 border-b border-slate-100 transition-colors group ${isSelected ? 'bg-indigo-50/30' : ''}`}
                 >
                   {rowReorderable && (
-                    <td style={{...getStickyStyles('ROW_REORDER_COL', false), backgroundColor: 'inherit'}} className={`p-0 text-center bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
+                    <td style={{...getStickyStyles('ROW_REORDER_COL', false), backgroundColor: 'inherit'}} className={`p-0 text-center bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
                       <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 py-1.5 px-2 w-full flex items-center justify-center">
                         <GripVertical size={14} />
                       </div>
                     </td>
                   )}
                   {selectable && (
-                    <td style={{...getStickyStyles('SELECT_COL', false), backgroundColor: 'inherit'}} className={`p-1.5 text-center bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
+                    <td style={{...getStickyStyles('SELECT_COL', false), backgroundColor: 'inherit'}} className={`p-1.5 text-center bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
                       <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(row.id)} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                     </td>
                   )}
                   {visibleColumns.map((col) => (
-                    <td key={`${row.id || rowIndex}-${col.field}`} style={getStickyStyles(col.field)} className={`p-1.5 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
+                    <td key={`${row.id || rowIndex}-${col.field}`} style={{...getStickyStyles(col.field), backgroundColor: 'inherit'}} className={`p-1.5 text-[11px] text-slate-700 truncate bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
                       {renderCellContent(col, row, rowIndex)}
                     </td>
                   ))}
                   
                   {actions.length > 0 && (
-                    <td style={getStickyStyles('ACTIONS', true)} className="p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-inherit relative z-20 border-slate-100">
+                    <td style={{...getStickyStyles('ACTIONS', true), backgroundColor: 'inherit'}} className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} border-slate-100`}>
                       <div className="flex items-center justify-center gap-0.5">
                         {actions.map((act, i) => {
                           const actClass = typeof act.className === 'function' ? act.className(row) : (act.className || 'hover:text-indigo-600');
                           return (
-                            <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 bg-white border border-transparent hover:border-slate-200 hover:shadow-sm transition-all ${actClass}`}>
+                            <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 border border-transparent hover:border-slate-200 hover:bg-white hover:shadow-sm transition-all ${actClass}`}>
                               <act.icon size={14} strokeWidth={2} />
                             </button>
                           );

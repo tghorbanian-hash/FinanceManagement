@@ -1,6 +1,5 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-// اضافه شدن Plus و Settings به لیست ایمپورت‌ها برای جلوگیری از ارور
 import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
@@ -199,29 +198,31 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* --- نمای فرم (ایجاد/ویرایش) --- */}
+      {/* --- نمای فرم (ایجاد/ویرایش) کاملاً فشرده --- */}
       {currentView === 'form' && selectedRow && (
-        <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
+        <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden min-h-0">
           <Card 
             title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
             noPadding={true}
-            className="flex-1 flex flex-col border border-slate-200 shadow-sm"
+            className="flex-1 flex flex-col border border-slate-200 shadow-sm min-h-0"
             headerClassName="bg-white border-b-2 border-indigo-100 h-14"
             action={
               <div className="flex items-center gap-1.5">
-                <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)}>{t('ضمائم', 'Attachments')}</Button>
-                <Button size="sm" variant="ghost" icon={Printer} onClick={() => alert('Print Preview')}>{t('چاپ', 'Print')}</Button>
+                <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)} title={t('ضمائم', 'Attachments')} />
+                <Button size="sm" variant="ghost" icon={Printer} onClick={() => alert('Print Preview')} title={t('چاپ', 'Print')} />
                 <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت', 'Back')}</Button>
                 <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
                 <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
               </div>
             }
           >
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50">
-              <div className="w-full space-y-3">
+            {/* بدنه فرم تمام عرض و فشرده */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
+              <div className="w-full flex flex-col gap-3 h-full">
                 
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-                  <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white">
+                {/* اطلاعات اصلی و تنظیمات */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
+                  <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
                     <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
                       <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
                       <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(e) => setSelectedRow({...selectedRow, docDate: e.target.value})} isRtl={isRtl} type="date" />
@@ -233,7 +234,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                     </div>
                   </Card>
 
-                  <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white">
+                  <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
                     <div className="p-3 flex flex-col gap-4 bg-white h-full justify-center">
                       <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
                       <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
@@ -241,12 +242,13 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   </Card>
                 </div>
 
+                {/* گرید اقلام ویرایشی */}
                 <Card 
                   title={t('اقلام سند (Inline Edit)', 'Line Items')} 
-                  noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" 
-                  action={<Button size="sm" variant="ghost" icon={Plus} onClick={() => setLineItems([...lineItems, {id: Date.now(), account:'', costCenter:'', debit:'', credit:'', note:''}])}>{t('افزودن ردیف', 'Add Row')}</Button>}
+                  noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[350px]" headerClassName="h-10 bg-white shrink-0" 
+                  action={<Button size="sm" variant="ghost" icon={Plus} onClick={() => setLineItems([...lineItems, {id: Date.now(), account:'', costCenter:'', debit:'', credit:'', note:''}])} />}
                 >
-                  <div className="h-[250px]">
+                  <div className="flex-1 flex flex-col min-h-0">
                     <DataGrid 
                       data={lineItems} 
                       columns={lineItemColumns} 
@@ -266,35 +268,37 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* --- مودال نمایش جزئیات (بدون تغییر نسبت به دو مرحله قبل) --- */}
+      {/* --- مودال نمایش جزئیات --- */}
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
         {selectedRow && (
-          <div className="space-y-4 p-4">
-            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true}>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-white">
+          <div className="space-y-3 p-4">
+            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
+              <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white">
                 <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
                 <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} dir="ltr" />
+                <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} disabled data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
                 <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} dir="ltr" />
-                <div className="flex flex-col gap-1.5 justify-center mt-4">
-                  <span className="text-[11px] font-bold text-slate-700">{t('وضعیت:', 'Status:')}</span>
-                  <div>
+                
+                <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
+                
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
+                  <div className="flex items-center h-8">
                     <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : selectedRow.status === 'پیش‌نویس' ? 'orange' : 'gray'}>
                       {selectedRow.status}
                     </Badge>
                   </div>
                 </div>
-                <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3 lg:col-span-4" />
-                
-                <div className="md:col-span-3 lg:col-span-4 flex items-center gap-6 pt-3 border-t border-slate-100">
+
+                <div className="md:col-span-4 flex items-center gap-6 pt-2 border-t border-slate-100">
                   <ToggleField size="sm" label={t('فعال', 'Active')} checked={selectedRow.isActive} disabled isRtl={isRtl} />
                   <CheckboxField size="sm" label={t('کنترل شده', 'Controlled')} checked={selectedRow.isControlled} disabled isRtl={isRtl} />
                 </div>
               </div>
             </Card>
 
-            <div>
-              <h4 className="text-[12px] font-black text-slate-800 mb-2 flex items-center gap-1.5"><Table size={14} className="text-indigo-600" />{t('اقلام سند (ردیف‌ها)', 'Document Line Items')}</h4>
-              <div className="h-[250px] border border-slate-200 rounded-lg overflow-hidden">
+            <Card title={t('اقلام سند', 'Line Items')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
+              <div className="h-[250px]">
                 <DataGrid 
                   data={[
                     { id: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
@@ -311,7 +315,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   language={language}
                 />
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </Modal>
