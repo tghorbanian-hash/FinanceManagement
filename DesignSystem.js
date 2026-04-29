@@ -4,7 +4,7 @@ import {
   Loader2, AlertCircle, Search, Download, Upload, Settings, Eye, Edit, Trash2, 
   Paperclip, Printer, Pin, PinOff, GripVertical, ChevronDown, 
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Layers, X, Maximize2, Minimize2, Plus, Home, Filter
+  Layers, X, Maximize2, Minimize2, Plus, Home, Filter, UploadCloud, FileText
 } from 'lucide-react';
 
 // ==========================================
@@ -137,13 +137,12 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
 };
 
 // ==========================================
-// 6. Modal Component (NEW)
+// 6. Modal Component
 // ==========================================
 const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
   const isRtl = language === 'fa';
   const [isMaximized, setIsMaximized] = useState(false);
 
-  // Close on Escape key
   useEffect(() => {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     if (isOpen) document.addEventListener('keydown', handleEsc);
@@ -161,7 +160,6 @@ const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 
           isMaximized ? 'w-full h-full inset-0 rounded-none' : `${width} w-full max-h-[90vh] rounded-xl`
         }`}
       >
-        {/* Modal Header */}
         <div className="h-14 px-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
           <h3 className="font-black text-slate-800 text-[14px]">{title}</h3>
           <div className="flex items-center gap-1.5">
@@ -174,17 +172,11 @@ const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 
                 {isMaximized ? <Minimize2 size={16} strokeWidth={2.5} /> : <Maximize2 size={16} strokeWidth={2.5} />}
               </button>
             )}
-            <button 
-              onClick={onClose} 
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-              title={isRtl ? 'بستن' : 'Close'}
-            >
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
               <X size={18} strokeWidth={2.5} />
             </button>
           </div>
         </div>
-        
-        {/* Modal Body */}
         <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/30">
           {children}
         </div>
@@ -224,11 +216,8 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
               }
               return (
                 <TextField 
-                  key={idx} size="sm" label={f.label} isRtl={isRtl}
-                  type={f.type} 
-                  placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''}
-                  value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)}
-                  dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
+                  key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''}
+                  value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
                 />
               );
             })}
@@ -244,7 +233,84 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
 };
 
 // ==========================================
-// 8. DataGrid Component (Advanced)
+// 8. AttachmentManager Component (NEW)
+// ==========================================
+const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  const t = (fa, en) => isRtl ? fa : en;
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e) => {
+    e.preventDefault(); setIsDragging(false);
+    if (readOnly) return;
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onUpload(Array.from(e.dataTransfer.files));
+    }
+  };
+  const handleFileSelect = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onUpload(Array.from(e.target.files));
+    }
+  };
+
+  const formatSize = (bytes) => {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  return (
+    <div className="flex flex-col gap-3 font-sans w-full" dir={isRtl ? 'rtl' : 'ltr'}>
+      {!readOnly && (
+        <div 
+          onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}
+          className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-indigo-400'}`}
+        >
+          <UploadCloud size={24} className={isDragging ? 'text-indigo-600' : 'text-slate-400'} />
+          <span className="text-[12px] font-bold text-slate-700 mt-2">{t('فایل‌ها را اینجا رها کنید یا کلیک کنید', 'Drop files here or click to upload')}</span>
+          <span className="text-[10px] text-slate-500 mt-1">{t('حداکثر حجم فایل: ۱۰ مگابایت', 'Max file size: 10MB')}</span>
+          <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelect} />
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
+        {files.length === 0 ? (
+          <div className="text-center p-4 text-[11px] text-slate-400 border border-slate-100 rounded-lg bg-slate-50/50">
+            {t('هیچ فایلی ضمیمه نشده است.', 'No attachments found.')}
+          </div>
+        ) : (
+          files.map((file, idx) => (
+            <div key={idx} className="flex items-center justify-between p-2 border border-slate-200 rounded-lg bg-white hover:border-indigo-200 transition-colors group">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md shrink-0"><FileText size={14} /></div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
+                  <span className="text-[9px] text-slate-400 font-medium">{formatSize(file.size)}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                {onDownload && (
+                  <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title={t('دانلود', 'Download')}><Download size={14} /></button>
+                )}
+                {!readOnly && onDelete && (
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors" title={t('حذف', 'Delete')}><Trash2 size={14} /></button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// 9. DataGrid Component (Advanced)
 // ==========================================
 const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd }) => {
   const isRtl = language === 'fa';
@@ -391,9 +457,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      {/* Unified Toolbar */}
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
-        
         <div className="flex items-center shrink-0">
           {onAdd && (
             <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
@@ -456,7 +520,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
         </div>
       </div>
 
-      {/* Grid Container */}
       <div className="overflow-auto custom-scrollbar flex-1 relative bg-white">
         <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
           <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
@@ -545,11 +608,14 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
                   {actions.length > 0 && (
                     <td style={getStickyStyles('ACTIONS', true)} className="p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-inherit relative z-20 border-slate-100">
                       <div className="flex items-center justify-center gap-0.5">
-                        {actions.map((act, i) => (
-                          <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 bg-white border border-transparent hover:border-slate-200 hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600'}`}>
-                            <act.icon size={14} strokeWidth={2} />
-                          </button>
-                        ))}
+                        {actions.map((act, i) => {
+                          const actClass = typeof act.className === 'function' ? act.className(row) : (act.className || 'hover:text-indigo-600');
+                          return (
+                            <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 bg-white border border-transparent hover:border-slate-200 hover:shadow-sm transition-all ${actClass}`}>
+                              <act.icon size={14} strokeWidth={2} />
+                            </button>
+                          );
+                        })}
                       </div>
                     </td>
                   )}
@@ -566,7 +632,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
         </table>
       </div>
 
-      {/* Pagination Footer */}
       <div className="flex flex-wrap items-center justify-between p-2 border-t border-slate-200 bg-slate-50 gap-4 shrink-0 z-50">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold text-slate-500">{t('تعداد در صفحه:', 'Rows per page:')}</span>
@@ -589,4 +654,4 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   );
 };
 
-window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, Modal, AdvancedFilter, DataGrid };
+window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, Modal, AdvancedFilter, AttachmentManager, DataGrid };
