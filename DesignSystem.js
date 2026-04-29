@@ -4,7 +4,8 @@ import {
   Loader2, AlertCircle, Search, Download, Upload, Settings, Eye, Edit, Trash2, 
   Paperclip, Printer, Pin, PinOff, GripVertical, ChevronDown, 
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Layers, X, Maximize2, Minimize2, Plus, Home, Filter, UploadCloud, FileText, Check
+  Layers, X, Maximize2, Minimize2, Plus, Home, Filter, UploadCloud, FileText, Check,
+  FileSpreadsheet, FileDown
 } from 'lucide-react';
 
 const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
@@ -302,7 +303,7 @@ const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnl
   );
 };
 
-const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder }) => {
+const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
@@ -431,9 +432,11 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
 
   const getStickyStyles = (field, isAction = false, isHeader = false) => {
     const baseZ = isHeader ? 30 : 1;
-    if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader ? 50 : 20, background: 'inherit' };
-    if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : 15, background: 'inherit' };
-    if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : 15, background: 'inherit' };
+    // تخصیص بک‌گراند سالید برای جلوگیری از تداخل متون زیرین هنگام اسکرول
+    const bg = isHeader ? '#f1f5f9' : '#ffffff'; 
+    if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader ? 50 : 20, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
+    if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : 15, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
+    if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : 15, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
 
     if (!pinnedCols.has(field)) return { zIndex: isHeader ? 30 : 1 };
     
@@ -442,7 +445,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
       if (col.field === field) break;
       offset += parseInt(col.width || 100);
     }
-    return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader ? 40 : 10, background: 'inherit' };
+    return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader ? 40 : 10, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
   };
 
   const renderCellContent = (col, row, rowIndex) => {
@@ -519,9 +522,12 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
             )}
           </div>
           <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+          {onDownloadSample && (
+            <button onClick={onDownloadSample} title={t('دانلود نمونه فایل اکسل', 'Download Excel Sample')} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><FileDown size={16} /></button>
+          )}
           <button onClick={() => document.getElementById('grid-import-input').click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
           <input id="grid-import-input" type="file" className="hidden" accept=".csv" />
-          <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Printer size={16} /></button>
+          <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><FileSpreadsheet size={16} /></button>
         </div>
       </div>
 

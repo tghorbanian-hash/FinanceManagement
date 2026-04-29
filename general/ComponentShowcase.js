@@ -1,6 +1,6 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, FileDown } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
   const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager } = window.DesignSystem || {};
@@ -127,7 +127,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (r) => { setSelectedRow(r); setAttachModalOpen(true); }, 
       className: (row) => row.attachments?.length > 0 ? 'text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100' : 'hover:text-indigo-600' 
     },
-    { icon: Printer, tooltip: t('چاپ', 'Print'), onClick: (row) => alert(`${t('چاپ', 'Print')} ID: ${row.id}`), className: 'hover:text-slate-800' },
+    { icon: FileSpreadsheet, tooltip: t('خروجی اکسل', 'Export'), onClick: (row) => alert(`${t('خروجی اکسل', 'Export')} ID: ${row.id}`), className: 'hover:text-emerald-600' },
     { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => alert(`${t('حذف', 'Delete')} ID: ${row.id}`), className: 'hover:text-red-600' },
   ];
 
@@ -212,8 +212,11 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     }, className: 'hover:text-emerald-600' },
     { icon: Copy, tooltip: t('کپی ردیف', 'Duplicate'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => {
       const newItems = [...lineItems];
-      newItems.splice(idx + 1, 0, { ...row, id: Date.now() });
+      const newId = Date.now();
+      newItems.splice(idx + 1, 0, { ...row, id: newId });
       setLineItems(newItems);
+      setEditingLineItemId(newId);
+      setEditingLineData({ ...row, id: newId });
     }, className: 'hover:text-blue-600' },
     { icon: Trash2, tooltip: t('حذف ردیف', 'Delete'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => setLineItems(lineItems.filter((_, i) => i !== idx)), className: 'hover:text-red-600' },
   ];
@@ -247,6 +250,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               language={language} 
               onAdd={() => handleOpenForm()}
               onRowDoubleClick={handleOpenForm}
+              onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
               selectable={true}
               bulkActions={[
                 { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: handleBulkDelete },
@@ -301,7 +305,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 <Card 
                   title={t('اقلام سند (Inline Edit)', 'Line Items')} 
                   noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
-                  action={<Button size="sm" variant="primary" icon={Plus} onClick={handleAddLineItem}>{t('افزودن ردیف', 'Add Row')}</Button>}
                 >
                   <div className="flex-1 flex flex-col min-h-0">
                     <DataGrid 
@@ -312,6 +315,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                       selectable={true}
                       rowReorderable={true}
                       onRowReorder={handleRowReorder}
+                      onAdd={handleAddLineItem}
+                      onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
                       bulkActions={[{ label: t('حذف ردیف‌های انتخاب شده', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setLineItems(lineItems.filter(l => !ids.includes(l.id))) }]}
                     />
                   </div>
