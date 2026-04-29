@@ -34,12 +34,17 @@ const Button = ({ children, variant = 'primary', size = 'md', isLoading = false,
 const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+  
   return (
     <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative flex items-center">
         {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
-        <input id={inputId} type={type} disabled={disabled} className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`} dir={isRtl ? 'rtl' : 'ltr'} {...props} />
+        <input
+          id={inputId} type={type} disabled={disabled}
+          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
+          dir={isRtl ? 'rtl' : 'ltr'} {...props}
+        />
       </div>
       {error ? <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div> : hint ? <div className="text-slate-500 text-[10px] mt-0.5">{hint}</div> : null}
     </div>
@@ -49,11 +54,16 @@ const TextField = ({ label, error, hint, icon: Icon, disabled = false, required 
 const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, ...props }) => {
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+
   return (
     <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label htmlFor={selectId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative">
-        <select id={selectId} disabled={disabled} className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-8 pr-2.5' : 'pr-8 pl-2.5'} ${className}`} dir={isRtl ? 'rtl' : 'ltr'} {...props}>
+        <select
+          id={selectId} disabled={disabled}
+          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-8 pr-2.5' : 'pr-8 pl-2.5'} ${className}`}
+          dir={isRtl ? 'rtl' : 'ltr'} {...props}
+        >
           <option value="" disabled hidden>انتخاب کنید...</option>
           {options.map((opt, idx) => <option key={idx} value={opt.value}>{opt.label}</option>)}
         </select>
@@ -78,7 +88,13 @@ const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label,
 const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClassName = '' }) => {
   return (
     <label className={`flex items-center gap-2 ${disabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'} ${wrapperClassName}`}>
-      <input type="checkbox" checked={checked || false} onChange={(e) => onChange(e.target.checked)} disabled={disabled} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:bg-slate-200 disabled:border-slate-300" />
+      <input 
+        type="checkbox" 
+        checked={checked || false} 
+        onChange={(e) => onChange(e.target.checked)} 
+        disabled={disabled}
+        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:bg-slate-100 disabled:border-slate-300"
+      />
       {label && <span className="text-[11px] font-bold text-slate-700 select-none">{label}</span>}
     </label>
   );
@@ -87,6 +103,7 @@ const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClas
 const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const t = (fa, en) => isRtl ? fa : en;
+  
   return (
     <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
@@ -98,7 +115,10 @@ const LOVField = ({ label, displayValue, onChange, data, columns, disabled = fal
       </div>
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
         <div className="h-[350px] p-2 bg-slate-50/50">
-          <DataGrid data={data} columns={columns} language={isRtl ? 'fa' : 'en'} onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }} />
+          <DataGrid 
+            data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
+            onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
+          />
         </div>
       </Modal>
     </div>
@@ -108,27 +128,43 @@ const LOVField = ({ label, displayValue, onChange, data, columns, disabled = fal
 const Card = ({ title, action, children, className = '', noPadding = false, headerClassName = '', isCollapsible = false, defaultCollapsed = false, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all ${className}`}>
       {(title || action) && (
-        <div className={`h-10 border-b border-slate-100 flex items-center justify-between px-3 bg-slate-50/50 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50' : ''} ${headerClassName}`} onClick={() => isCollapsible && setCollapsed(!collapsed)}>
+        <div 
+          className={`h-10 border-b border-slate-100 flex items-center justify-between px-3 bg-slate-50/50 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50' : ''} ${headerClassName}`}
+          onClick={() => isCollapsible && setCollapsed(!collapsed)}
+        >
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {isCollapsible && <span className="text-slate-400 shrink-0 transition-transform">{collapsed ? (isRtl ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>) : <ChevronDown size={16}/>}</span>}
+            {isCollapsible && (
+              <span className="text-slate-400 shrink-0 transition-transform">
+                {collapsed ? (isRtl ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>) : <ChevronDown size={16}/>}
+              </span>
+            )}
             <h3 className="font-black text-[12px] text-slate-800 truncate">{title}</h3>
           </div>
           {action && <div className="shrink-0" onClick={e => e.stopPropagation()}>{action}</div>}
         </div>
       )}
-      {!collapsed && <div className={`flex flex-col flex-1 min-h-0 ${noPadding ? '' : 'p-3'}`}>{children}</div>}
+      {!collapsed && (
+        <div className={`flex flex-col flex-1 min-h-0 ${noPadding ? '' : 'p-3'}`}>
+          {children}
+        </div>
+      )}
     </div>
   );
 };
 
 const Badge = ({ children, variant = 'gray', className = '' }) => {
   const variants = {
-    gray: "bg-slate-100 text-slate-600 border border-slate-200", success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
-    warning: "bg-amber-50 text-amber-600 border border-amber-200", danger: "bg-red-50 text-red-600 border border-red-200", 
-    indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200", blue: "bg-blue-50 text-blue-600 border border-blue-200", orange: "bg-orange-50 text-orange-600 border border-orange-200"
+    gray: "bg-slate-100 text-slate-600 border border-slate-200", 
+    success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+    warning: "bg-amber-50 text-amber-600 border border-amber-200", 
+    danger: "bg-red-50 text-red-600 border border-red-200", 
+    indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200",
+    blue: "bg-blue-50 text-blue-600 border border-blue-200",
+    orange: "bg-orange-50 text-orange-600 border border-orange-200"
   };
   return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
 };
@@ -143,7 +179,10 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
           {breadcrumbs.map((bc, idx) => (
             <React.Fragment key={idx}>
               <span className="opacity-40 shrink-0">{isRtl ? <ChevronLeft size={10} strokeWidth={3}/> : <ChevronRight size={10} strokeWidth={3}/>}</span>
-              <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 cursor-pointer transition-colors">{bc.icon && <bc.icon size={12} />}{bc.label}</span>
+              <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 cursor-pointer transition-colors">
+                {bc.icon && <bc.icon size={12} />}
+                {bc.label}
+              </span>
             </React.Fragment>
           ))}
         </div>
@@ -418,7 +457,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
-        {/* Action Buttons (New) - جابجا شده به سمت راست/ابتدای هدر */}
         <div className="flex items-center shrink-0">
           {onAdd && (
             <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
@@ -463,7 +501,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
           </div>
         )}
 
-        {/* Tools Menu (Columns, Import, Export) - جابجا شده به انتهای هدر */}
         <div className="flex items-center gap-1 shrink-0">
           <div className="relative flex items-center h-full" ref={colMenuRef}>
             <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
@@ -535,14 +572,16 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
                 return (
                   <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                     <div className="relative">
-                      {col.type !== 'date' && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
-                      <input 
-                        type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
-                        dir={col.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
-                        value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
-                        placeholder={col.type === 'date' ? '' : t('جستجو...', 'Search...')}
-                        className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${col.type === 'date' ? 'px-1' : (isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1')}`}
-                      />
+                      {(col.type === 'text' || col.type === 'number') && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
+                      {col.type !== 'toggle' && col.type !== 'checkbox' && (
+                        <input 
+                          type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+                          dir={col.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
+                          value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
+                          placeholder={col.type === 'date' ? '' : t('جستجو...', 'Search...')}
+                          className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${col.type === 'date' ? 'px-1' : (isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1')}`}
+                        />
+                      )}
                     </div>
                   </td>
                 );
@@ -582,7 +621,9 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
                 >
                   {rowReorderable && (
                     <td style={{...getStickyStyles('ROW_REORDER_COL', false), backgroundColor: 'inherit'}} className={`p-0 text-center bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
-                      <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 py-1.5 px-2 w-full flex items-center justify-center"><GripVertical size={14} /></div>
+                      <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 py-1.5 px-2 w-full flex items-center justify-center">
+                        <GripVertical size={14} />
+                      </div>
                     </td>
                   )}
                   {selectable && (

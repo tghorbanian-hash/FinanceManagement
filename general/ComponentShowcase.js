@@ -121,8 +121,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   };
 
   const gridActions = [
-    { icon: Eye, tooltip: t('مشاهده جزئیات', 'View Details'), onClick: (r) => { setSelectedRow(r); setViewModalOpen(true); }, className: 'hover:text-blue-600' },
-    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: handleOpenForm, className: 'hover:text-emerald-600' },
+    { icon: Eye, tooltip: t('مشاهده جزئیات (مودال)', 'View Details'), onClick: (r) => { setSelectedRow(r); setViewModalOpen(true); }, className: 'hover:text-blue-600' },
+    { icon: Edit, tooltip: t('ویرایش (ورود به فرم)', 'Edit'), onClick: handleOpenForm, className: 'hover:text-emerald-600' },
     { 
       icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (r) => { setSelectedRow(r); setAttachModalOpen(true); }, 
       className: (row) => row.attachments?.length > 0 ? 'text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100' : 'hover:text-indigo-600' 
@@ -151,7 +151,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setFilteredData(result);
   };
 
-  // --- Inline Edit Logic for Line Items ---
   const lineItemColumns = [
     { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2 font-mono">{idx + 1}</span> },
     { 
@@ -201,13 +200,12 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   };
 
   const lineItemActions = [
-    // دکمه‌های حالت ویرایش
     { icon: Check, tooltip: t('تایید', 'Save'), hidden: (row) => editingLineItemId !== row.id, onClick: (row) => {
       setLineItems(lineItems.map(item => item.id === editingLineItemId ? editingLineData : item));
       setEditingLineItemId(null);
     }, className: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
     { icon: X, tooltip: t('انصراف', 'Cancel'), hidden: (row) => editingLineItemId !== row.id, onClick: () => setEditingLineItemId(null), className: 'text-red-500 bg-red-50 hover:bg-red-100 border-red-200' },
-    // دکمه‌های حالت نمایش
+    
     { icon: Edit, tooltip: t('ویرایش', 'Edit'), hidden: (row) => editingLineItemId === row.id, onClick: (row) => {
       setEditingLineItemId(row.id);
       setEditingLineData({...row});
@@ -238,7 +236,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         breadcrumbs={[{ label: t('میز کار', 'Workspace') }, { label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سیستم طراحی', 'Design System') }]}
       />
 
-      {/* --- نمای لیست (گرید اصلی) --- */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
           <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
@@ -260,7 +257,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* --- نمای فرم (ایجاد/ویرایش) کاملاً فشرده --- */}
       {currentView === 'form' && selectedRow && (
         <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden min-h-0">
           <Card 
@@ -278,11 +274,9 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               </div>
             }
           >
-            {/* بدنه فرم با قابلیت اسکرول */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
               <div className="w-full flex flex-col gap-3 h-full">
                 
-                {/* اطلاعات اصلی و تنظیمات */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
                   <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
                     <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
@@ -304,7 +298,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   </Card>
                 </div>
 
-                {/* گرید اقلام ویرایشی با ارتفاع حداقل 400پیکسل */}
                 <Card 
                   title={t('اقلام سند (Inline Edit)', 'Line Items')} 
                   noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
@@ -330,7 +323,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
-      {/* --- مودال نمایش جزئیات --- */}
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
         {selectedRow && (
           <div className="space-y-3 p-4">
@@ -383,7 +375,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         )}
       </Modal>
 
-      {/* --- مودال فایل‌های ضمیمه --- */}
       <Modal isOpen={attachModalOpen} onClose={() => setAttachModalOpen(false)} title={`${t('ضمائم سند شماره', 'Attachments for Doc #')} ${selectedRow?.id || ''}`} width="max-w-xl" language={language} showMaximize={false}>
         {selectedRow && (
           <div className="p-4 h-[350px]">
