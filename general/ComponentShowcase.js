@@ -1,12 +1,13 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, FileDown } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, FileDown, Layers } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager } = window.DesignSystem || {};
+  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager, Tabs } = window.DesignSystem || {};
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
+  const [activeShowcaseTab, setActiveShowcaseTab] = useState('grid_form');
   const [currentView, setCurrentView] = useState('list'); 
   const [mockData, setMockData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -19,6 +20,12 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const showcaseTabs = [
+    { id: 'grid_form', label: t('امکانات گرید و فرم', 'Grid & Form Features'), icon: Table },
+    { id: 'tree', label: t('درخت', 'Tree'), icon: Layers },
+    { id: 'components', label: t('کامپوننت‌های کوچک', 'Small Components'), icon: BoxSelect }
+  ];
 
   const lovDepartments = [
     { code: '101', title: 'مالی', structure: 'معاونت اداری و مالی', isActive: true },
@@ -228,7 +235,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setLineItems(reordered);
   };
 
-  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
   return (
     <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -239,92 +246,110 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         breadcrumbs={[{ label: t('میز کار', 'Workspace') }, { label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سیستم طراحی', 'Design System') }]}
       />
 
-      {currentView === 'list' && (
-        <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
-          <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
-          <div className="flex-1 min-h-0">
-            <DataGrid 
-              data={filteredData} 
-              columns={gridColumns} 
-              actions={gridActions} 
-              language={language} 
-              onAdd={() => handleOpenForm()}
-              onRowDoubleClick={handleOpenForm}
-              onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
-              selectable={true}
-              bulkActions={[
-                { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: handleBulkDelete },
-                { label: t('تایید اسناد', 'Approve Selected'), icon: Check, variant: 'outline', onClick: () => alert('Approved') }
-              ]}
-            />
-          </div>
+      <Tabs tabs={showcaseTabs} activeTab={activeShowcaseTab} onChange={setActiveShowcaseTab} />
+
+      {activeShowcaseTab === 'grid_form' && (
+        <>
+          {currentView === 'list' && (
+            <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
+              <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
+              <div className="flex-1 min-h-0">
+                <DataGrid 
+                  data={filteredData} 
+                  columns={gridColumns} 
+                  actions={gridActions} 
+                  language={language} 
+                  onAdd={() => handleOpenForm()}
+                  onRowDoubleClick={handleOpenForm}
+                  onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
+                  selectable={true}
+                  bulkActions={[
+                    { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: handleBulkDelete },
+                    { label: t('تایید اسناد', 'Approve Selected'), icon: Check, variant: 'outline', onClick: () => alert('Approved') }
+                  ]}
+                />
+              </div>
+            </div>
+          )}
+
+          {currentView === 'form' && selectedRow && (
+            <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden min-h-0">
+              <Card 
+                title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
+                noPadding={true}
+                className="flex-1 flex flex-col border border-slate-200 shadow-sm min-h-0"
+                headerClassName="bg-white border-b-2 border-indigo-100 h-14"
+                action={
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)} title={t('ضمائم', 'Attachments')} />
+                    <Button size="sm" variant="ghost" icon={Printer} onClick={() => alert('Print Preview')} title={t('چاپ', 'Print')} />
+                    <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت', 'Back')}</Button>
+                    <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
+                    <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
+                  </div>
+                }
+              >
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
+                  <div className="w-full flex flex-col gap-3 h-full">
+                    
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
+                      <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
+                        <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
+                          <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
+                          <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(e) => setSelectedRow({...selectedRow, docDate: e.target.value})} isRtl={isRtl} type="date" />
+                          <div className="lg:col-span-2">
+                            <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} onChange={(row) => setSelectedRow({...selectedRow, department: row})} data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
+                          </div>
+                          <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} onChange={(e) => setSelectedRow({...selectedRow, amount: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="lg:col-span-1" />
+                          <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} onChange={(e) => setSelectedRow({...selectedRow, description: e.target.value})} isRtl={isRtl} wrapperClassName="lg:col-span-3" />
+                        </div>
+                      </Card>
+
+                      <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
+                        <div className="p-3 flex flex-col gap-4 bg-white h-full justify-center">
+                          <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
+                          <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
+                        </div>
+                      </Card>
+                    </div>
+
+                    <Card 
+                      title={t('اقلام سند (Inline Edit)', 'Line Items')} 
+                      noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
+                    >
+                      <div className="flex-1 flex flex-col min-h-0">
+                        <DataGrid 
+                          data={lineItems} 
+                          columns={lineItemColumns} 
+                          actions={lineItemActions}
+                          language={language}
+                          selectable={true}
+                          rowReorderable={true}
+                          onRowReorder={handleRowReorder}
+                          onAdd={handleAddLineItem}
+                          onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
+                          bulkActions={[{ label: t('حذف ردیف‌های انتخاب شده', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setLineItems(lineItems.filter(l => !ids.includes(l.id))) }]}
+                        />
+                      </div>
+                    </Card>
+
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeShowcaseTab === 'tree' && (
+        <div className="flex-1 flex items-center justify-center bg-white border border-slate-200 rounded-lg shadow-sm border-dashed">
+          <span className="text-slate-400 font-bold">{t('محل قرارگیری کامپوننت درخت...', 'Tree component placeholder...')}</span>
         </div>
       )}
 
-      {currentView === 'form' && selectedRow && (
-        <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden min-h-0">
-          <Card 
-            title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
-            noPadding={true}
-            className="flex-1 flex flex-col border border-slate-200 shadow-sm min-h-0"
-            headerClassName="bg-white border-b-2 border-indigo-100 h-14"
-            action={
-              <div className="flex items-center gap-1.5">
-                <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)} title={t('ضمائم', 'Attachments')} />
-                <Button size="sm" variant="ghost" icon={Printer} onClick={() => alert('Print Preview')} title={t('چاپ', 'Print')} />
-                <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت', 'Back')}</Button>
-                <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
-                <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
-              </div>
-            }
-          >
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
-              <div className="w-full flex flex-col gap-3 h-full">
-                
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
-                  <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
-                    <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
-                      <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
-                      <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(e) => setSelectedRow({...selectedRow, docDate: e.target.value})} isRtl={isRtl} type="date" />
-                      <div className="lg:col-span-2">
-                        <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} onChange={(row) => setSelectedRow({...selectedRow, department: row})} data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
-                      </div>
-                      <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} onChange={(e) => setSelectedRow({...selectedRow, amount: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="lg:col-span-1" />
-                      <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} onChange={(e) => setSelectedRow({...selectedRow, description: e.target.value})} isRtl={isRtl} wrapperClassName="lg:col-span-3" />
-                    </div>
-                  </Card>
-
-                  <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
-                    <div className="p-3 flex flex-col gap-4 bg-white h-full justify-center">
-                      <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
-                      <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
-                    </div>
-                  </Card>
-                </div>
-
-                <Card 
-                  title={t('اقلام سند (Inline Edit)', 'Line Items')} 
-                  noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
-                >
-                  <div className="flex-1 flex flex-col min-h-0">
-                    <DataGrid 
-                      data={lineItems} 
-                      columns={lineItemColumns} 
-                      actions={lineItemActions}
-                      language={language}
-                      selectable={true}
-                      rowReorderable={true}
-                      onRowReorder={handleRowReorder}
-                      onAdd={handleAddLineItem}
-                      onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
-                      bulkActions={[{ label: t('حذف ردیف‌های انتخاب شده', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setLineItems(lineItems.filter(l => !ids.includes(l.id))) }]}
-                    />
-                  </div>
-                </Card>
-
-              </div>
-            </div>
-          </Card>
+      {activeShowcaseTab === 'components' && (
+        <div className="flex-1 flex items-center justify-center bg-white border border-slate-200 rounded-lg shadow-sm border-dashed">
+          <span className="text-slate-400 font-bold">{t('محل قرارگیری کامپوننت‌های کوچک...', 'Small components placeholder...')}</span>
         </div>
       )}
 

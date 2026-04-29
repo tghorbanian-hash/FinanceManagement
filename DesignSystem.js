@@ -303,6 +303,27 @@ const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnl
   );
 };
 
+const Tabs = ({ tabs = [], activeTab, onChange, className = '' }) => {
+  return (
+    <div className={`flex items-center gap-1 border-b border-slate-200 mb-4 overflow-x-auto custom-scrollbar ${className}`}>
+      {tabs.map(tab => {
+        const isActive = activeTab === tab.id;
+        const Icon = tab.icon;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-[12px] font-bold transition-all border-b-2 outline-none whitespace-nowrap ${isActive ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-t-lg'}`}
+          >
+            {Icon && <Icon size={16} />}
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
@@ -693,4 +714,4 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   );
 };
 
-window.DesignSystem = { Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, Modal, AdvancedFilter, AttachmentManager, DataGrid };
+window.DesignSystem = { Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, Modal, AdvancedFilter, AttachmentManager, Tabs, DataGrid };
