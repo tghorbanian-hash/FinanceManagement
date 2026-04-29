@@ -1,9 +1,9 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, Check, Settings } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager } = window.DesignSystem || {};
+  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager } = window.DesignSystem || {};
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
@@ -12,13 +12,30 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [filteredData, setFilteredData] = useState([]);
   
   const [selectedRow, setSelectedRow] = useState(null);
+  const [lineItems, setLineItems] = useState([]); // برای گرید ویرایش درجا
+  
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // دیتای تستی برای LOV
+  const lovDepartments = [
+    { code: '101', title: 'مالی', structure: 'معاونت اداری و مالی', isActive: true },
+    { code: '102', title: 'فروش', structure: 'معاونت بازرگانی', isActive: true },
+    { code: '103', title: 'تدارکات', structure: 'معاونت پشتیبانی', isActive: true },
+    { code: '104', title: 'منابع انسانی', structure: 'معاونت اداری و مالی', isActive: false },
+    { code: '105', title: 'تولید', structure: 'معاونت کارخانه', isActive: true },
+  ];
+
+  const lovDeptColumns = [
+    { field: 'code', header_fa: 'کد واحد', header_en: 'Code', width: '80px', type: 'text' },
+    { field: 'title', header_fa: 'عنوان واحد', header_en: 'Title', width: '150px', type: 'text' },
+    { field: 'structure', header_fa: 'ساختار مرتبط', header_en: 'Structure', width: '150px', type: 'text' },
+    { field: 'isActive', header_fa: 'فعال', header_en: 'Active', width: '80px', type: 'toggle' },
+  ];
+
   useEffect(() => {
     const data = [];
-    const departments = ['مالی', 'فروش', 'تدارکات', 'منابع انسانی', 'مدیریت'];
     const statuses = ['تایید شده', 'در حال بررسی', 'پیش‌نویس', 'رد شده'];
     const types = ['بدهکار', 'بستانکار'];
 
@@ -29,7 +46,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       data.push({
         id: 1000 + i, 
         docDate: formattedDate, 
-        department: departments[i % 5],
+        department: lovDepartments[i % 5], // حالا آبجکت ذخیره می‌شود
         description: `بابت خرید/فروش اقلام شماره ${Math.floor(Math.random() * 9000) + 1000} مربوط به پروژه`,
         type: types[i % 2], 
         amount: (Math.floor(Math.random() * 50000) * 1000).toLocaleString(), 
@@ -46,10 +63,10 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const gridColumns = [
     { field: 'id', header_fa: 'شماره سند', header_en: 'Doc ID', type: 'number', width: '90px' },
-    { field: 'isActive', header_fa: 'فعال', header_en: 'Active', type: 'toggle', width: '80px' },
-    { field: 'isControlled', header_fa: 'کنترل شده', header_en: 'Controlled', type: 'checkbox', width: '90px' },
-    { field: 'docDate', header_fa: 'تاریخ ثبت', header_en: 'Date', type: 'date', width: '110px' },
-    { field: 'department', header_fa: 'واحد سازمانی', header_en: 'Department', type: 'text', width: '130px' },
+    { field: 'isActive', header_fa: 'فعال', header_en: 'Active', type: 'toggle', width: '70px' },
+    { field: 'isControlled', header_fa: 'کنترل شده', header_en: 'Controlled', type: 'checkbox', width: '80px' },
+    { field: 'docDate', header_fa: 'تاریخ ثبت', header_en: 'Date', type: 'date', width: '100px' },
+    { field: 'department', header_fa: 'واحد سازمانی', header_en: 'Department', width: '130px', render: (val) => val?.title },
     { field: 'description', header_fa: 'شرح سند', header_en: 'Description', type: 'text', width: '250px' },
     { field: 'amount', header_fa: 'مبلغ (ریال)', header_en: 'Amount (IRR)', type: 'text', width: '130px' },
     { 
@@ -65,7 +82,14 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   ];
 
   const handleOpenForm = (row = null) => {
-    setSelectedRow(row || { id: '', docDate: '', department: '', description: '', amount: '', status: 'پیش‌نویس', isActive: true, isControlled: false });
+    setSelectedRow(row || { id: '', docDate: '', department: null, description: '', amount: '', status: 'پیش‌نویس', isActive: true, isControlled: false });
+    
+    // شبیه‌سازی اقلام سند برای گرید ویرایش
+    setLineItems(row ? [
+      { id: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: row.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
+      { id: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: row.amount, note: 'شناسایی درآمد' }
+    ] : []);
+    
     setCurrentView('form');
   };
 
@@ -95,21 +119,56 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const advancedFilterFields = [
     { name: 'id', label: t('شماره سند', 'Doc ID'), type: 'number' },
     { name: 'docDate', label: t('تاریخ سند', 'Date'), type: 'date' },
-    { name: 'department', label: t('واحد سازمانی', 'Department'), type: 'select', options: [{ value: 'مالی', label: t('مالی', 'Finance') }, { value: 'فروش', label: t('فروش', 'Sales') }, { value: 'تدارکات', label: t('تدارکات', 'Procurement') }]},
+    { name: 'department', label: t('واحد سازمانی', 'Department'), type: 'lov', lovData: lovDepartments, lovColumns: lovDeptColumns },
     { name: 'status', label: t('وضعیت', 'Status'), type: 'select', options: [{ value: 'تایید شده', label: t('تایید شده', 'Approved') }, { value: 'در حال بررسی', label: t('در حال بررسی', 'In Review') }, { value: 'رد شده', label: t('رد شده', 'Rejected') }]},
   ];
 
   const handleAdvancedFilter = (values) => {
     let result = [...mockData];
     Object.keys(values).forEach(key => {
-      const filterVal = values[key]?.toString().toLowerCase();
+      const filterVal = values[key]?.title ? values[key].title.toLowerCase() : values[key]?.toString().toLowerCase();
       if (!filterVal) return;
-      result = result.filter(row => row[key]?.toString().toLowerCase().includes(filterVal));
+      result = result.filter(row => {
+        const rowVal = row[key]?.title ? row[key].title.toLowerCase() : row[key]?.toString().toLowerCase();
+        return rowVal && rowVal.includes(filterVal);
+      });
     });
     setFilteredData(result);
   };
 
-  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+  // تنظیمات گرید اقلام (Inline Edit)
+  const lineItemColumns = [
+    { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2">{idx + 1}</span> },
+    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'account', e.target.value)} isRtl={isRtl} /> },
+    { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '150px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'costCenter', e.target.value)} isRtl={isRtl} /> },
+    { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '130px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'debit', e.target.value)} isRtl={isRtl} dir="ltr" /> },
+    { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '130px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'credit', e.target.value)} isRtl={isRtl} dir="ltr" /> },
+    { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'note', e.target.value)} isRtl={isRtl} /> },
+  ];
+
+  const updateLineItem = (index, field, value) => {
+    const newItems = [...lineItems];
+    newItems[index][field] = value;
+    setLineItems(newItems);
+  };
+
+  const lineItemActions = [
+    { icon: Copy, tooltip: t('کپی ردیف', 'Duplicate'), onClick: (row, idx) => {
+      const newItems = [...lineItems];
+      newItems.splice(idx + 1, 0, { ...row, id: Date.now() });
+      setLineItems(newItems);
+    }, className: 'hover:text-blue-600' },
+    { icon: Trash2, tooltip: t('حذف ردیف', 'Delete'), onClick: (row, idx) => setLineItems(lineItems.filter((_, i) => i !== idx)), className: 'hover:text-red-600' },
+  ];
+
+  const handleRowReorder = (sourceIdx, destIdx) => {
+    const reordered = Array.from(lineItems);
+    const [moved] = reordered.splice(sourceIdx, 1);
+    reordered.splice(destIdx, 0, moved);
+    setLineItems(reordered);
+  };
+
+  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
   return (
     <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -120,6 +179,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         breadcrumbs={[{ label: t('میز کار', 'Workspace') }, { label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سیستم طراحی', 'Design System') }]}
       />
 
+      {/* --- نمای لیست (گرید اصلی) --- */}
       {currentView === 'list' && (
         <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
           <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
@@ -141,86 +201,111 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </div>
       )}
 
+      {/* --- نمای فرم (ایجاد/ویرایش) کاملاً فشرده --- */}
       {currentView === 'form' && selectedRow && (
         <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-4 duration-300 overflow-hidden">
           <Card 
             title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
             noPadding={true}
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col border border-slate-200 shadow-sm"
             headerClassName="bg-white border-b-2 border-indigo-100 h-14"
             action={
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
+                <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)}>{t('ضمائم', 'Attachments')}</Button>
                 <Button size="sm" variant="ghost" icon={Printer} onClick={() => alert('Print Preview')}>{t('چاپ', 'Print')}</Button>
-                <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت به فهرست', 'Back to List')}</Button>
-                <div className="w-px h-5 bg-slate-200 mx-1"></div>
+                <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت', 'Back')}</Button>
+                <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
                 <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
               </div>
             }
           >
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 bg-slate-50/50">
-              
-              <div className="max-w-6xl mx-auto space-y-6">
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                  <h4 className="text-[12px] font-black text-indigo-700 mb-4 flex items-center gap-1.5"><FileText size={16}/>{t('اطلاعات اصلی', 'General Info')}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
-                    <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} isRtl={isRtl} type="date" />
-                    <SelectField size="sm" label={t('واحد سازمانی', 'Department')} value={selectedRow.department} isRtl={isRtl} options={[{value:'مالی', label:'مالی'}, {value:'فروش', label:'فروش'}, {value:'تدارکات', label:'تدارکات'}]} />
-                    <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} isRtl={isRtl} dir="ltr" />
-                    <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} isRtl={isRtl} wrapperClassName="md:col-span-3 lg:col-span-4" />
-                  </div>
+            {/* بدنه فرم تمام عرض و فشرده */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50">
+              <div className="w-full space-y-3">
+                
+                {/* اطلاعات اصلی و تنظیمات (توی یک ردیف در صفحات بزرگ) */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+                  <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white">
+                    <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
+                      <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
+                      <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(e) => setSelectedRow({...selectedRow, docDate: e.target.value})} isRtl={isRtl} type="date" />
+                      <div className="lg:col-span-2">
+                        <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} onChange={(row) => setSelectedRow({...selectedRow, department: row})} data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
+                      </div>
+                      <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} onChange={(e) => setSelectedRow({...selectedRow, amount: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="lg:col-span-1" />
+                      <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} onChange={(e) => setSelectedRow({...selectedRow, description: e.target.value})} isRtl={isRtl} wrapperClassName="lg:col-span-3" />
+                    </div>
+                  </Card>
+
+                  <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white">
+                    <div className="p-3 flex flex-col gap-4 bg-white h-full justify-center">
+                      <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
+                      <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
+                    </div>
+                  </Card>
                 </div>
 
-                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                  <h4 className="text-[12px] font-black text-indigo-700 mb-4 flex items-center gap-1.5"><Settings size={16}/>{t('تنظیمات عملیاتی', 'Operational Settings')}</h4>
-                  <div className="flex flex-wrap items-center gap-8">
-                    <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
-                    <div className="w-px h-6 bg-slate-200 hidden md:block"></div>
-                    <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
+                {/* گرید اقلام ویرایشی */}
+                <Card title={t('اقلام سند (Inline Edit)', 'Line Items')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" action={<Button size="sm" variant="ghost" icon={Plus} onClick={() => setLineItems([...lineItems, {id: Date.now(), account:'', costCenter:'', debit:'', credit:'', note:''}])}>{t('افزودن ردیف', 'Add Row')}</Button>}>
+                  <div className="h-[250px]">
+                    <DataGrid 
+                      data={lineItems} 
+                      columns={lineItemColumns} 
+                      actions={lineItemActions}
+                      language={language}
+                      selectable={true}
+                      rowReorderable={true}
+                      onRowReorder={handleRowReorder}
+                      bulkActions={[{ label: t('حذف ردیف‌های انتخاب شده', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setLineItems(lineItems.filter(l => !ids.includes(l.id))) }]}
+                    />
                   </div>
-                </div>
+                </Card>
+
               </div>
-
             </div>
           </Card>
         </div>
       )}
 
+      {/* --- مودال نمایش جزئیات (View Modal) --- */}
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
         {selectedRow && (
-          <div className="space-y-4 p-4">
-            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true}>
-              <div className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 bg-white">
+          <div className="space-y-3 p-4">
+            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
+              <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white">
                 <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
                 <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} dir="ltr" />
+                <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} disabled data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
                 <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} dir="ltr" />
-                <div className="flex flex-col gap-1.5 justify-center mt-4">
-                  <span className="text-[11px] font-bold text-slate-700">{t('وضعیت:', 'Status:')}</span>
-                  <div>
+                
+                <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
+                
+                {/* همترازی وضعیت */}
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
+                  <div className="flex items-center h-8">
                     <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : selectedRow.status === 'پیش‌نویس' ? 'orange' : 'gray'}>
                       {selectedRow.status}
                     </Badge>
                   </div>
                 </div>
-                <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3 lg:col-span-4" />
-                
-                <div className="md:col-span-3 lg:col-span-4 flex items-center gap-6 pt-3 border-t border-slate-100">
+
+                <div className="md:col-span-4 flex items-center gap-6 pt-2 border-t border-slate-100">
                   <ToggleField size="sm" label={t('فعال', 'Active')} checked={selectedRow.isActive} disabled isRtl={isRtl} />
                   <CheckboxField size="sm" label={t('کنترل شده', 'Controlled')} checked={selectedRow.isControlled} disabled isRtl={isRtl} />
                 </div>
               </div>
             </Card>
 
-            <div>
-              <h4 className="text-[12px] font-black text-slate-800 mb-2 flex items-center gap-1.5"><Table size={14} className="text-indigo-600" />{t('اقلام سند (ردیف‌ها)', 'Document Line Items')}</h4>
-              <div className="h-[250px] border border-slate-200 rounded-lg overflow-hidden">
+            <Card title={t('اقلام سند', 'Line Items')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
+              <div className="h-[250px]">
                 <DataGrid 
                   data={[
-                    { rowId: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
-                    { rowId: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
+                    { id: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
+                    { id: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
                   ]}
                   columns={[
-                    { field: 'rowId', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
+                    { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
                     { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px' },
                     { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
                     { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
@@ -230,14 +315,15 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   language={language}
                 />
               </div>
-            </div>
+            </Card>
           </div>
         )}
       </Modal>
 
+      {/* --- مودال فایل‌های ضمیمه --- */}
       <Modal isOpen={attachModalOpen} onClose={() => setAttachModalOpen(false)} title={`${t('ضمائم سند شماره', 'Attachments for Doc #')} ${selectedRow?.id || ''}`} width="max-w-xl" language={language} showMaximize={false}>
         {selectedRow && (
-          <div className="p-4">
+          <div className="p-4 h-[350px]">
             <AttachmentManager 
               files={selectedRow.attachments} 
               onUpload={(newFiles) => {
