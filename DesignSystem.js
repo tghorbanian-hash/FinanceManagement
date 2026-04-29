@@ -137,7 +137,64 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
 };
 
 // ==========================================
-// 6. AdvancedFilter Component
+// 6. Modal Component (NEW)
+// ==========================================
+const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
+      
+      <div 
+        className={`bg-white shadow-2xl flex flex-col relative z-10 transition-all duration-300 animate-in zoom-in-95 overflow-hidden ${
+          isMaximized ? 'w-full h-full inset-0 rounded-none' : `${width} w-full max-h-[90vh] rounded-xl`
+        }`}
+      >
+        {/* Modal Header */}
+        <div className="h-14 px-5 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
+          <h3 className="font-black text-slate-800 text-[14px]">{title}</h3>
+          <div className="flex items-center gap-1.5">
+            {showMaximize && (
+              <button 
+                onClick={() => setIsMaximized(!isMaximized)} 
+                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                title={isMaximized ? (isRtl ? 'کوچک کردن' : 'Restore') : (isRtl ? 'بزرگنمایی' : 'Maximize')}
+              >
+                {isMaximized ? <Minimize2 size={16} strokeWidth={2.5} /> : <Maximize2 size={16} strokeWidth={2.5} />}
+              </button>
+            )}
+            <button 
+              onClick={onClose} 
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title={isRtl ? 'بستن' : 'Close'}
+            >
+              <X size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+        </div>
+        
+        {/* Modal Body */}
+        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/30">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==========================================
+// 7. AdvancedFilter Component
 // ==========================================
 const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
@@ -160,7 +217,6 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
       
       {isOpen && (
         <div className="p-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
-          {/* استفاده از سایز فشرده (sm) برای فیلدها */}
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {fields.map((f, idx) => {
               if (f.type === 'select') {
@@ -177,7 +233,6 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
               );
             })}
           </div>
-          {/* حذف خط بالایی دکمه‌ها و فشرده‌سازی فاصله */}
           <div className="flex items-center justify-end gap-2 mt-3">
             <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
             <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
@@ -189,7 +244,7 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
 };
 
 // ==========================================
-// 7. DataGrid Component (Advanced)
+// 8. DataGrid Component (Advanced)
 // ==========================================
 const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd }) => {
   const isRtl = language === 'fa';
@@ -339,7 +394,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
       {/* Unified Toolbar */}
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
         
-        {/* Action Buttons (New) - جابجا شده به سمت راست/ابتدای هدر */}
         <div className="flex items-center shrink-0">
           {onAdd && (
             <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
@@ -348,7 +402,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
           )}
         </div>
 
-        {/* Grouping Drop Zone */}
         <div 
           className={`flex-1 flex items-center gap-2 px-3 py-1 border border-dashed rounded-md transition-colors overflow-x-auto custom-scrollbar ${groupCols.length > 0 ? 'bg-indigo-50/30 border-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
           onDragOver={(e) => e.preventDefault()} onDrop={handleGroupDrop}
@@ -376,7 +429,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
           )}
         </div>
 
-        {/* Tools Menu (Columns, Import, Export) - جابجا شده به انتهای هدر */}
         <div className="flex items-center gap-1 shrink-0">
           <div className="relative flex items-center h-full" ref={colMenuRef}>
             <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center">
@@ -406,7 +458,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
 
       {/* Grid Container */}
       <div className="overflow-auto custom-scrollbar flex-1 relative bg-white">
-        {/* رفع باگ نشت بک‌گراند: استفاده از border-separate بجای border-collapse */}
         <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
           <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
             <tr>
@@ -449,7 +500,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
                 return (
                   <td key={`filter-${col.field}`} style={{...getStickyStyles(col.field, false), zIndex: filterZIndex}} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                     <div className="relative">
-                      {/* تقویم بازگردانده شد و دکمه سرچ در تقویم پنهان است */}
                       {col.type !== 'date' && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
                       <input 
                         type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
@@ -539,4 +589,4 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   );
 };
 
-window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, AdvancedFilter, DataGrid };
+window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, Modal, AdvancedFilter, DataGrid };

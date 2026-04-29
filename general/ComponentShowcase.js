@@ -1,9 +1,9 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  const { DataGrid, Button, TextField, Card, Badge, SelectField, PageHeader, AdvancedFilter } = window.DesignSystem || {};
+  const { DataGrid, Button, TextField, Card, Badge, SelectField, PageHeader, AdvancedFilter, Modal } = window.DesignSystem || {};
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
@@ -11,8 +11,11 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [mockData, setMockData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
   const [formData, setFormData] = useState({ username: '', email: '', role: '' });
+  
+  // States for View Details Modal
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedRow, setSelectedRow] = useState(null);
 
-  // تولید ۱۰۰ دیتای نمونه
   useEffect(() => {
     const data = [];
     const departments = ['مالی', 'فروش', 'تدارکات', 'منابع انسانی', 'مدیریت'];
@@ -42,8 +45,13 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     { field: 'status', header_fa: 'وضعیت', header_en: 'Status', type: 'text', width: '110px' },
   ];
 
+  const handleViewDetails = (row) => {
+    setSelectedRow(row);
+    setViewModalOpen(true);
+  };
+
   const gridActions = [
-    { icon: Eye, tooltip: t('مشاهده جزئیات', 'View Details'), onClick: (row) => alert(`${t('مشاهده', 'View')} ID: ${row.id}`), className: 'text-slate-400 hover:text-blue-600' },
+    { icon: Eye, tooltip: t('مشاهده جزئیات', 'View Details'), onClick: handleViewDetails, className: 'text-slate-400 hover:text-blue-600' },
     { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => alert(`${t('ویرایش', 'Edit')} ID: ${row.id}`), className: 'text-slate-400 hover:text-emerald-600' },
     { icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (row) => alert(`${t('ضمائم', 'Attachments')} ID: ${row.id}`), className: 'text-slate-400 hover:text-indigo-600' },
     { icon: Printer, tooltip: t('چاپ', 'Print'), onClick: (row) => alert(`${t('چاپ', 'Print')} ID: ${row.id}`), className: 'text-slate-400 hover:text-slate-800' },
@@ -75,7 +83,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setFilteredData(result);
   };
 
-  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
   return (
     <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -154,6 +162,60 @@ const ComponentShowcase = ({ language = 'fa' }) => {
           </div>
         </div>
       )}
+
+      {/* مودال نمایش جزئیات سند */}
+      <Modal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`}
+        width="max-w-5xl"
+        language={language}
+        showMaximize={true}
+      >
+        {selectedRow && (
+          <div className="space-y-6 p-2">
+            {/* بخش اطلاعات کلی (هدر سند) */}
+            <Card title={t('اطلاعات کلی سند', 'General Information')} icon={FileText} noPadding={true}>
+              <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 bg-white">
+                <TextField label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
+                <TextField label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} dir="ltr" />
+                <TextField label={t('واحد سازمانی', 'Department')} value={selectedRow.department} disabled isRtl={isRtl} />
+                <TextField label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} dir="ltr" />
+                <TextField label={t('ماهیت', 'Type')} value={selectedRow.type} disabled isRtl={isRtl} />
+                <TextField label={t('وضعیت', 'Status')} value={selectedRow.status} disabled isRtl={isRtl} />
+                <TextField label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
+              </div>
+            </Card>
+
+            {/* بخش اقلام (جدول داخلی) */}
+            <div>
+              <h4 className="text-[13px] font-black text-slate-800 mb-3 flex items-center gap-2">
+                <Table size={16} className="text-indigo-600" />
+                {t('اقلام سند (ردیف‌ها)', 'Document Line Items')}
+              </h4>
+              <div className="h-[250px] border border-slate-200 rounded-lg overflow-hidden">
+                {/* یک گرید مینیاتوری فقط برای نمایش داخل مودال */}
+                <DataGrid 
+                  data={[
+                    { rowId: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
+                    { rowId: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
+                  ]}
+                  columns={[
+                    { field: 'rowId', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
+                    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px' },
+                    { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
+                    { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
+                    { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px' },
+                    { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px' },
+                  ]}
+                  language={language}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
     </div>
   );
 };
