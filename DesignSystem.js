@@ -7,10 +7,7 @@ import {
   Layers, X, Maximize2, Minimize2, Plus, Home, Filter, UploadCloud, FileText, Check
 } from 'lucide-react';
 
-const Button = ({
-  children, variant = 'primary', size = 'md', isLoading = false, disabled = false,
-  icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props
-}) => {
+const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
   const variants = {
     primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-sm shadow-indigo-200",
@@ -20,15 +17,8 @@ const Button = ({
     'danger-outline': "bg-white text-red-500 border border-red-200 hover:bg-red-50 focus:ring-red-100",
     ghost: "bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-200"
   };
-  
   const hasText = React.Children.count(children) > 0;
-  
-  const sizes = { 
-    sm: `h-8 ${hasText ? 'px-3 gap-1.5 text-[11px]' : 'w-8'}`, 
-    md: `h-10 ${hasText ? 'px-4 gap-2 text-[12px]' : 'w-10'}`, 
-    lg: `h-12 ${hasText ? 'px-6 gap-2.5 text-[14px]' : 'w-12'}` 
-  };
-  
+  const sizes = { sm: `h-8 ${hasText ? 'px-3 gap-1.5 text-[11px]' : 'w-8'}`, md: `h-10 ${hasText ? 'px-4 gap-2 text-[12px]' : 'w-10'}`, lg: `h-12 ${hasText ? 'px-6 gap-2.5 text-[14px]' : 'w-12'}` };
   const iconSizes = { sm: 14, md: 16, lg: 18 };
 
   return (
@@ -44,17 +34,12 @@ const Button = ({
 const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
-  
   return (
     <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative flex items-center">
         {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
-        <input
-          id={inputId} type={type} disabled={disabled}
-          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
-          dir={isRtl ? 'rtl' : 'ltr'} {...props}
-        />
+        <input id={inputId} type={type} disabled={disabled} className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`} dir={isRtl ? 'rtl' : 'ltr'} {...props} />
       </div>
       {error ? <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div> : hint ? <div className="text-slate-500 text-[10px] mt-0.5">{hint}</div> : null}
     </div>
@@ -64,16 +49,11 @@ const TextField = ({ label, error, hint, icon: Icon, disabled = false, required 
 const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, ...props }) => {
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
-
   return (
     <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label htmlFor={selectId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative">
-        <select
-          id={selectId} disabled={disabled}
-          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-8 pr-2.5' : 'pr-8 pl-2.5'} ${className}`}
-          dir={isRtl ? 'rtl' : 'ltr'} {...props}
-        >
+        <select id={selectId} disabled={disabled} className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-8 pr-2.5' : 'pr-8 pl-2.5'} ${className}`} dir={isRtl ? 'rtl' : 'ltr'} {...props}>
           <option value="" disabled hidden>انتخاب کنید...</option>
           {options.map((opt, idx) => <option key={idx} value={opt.value}>{opt.label}</option>)}
         </select>
@@ -98,13 +78,7 @@ const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label,
 const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClassName = '' }) => {
   return (
     <label className={`flex items-center gap-2 ${disabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'} ${wrapperClassName}`}>
-      <input 
-        type="checkbox" 
-        checked={checked || false} 
-        onChange={(e) => onChange(e.target.checked)} 
-        disabled={disabled}
-        className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:bg-slate-100 disabled:border-slate-300"
-      />
+      <input type="checkbox" checked={checked || false} onChange={(e) => onChange(e.target.checked)} disabled={disabled} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer disabled:bg-slate-200 disabled:border-slate-300" />
       {label && <span className="text-[11px] font-bold text-slate-700 select-none">{label}</span>}
     </label>
   );
@@ -113,7 +87,6 @@ const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClas
 const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const t = (fa, en) => isRtl ? fa : en;
-  
   return (
     <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
       {label && <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
@@ -123,12 +96,9 @@ const LOVField = ({ label, displayValue, onChange, data, columns, disabled = fal
           <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
         </div>
       </div>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
         <div className="h-[350px] p-2 bg-slate-50/50">
-          <DataGrid 
-            data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
-            onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
-          />
+          <DataGrid data={data} columns={columns} language={isRtl ? 'fa' : 'en'} onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }} />
         </div>
       </Modal>
     </div>
@@ -138,43 +108,27 @@ const LOVField = ({ label, displayValue, onChange, data, columns, disabled = fal
 const Card = ({ title, action, children, className = '', noPadding = false, headerClassName = '', isCollapsible = false, defaultCollapsed = false, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
-  
   return (
     <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all ${className}`}>
       {(title || action) && (
-        <div 
-          className={`h-10 border-b border-slate-100 flex items-center justify-between px-3 bg-slate-50/50 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50' : ''} ${headerClassName}`}
-          onClick={() => isCollapsible && setCollapsed(!collapsed)}
-        >
+        <div className={`h-10 border-b border-slate-100 flex items-center justify-between px-3 bg-slate-50/50 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50' : ''} ${headerClassName}`} onClick={() => isCollapsible && setCollapsed(!collapsed)}>
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            {isCollapsible && (
-              <span className="text-slate-400 shrink-0 transition-transform">
-                {collapsed ? (isRtl ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>) : <ChevronDown size={16}/>}
-              </span>
-            )}
+            {isCollapsible && <span className="text-slate-400 shrink-0 transition-transform">{collapsed ? (isRtl ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>) : <ChevronDown size={16}/>}</span>}
             <h3 className="font-black text-[12px] text-slate-800 truncate">{title}</h3>
           </div>
           {action && <div className="shrink-0" onClick={e => e.stopPropagation()}>{action}</div>}
         </div>
       )}
-      {!collapsed && (
-        <div className={`flex flex-col flex-1 min-h-0 ${noPadding ? '' : 'p-3'}`}>
-          {children}
-        </div>
-      )}
+      {!collapsed && <div className={`flex flex-col flex-1 min-h-0 ${noPadding ? '' : 'p-3'}`}>{children}</div>}
     </div>
   );
 };
 
 const Badge = ({ children, variant = 'gray', className = '' }) => {
   const variants = {
-    gray: "bg-slate-100 text-slate-600 border border-slate-200", 
-    success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
-    warning: "bg-amber-50 text-amber-600 border border-amber-200", 
-    danger: "bg-red-50 text-red-600 border border-red-200", 
-    indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200",
-    blue: "bg-blue-50 text-blue-600 border border-blue-200",
-    orange: "bg-orange-50 text-orange-600 border border-orange-200"
+    gray: "bg-slate-100 text-slate-600 border border-slate-200", success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+    warning: "bg-amber-50 text-amber-600 border border-amber-200", danger: "bg-red-50 text-red-600 border border-red-200", 
+    indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200", blue: "bg-blue-50 text-blue-600 border border-blue-200", orange: "bg-orange-50 text-orange-600 border border-orange-200"
   };
   return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
 };
@@ -189,10 +143,7 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
           {breadcrumbs.map((bc, idx) => (
             <React.Fragment key={idx}>
               <span className="opacity-40 shrink-0">{isRtl ? <ChevronLeft size={10} strokeWidth={3}/> : <ChevronRight size={10} strokeWidth={3}/>}</span>
-              <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 cursor-pointer transition-colors">
-                {bc.icon && <bc.icon size={12} />}
-                {bc.label}
-              </span>
+              <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 cursor-pointer transition-colors">{bc.icon && <bc.icon size={12} />}{bc.label}</span>
             </React.Fragment>
           ))}
         </div>
@@ -220,28 +171,15 @@ const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose} />
-      
-      <div 
-        className={`bg-white shadow-2xl flex flex-col relative z-10 transition-all duration-300 animate-in zoom-in-95 overflow-hidden ${
-          isMaximized ? 'w-full h-full inset-0 rounded-none' : `${width} w-full max-h-[90vh] rounded-xl`
-        }`}
-      >
+      <div className={`bg-white shadow-2xl flex flex-col relative z-10 transition-all duration-300 animate-in zoom-in-95 overflow-hidden ${isMaximized ? 'w-full h-full inset-0 rounded-none' : `${width} w-full max-h-[90vh] rounded-xl`}`}>
         <div className="h-12 px-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 shrink-0">
           <h3 className="font-black text-slate-800 text-[13px]">{title}</h3>
           <div className="flex items-center gap-1.5">
-            {showMaximize && (
-              <button onClick={() => setIsMaximized(!isMaximized)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors">
-                {isMaximized ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
-              </button>
-            )}
-            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors">
-              <X size={16} strokeWidth={2.5} />
-            </button>
+            {showMaximize && <button onClick={() => setIsMaximized(!isMaximized)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors">{isMaximized ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}</button>}
+            <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"><X size={16} strokeWidth={2.5} /></button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/30 flex flex-col min-h-0">
-          {children}
-        </div>
+        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/30 flex flex-col min-h-0">{children}</div>
       </div>
     </div>
   );
@@ -259,13 +197,9 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-3 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-lg transition-colors select-none" onClick={() => setIsOpen(!isOpen)}>
-        <div className="flex items-center gap-2 text-indigo-600">
-          <Filter size={14} strokeWidth={2.5} />
-          <span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span>
-        </div>
+        <div className="flex items-center gap-2 text-indigo-600"><Filter size={14} strokeWidth={2.5} /><span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span></div>
         <div className="text-slate-400">{isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
       </div>
-      
       {isOpen && (
         <div className="p-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
@@ -274,12 +208,7 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
               if (f.type === 'toggle') return <ToggleField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
               if (f.type === 'checkbox') return <CheckboxField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
               if (f.type === 'lov') return <LOVField key={idx} size="sm" label={f.label} isRtl={isRtl} data={f.lovData} columns={f.lovColumns} displayValue={values[f.name]?.title} onChange={(row) => handleChange(f.name, row)} />;
-              return (
-                <TextField 
-                  key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''}
-                  value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
-                />
-              );
+              return <TextField key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'} />;
             })}
           </div>
           <div className="flex items-center justify-end gap-2 mt-3">
@@ -298,19 +227,11 @@ const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnl
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
-  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
-  const handleDrop = (e) => {
-    e.preventDefault(); setIsDragging(false);
-    if (readOnly) return;
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) onUpload(Array.from(e.dataTransfer.files));
-  };
-  const handleFileSelect = (e) => {
-    if (e.target.files && e.target.files.length > 0) onUpload(Array.from(e.target.files));
-  };
+  const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); if (!readOnly && e.dataTransfer.files?.length > 0) onUpload(Array.from(e.dataTransfer.files)); };
+  const handleFileSelect = (e) => { if (e.target.files?.length > 0) onUpload(Array.from(e.target.files)); };
 
   const formatSize = (bytes) => {
-    if (!bytes || bytes === 0) return '0 B';
+    if (!bytes) return '0 B';
     const k = 1024; const sizes = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
@@ -318,49 +239,31 @@ const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnl
   return (
     <div className="flex flex-col gap-3 font-sans w-full h-full" dir={isRtl ? 'rtl' : 'ltr'}>
       {!readOnly && (
-        <div 
-          onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()}
-          className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all shrink-0 ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-indigo-400'}`}
-        >
+        <div onDragOver={e => {e.preventDefault(); setIsDragging(true);}} onDragLeave={e => {e.preventDefault(); setIsDragging(false);}} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()} className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all shrink-0 ${isDragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-300 bg-slate-50 hover:bg-slate-100 hover:border-indigo-400'}`}>
           <UploadCloud size={24} className={isDragging ? 'text-indigo-600' : 'text-slate-400'} />
           <span className="text-[12px] font-bold text-slate-700 mt-2">{t('فایل‌ها را اینجا رها کنید یا کلیک کنید', 'Drop files here or click to upload')}</span>
-          <span className="text-[10px] text-slate-500 mt-1">{t('حداکثر حجم فایل: ۱۰ مگابایت', 'Max file size: 10MB')}</span>
           <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelect} />
         </div>
       )}
-
       <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
-        {files.length === 0 ? (
-          <div className="text-center p-4 text-[11px] text-slate-400 border border-slate-100 rounded-lg bg-slate-50/50">
-            {t('هیچ فایلی ضمیمه نشده است.', 'No attachments found.')}
-          </div>
-        ) : (
-          files.map((file, idx) => (
-            <div key={idx} className="flex items-center justify-between p-2 border border-slate-200 rounded-lg bg-white hover:border-indigo-200 transition-colors group shrink-0">
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md shrink-0"><FileText size={14} /></div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span>
-                  <span className="text-[9px] text-slate-400 font-medium">{formatSize(file.size)}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"><Download size={14} /></button>}
-                {!readOnly && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={14} /></button>}
-              </div>
+        {files.length === 0 ? <div className="text-center p-4 text-[11px] text-slate-400 border border-slate-100 rounded-lg bg-slate-50/50">{t('هیچ فایلی ضمیمه نشده است.', 'No attachments found.')}</div> : files.map((file, idx) => (
+          <div key={idx} className="flex items-center justify-between p-2 border border-slate-200 rounded-lg bg-white hover:border-indigo-200 transition-colors group shrink-0">
+            <div className="flex items-center gap-2.5 overflow-hidden">
+              <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-md shrink-0"><FileText size={14} /></div>
+              <div className="flex flex-col min-w-0"><span className="text-[11px] font-bold text-slate-700 truncate">{file.name}</span><span className="text-[9px] text-slate-400 font-medium">{formatSize(file.size)}</span></div>
             </div>
-          ))
-        )}
+            <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+              {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md"><Download size={14} /></button>}
+              {!readOnly && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md"><Trash2 size={14} /></button>}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-const DataGrid = ({ 
-  data = [], columns = [], actions = [], language = 'fa', 
-  onAdd, onRowDoubleClick, selectable = false, bulkActions = [],
-  rowReorderable = false, onRowReorder
-}) => {
+const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
@@ -378,10 +281,8 @@ const DataGrid = ({
   const [selectedRows, setSelectedRows] = useState([]);
   
   const colMenuRef = useRef(null);
-  const dragColItem = useRef();
-  const dragOverColItem = useRef();
-  const dragRowItem = useRef();
-  const dragOverRowItem = useRef();
+  const dragColItem = useRef(); const dragOverColItem = useRef();
+  const dragRowItem = useRef(); const dragOverRowItem = useRef();
 
   useEffect(() => {
     const handleClickOutside = (e) => { if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false); };
@@ -409,37 +310,26 @@ const DataGrid = ({
         return val.toString().toLowerCase().includes(filterVal);
       });
     });
-
     if (sortConfig.field) {
       result.sort((a, b) => {
-        const valA = a[sortConfig.field];
-        const valB = b[sortConfig.field];
+        const valA = a[sortConfig.field]; const valB = b[sortConfig.field];
         if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
         if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
-
     const buildGroupedData = (dataArray, colsToGroup, depth = 0, parentKey = '') => {
       if (depth >= colsToGroup.length) return dataArray;
-      const currentField = colsToGroup[depth];
-      const groups = {};
-      dataArray.forEach(row => {
-        const val = row[currentField] || t('نامشخص', 'Unknown');
-        if (!groups[val]) groups[val] = [];
-        groups[val].push(row);
-      });
+      const currentField = colsToGroup[depth]; const groups = {};
+      dataArray.forEach(row => { const val = row[currentField] || t('نامشخص', 'Unknown'); if (!groups[val]) groups[val] = []; groups[val].push(row); });
       let groupedResult = [];
       Object.keys(groups).forEach(val => {
         const groupKey = parentKey ? `${parentKey}|${val}` : val;
         groupedResult.push({ isGroupHeader: true, groupField: currentField, groupValue: val, groupKey, depth, count: groups[val].length });
-        if (!collapsedGroups.has(groupKey)) {
-          groupedResult = groupedResult.concat(buildGroupedData(groups[val], colsToGroup, depth + 1, groupKey));
-        }
+        if (!collapsedGroups.has(groupKey)) groupedResult = groupedResult.concat(buildGroupedData(groups[val], colsToGroup, depth + 1, groupKey));
       });
       return groupedResult;
     };
-
     if (groupCols.length > 0) return buildGroupedData(result, groupCols);
     return result;
   }, [gridData, filters, sortConfig, groupCols, collapsedGroups, t]);
@@ -460,11 +350,8 @@ const DataGrid = ({
   const handleColDragEnter = (e, position) => { dragOverColItem.current = position; };
   const handleColDragEnd = () => {
     if (dragColItem.current !== null && dragOverColItem.current !== null) {
-      const newOrder = [...columnOrder];
-      const draggedContent = newOrder[dragColItem.current];
-      newOrder.splice(dragColItem.current, 1);
-      newOrder.splice(dragOverColItem.current, 0, draggedContent);
-      setColumnOrder(newOrder);
+      const newOrder = [...columnOrder]; const draggedContent = newOrder[dragColItem.current];
+      newOrder.splice(dragColItem.current, 1); newOrder.splice(dragOverColItem.current, 0, draggedContent); setColumnOrder(newOrder);
     }
     dragColItem.current = null; dragOverColItem.current = null;
   };
@@ -478,11 +365,7 @@ const DataGrid = ({
     dragRowItem.current = null; dragOverRowItem.current = null;
   };
 
-  const handleGroupDrop = (e) => {
-    e.preventDefault();
-    const field = e.dataTransfer.getData('colField');
-    if (field && !groupCols.includes(field)) { setGroupCols([...groupCols, field]); setPage(1); }
-  };
+  const handleGroupDrop = (e) => { e.preventDefault(); const field = e.dataTransfer.getData('colField'); if (field && !groupCols.includes(field)) { setGroupCols([...groupCols, field]); setPage(1); } };
   const removeGroupCol = (field) => { setGroupCols(groupCols.filter(f => f !== field)); setCollapsedGroups(new Set()); setPage(1); };
   const toggleGroupCollapse = (groupKey) => { const newCollapsed = new Set(collapsedGroups); if (newCollapsed.has(groupKey)) newCollapsed.delete(groupKey); else newCollapsed.add(groupKey); setCollapsedGroups(newCollapsed); };
   const expandAllGroups = () => setCollapsedGroups(new Set());
@@ -497,9 +380,7 @@ const DataGrid = ({
       setSelectedRows(selectedRows.filter(id => !pageIds.includes(id)));
     }
   };
-  const handleSelectRow = (id) => {
-    if (selectedRows.includes(id)) setSelectedRows(selectedRows.filter(rowId => rowId !== id)); else setSelectedRows([...selectedRows, id]);
-  };
+  const handleSelectRow = (id) => { if (selectedRows.includes(id)) setSelectedRows(selectedRows.filter(rowId => rowId !== id)); else setSelectedRows([...selectedRows, id]); };
 
   const exportCSV = () => {
     const headers = visibleColumns.map(c => t(c.header_fa, c.header_en)).join(',');
@@ -512,7 +393,6 @@ const DataGrid = ({
   const getStickyStyles = (field, isAction = false, isHeader = false) => {
     const baseZ = isHeader ? 30 : 1;
     if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader ? 50 : 20, background: 'inherit' };
-    
     if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : 15, background: 'inherit' };
     if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : 15, background: 'inherit' };
 
@@ -538,6 +418,7 @@ const DataGrid = ({
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
+        {/* Action Buttons (New) - جابجا شده به سمت راست/ابتدای هدر */}
         <div className="flex items-center shrink-0">
           {onAdd && (
             <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
@@ -582,6 +463,7 @@ const DataGrid = ({
           </div>
         )}
 
+        {/* Tools Menu (Columns, Import, Export) - جابجا شده به انتهای هدر */}
         <div className="flex items-center gap-1 shrink-0">
           <div className="relative flex items-center h-full" ref={colMenuRef}>
             <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
@@ -653,16 +535,14 @@ const DataGrid = ({
                 return (
                   <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                     <div className="relative">
-                      {(col.type === 'text' || col.type === 'number') && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
-                      {col.type !== 'toggle' && col.type !== 'checkbox' && (
-                        <input 
-                          type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
-                          dir={col.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
-                          value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
-                          placeholder={col.type === 'date' ? '' : t('جستجو...', 'Search...')}
-                          className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${col.type === 'date' ? 'px-1' : (isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1')}`}
-                        />
-                      )}
+                      {col.type !== 'date' && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
+                      <input 
+                        type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
+                        dir={col.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
+                        value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
+                        placeholder={col.type === 'date' ? '' : t('جستجو...', 'Search...')}
+                        className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${col.type === 'date' ? 'px-1' : (isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1')}`}
+                      />
                     </div>
                   </td>
                 );
@@ -702,9 +582,7 @@ const DataGrid = ({
                 >
                   {rowReorderable && (
                     <td style={{...getStickyStyles('ROW_REORDER_COL', false), backgroundColor: 'inherit'}} className={`p-0 text-center bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
-                      <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 py-1.5 px-2 w-full flex items-center justify-center">
-                        <GripVertical size={14} />
-                      </div>
+                      <div className="cursor-grab active:cursor-grabbing text-slate-300 hover:text-indigo-500 py-1.5 px-2 w-full flex items-center justify-center"><GripVertical size={14} /></div>
                     </td>
                   )}
                   {selectable && (
@@ -722,6 +600,7 @@ const DataGrid = ({
                     <td style={{...getStickyStyles('ACTIONS', true), backgroundColor: 'inherit'}} className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-white group-hover:bg-slate-50 ${isSelected ? 'bg-indigo-50' : ''} border-slate-100`}>
                       <div className="flex items-center justify-center gap-0.5">
                         {actions.map((act, i) => {
+                          if (act.hidden && act.hidden(row)) return null;
                           const actClass = typeof act.className === 'function' ? act.className(row) : (act.className || 'hover:text-indigo-600');
                           return (
                             <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 border border-transparent hover:border-slate-200 hover:bg-white hover:shadow-sm transition-all ${actClass}`}>

@@ -1,6 +1,6 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
   const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager } = window.DesignSystem || {};
@@ -13,6 +13,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   
   const [selectedRow, setSelectedRow] = useState(null);
   const [lineItems, setLineItems] = useState([]); 
+  const [editingLineItemId, setEditingLineItemId] = useState(null);
+  const [editingLineData, setEditingLineData] = useState(null);
   
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
@@ -26,11 +28,25 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     { code: '105', title: 'تولید', structure: 'معاونت کارخانه', isActive: true },
   ];
 
+  const lovAccounts = [
+    { code: '1010', title: 'موجودی نقد و بانک', group: 'دارایی جاری' },
+    { code: '1020', title: 'حساب‌های دریافتنی', group: 'دارایی جاری' },
+    { code: '2010', title: 'حساب‌های پرداختنی', group: 'بدهی جاری' },
+    { code: '4010', title: 'درآمد فروش محصول', group: 'درآمدها' },
+    { code: '5010', title: 'هزینه حقوق و دستمزد', group: 'هزینه‌ها' },
+  ];
+
   const lovDeptColumns = [
-    { field: 'code', header_fa: 'کد واحد', header_en: 'Code', width: '80px', type: 'text' },
-    { field: 'title', header_fa: 'عنوان واحد', header_en: 'Title', width: '150px', type: 'text' },
+    { field: 'code', header_fa: 'کد', header_en: 'Code', width: '80px', type: 'text' },
+    { field: 'title', header_fa: 'عنوان', header_en: 'Title', width: '150px', type: 'text' },
     { field: 'structure', header_fa: 'ساختار مرتبط', header_en: 'Structure', width: '150px', type: 'text' },
     { field: 'isActive', header_fa: 'فعال', header_en: 'Active', width: '80px', type: 'toggle' },
+  ];
+
+  const lovAccColumns = [
+    { field: 'code', header_fa: 'کد حساب', header_en: 'Code', width: '80px', type: 'text' },
+    { field: 'title', header_fa: 'عنوان حساب', header_en: 'Title', width: '200px', type: 'text' },
+    { field: 'group', header_fa: 'گروه حساب', header_en: 'Group', width: '150px', type: 'text' },
   ];
 
   useEffect(() => {
@@ -84,10 +100,11 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setSelectedRow(row || { id: '', docDate: '', department: null, description: '', amount: '', status: 'پیش‌نویس', isActive: true, isControlled: false });
     
     setLineItems(row ? [
-      { id: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: row.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
-      { id: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: row.amount, note: 'شناسایی درآمد' }
+      { id: 1, account: lovAccounts[0], costCenter: 'تهران', docDate: row.docDate, debit: row.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
+      { id: 2, account: lovAccounts[3], costCenter: 'مرکزی', docDate: row.docDate, debit: '0', credit: row.amount, note: 'شناسایی درآمد' }
     ] : []);
     
+    setEditingLineItemId(null);
     setCurrentView('form');
   };
 
@@ -104,8 +121,8 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   };
 
   const gridActions = [
-    { icon: Eye, tooltip: t('مشاهده جزئیات (مودال)', 'View Details'), onClick: (r) => { setSelectedRow(r); setViewModalOpen(true); }, className: 'hover:text-blue-600' },
-    { icon: Edit, tooltip: t('ویرایش (ورود به فرم)', 'Edit'), onClick: handleOpenForm, className: 'hover:text-emerald-600' },
+    { icon: Eye, tooltip: t('مشاهده جزئیات', 'View Details'), onClick: (r) => { setSelectedRow(r); setViewModalOpen(true); }, className: 'hover:text-blue-600' },
+    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: handleOpenForm, className: 'hover:text-emerald-600' },
     { 
       icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (r) => { setSelectedRow(r); setAttachModalOpen(true); }, 
       className: (row) => row.attachments?.length > 0 ? 'text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100' : 'hover:text-indigo-600' 
@@ -134,28 +151,73 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setFilteredData(result);
   };
 
+  // --- Inline Edit Logic for Line Items ---
   const lineItemColumns = [
-    { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2">{idx + 1}</span> },
-    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'account', e.target.value)} isRtl={isRtl} /> },
-    { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '150px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'costCenter', e.target.value)} isRtl={isRtl} /> },
-    { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '130px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'debit', e.target.value)} isRtl={isRtl} dir="ltr" /> },
-    { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '130px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'credit', e.target.value)} isRtl={isRtl} dir="ltr" /> },
-    { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px', render: (val, row, idx) => <TextField size="sm" value={val} onChange={(e) => updateLineItem(idx, 'note', e.target.value)} isRtl={isRtl} /> },
+    { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2 font-mono">{idx + 1}</span> },
+    { 
+      field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '200px', 
+      render: (val, row) => editingLineItemId === row.id 
+        ? <LOVField size="sm" displayValue={editingLineData.account?.title} onChange={(r) => setEditingLineData({...editingLineData, account: r})} data={lovAccounts} columns={lovAccColumns} isRtl={isRtl} wrapperClassName="m-0" />
+        : val?.title 
+    },
+    { 
+      field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '130px', 
+      render: (val, row) => editingLineItemId === row.id 
+        ? <SelectField size="sm" value={editingLineData.costCenter} onChange={(e) => setEditingLineData({...editingLineData, costCenter: e.target.value})} options={[{value:'مرکزی',label:'مرکزی'}, {value:'تهران',label:'تهران'}]} isRtl={isRtl} wrapperClassName="m-0" />
+        : val 
+    },
+    { 
+      field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '120px', 
+      render: (val, row) => editingLineItemId === row.id 
+        ? <TextField size="sm" type="date" value={editingLineData.docDate} onChange={(e) => setEditingLineData({...editingLineData, docDate: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
+        : val 
+    },
+    { 
+      field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '130px', 
+      render: (val, row) => editingLineItemId === row.id 
+        ? <TextField size="sm" type="number" value={editingLineData.debit} onChange={(e) => setEditingLineData({...editingLineData, debit: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
+        : val 
+    },
+    { 
+      field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '130px', 
+      render: (val, row) => editingLineItemId === row.id 
+        ? <TextField size="sm" type="number" value={editingLineData.credit} onChange={(e) => setEditingLineData({...editingLineData, credit: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
+        : val 
+    },
+    { 
+      field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px', 
+      render: (val, row) => editingLineItemId === row.id 
+        ? <TextField size="sm" value={editingLineData.note} onChange={(e) => setEditingLineData({...editingLineData, note: e.target.value})} isRtl={isRtl} wrapperClassName="m-0" />
+        : val 
+    },
   ];
 
-  const updateLineItem = (index, field, value) => {
-    const newItems = [...lineItems];
-    newItems[index][field] = value;
-    setLineItems(newItems);
+  const handleAddLineItem = () => {
+    const newId = Date.now();
+    const newRow = { id: newId, account: null, costCenter: '', docDate: selectedRow?.docDate || '', debit: '', credit: '', note: '' };
+    setLineItems([newRow, ...lineItems]);
+    setEditingLineItemId(newId);
+    setEditingLineData(newRow);
   };
 
   const lineItemActions = [
-    { icon: Copy, tooltip: t('کپی ردیف', 'Duplicate'), onClick: (row, idx) => {
+    // دکمه‌های حالت ویرایش
+    { icon: Check, tooltip: t('تایید', 'Save'), hidden: (row) => editingLineItemId !== row.id, onClick: (row) => {
+      setLineItems(lineItems.map(item => item.id === editingLineItemId ? editingLineData : item));
+      setEditingLineItemId(null);
+    }, className: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
+    { icon: X, tooltip: t('انصراف', 'Cancel'), hidden: (row) => editingLineItemId !== row.id, onClick: () => setEditingLineItemId(null), className: 'text-red-500 bg-red-50 hover:bg-red-100 border-red-200' },
+    // دکمه‌های حالت نمایش
+    { icon: Edit, tooltip: t('ویرایش', 'Edit'), hidden: (row) => editingLineItemId === row.id, onClick: (row) => {
+      setEditingLineItemId(row.id);
+      setEditingLineData({...row});
+    }, className: 'hover:text-emerald-600' },
+    { icon: Copy, tooltip: t('کپی ردیف', 'Duplicate'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => {
       const newItems = [...lineItems];
       newItems.splice(idx + 1, 0, { ...row, id: Date.now() });
       setLineItems(newItems);
     }, className: 'hover:text-blue-600' },
-    { icon: Trash2, tooltip: t('حذف ردیف', 'Delete'), onClick: (row, idx) => setLineItems(lineItems.filter((_, i) => i !== idx)), className: 'hover:text-red-600' },
+    { icon: Trash2, tooltip: t('حذف ردیف', 'Delete'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => setLineItems(lineItems.filter((_, i) => i !== idx)), className: 'hover:text-red-600' },
   ];
 
   const handleRowReorder = (sourceIdx, destIdx) => {
@@ -216,7 +278,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               </div>
             }
           >
-            {/* بدنه فرم تمام عرض و فشرده */}
+            {/* بدنه فرم با قابلیت اسکرول */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
               <div className="w-full flex flex-col gap-3 h-full">
                 
@@ -242,11 +304,11 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   </Card>
                 </div>
 
-                {/* گرید اقلام ویرایشی */}
+                {/* گرید اقلام ویرایشی با ارتفاع حداقل 400پیکسل */}
                 <Card 
                   title={t('اقلام سند (Inline Edit)', 'Line Items')} 
-                  noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[350px]" headerClassName="h-10 bg-white shrink-0" 
-                  action={<Button size="sm" variant="ghost" icon={Plus} onClick={() => setLineItems([...lineItems, {id: Date.now(), account:'', costCenter:'', debit:'', credit:'', note:''}])} />}
+                  noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
+                  action={<Button size="sm" variant="primary" icon={Plus} onClick={handleAddLineItem}>{t('افزودن ردیف', 'Add Row')}</Button>}
                 >
                   <div className="flex-1 flex flex-col min-h-0">
                     <DataGrid 
@@ -301,13 +363,14 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               <div className="h-[250px]">
                 <DataGrid 
                   data={[
-                    { id: 1, account: 'حساب‌های دریافتنی', costCenter: 'فروش تهران', debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
-                    { id: 2, account: 'درآمد فروش محصول', costCenter: 'مرکزی', debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
+                    { id: 1, account: lovAccounts[0], costCenter: 'تهران', docDate: selectedRow.docDate, debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
+                    { id: 2, account: lovAccounts[3], costCenter: 'مرکزی', docDate: selectedRow.docDate, debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
                   ]}
                   columns={[
                     { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
-                    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px' },
+                    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px', render: val => val?.title },
                     { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
+                    { field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '100px' },
                     { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
                     { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px' },
                     { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px' }
