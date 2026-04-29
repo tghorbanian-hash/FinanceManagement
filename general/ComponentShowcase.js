@@ -166,7 +166,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         : val 
     },
     { 
-      field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '120px', 
+      field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '120px', type: 'date',
       render: (val, row) => editingLineItemId === row.id 
         ? <TextField size="sm" type="date" value={editingLineData.docDate} onChange={(e) => setEditingLineData({...editingLineData, docDate: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
         : val 
@@ -367,7 +367,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                     { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
                     { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px', render: val => val?.title },
                     { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
-                    { field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '100px' },
+                    { field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '100px', type: 'date' },
                     { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
                     { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px' },
                     { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px' }
