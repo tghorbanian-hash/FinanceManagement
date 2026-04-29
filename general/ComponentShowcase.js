@@ -1,18 +1,20 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, AlertCircle, LayoutGrid } from 'lucide-react';
+import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  const { DataGrid, Button, TextField, Card, Badge, SelectField, PageHeader } = window.DesignSystem || {};
+  const { DataGrid, Button, TextField, Card, Badge, SelectField, PageHeader, AdvancedFilter } = window.DesignSystem || {};
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
   const [activeTab, setActiveTab] = useState('grid'); 
   const [mockData, setMockData] = useState([]);
+  // دیتای فیلتر شده اولیه (برابر با کل دیتا)
+  const [filteredData, setFilteredData] = useState([]);
+  
   const [formData, setFormData] = useState({ username: '', email: '', role: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Generate 100 fake financial records
   useEffect(() => {
     const data = [];
     const departments = ['مالی', 'فروش', 'تدارکات', 'منابع انسانی', 'مدیریت'];
@@ -29,6 +31,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       });
     }
     setMockData(data);
+    setFilteredData(data);
   }, []);
 
   const gridColumns = [
@@ -49,16 +52,40 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => alert(`${t('حذف', 'Delete')} ID: ${row.id}`), className: 'text-slate-400 hover:text-red-600 hover:border-red-200' },
   ];
 
-  if (!DataGrid || !Button || !PageHeader) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+  // تنظیمات فیلتر پیشرفته
+  const advancedFilterFields = [
+    { name: 'id', label: t('شماره سند', 'Doc ID'), type: 'number' },
+    { name: 'docDate', label: t('تاریخ سند', 'Date'), type: 'date' },
+    { name: 'department', label: t('واحد سازمانی', 'Department'), type: 'select', options: [
+      { value: 'مالی', label: t('مالی', 'Finance') },
+      { value: 'فروش', label: t('فروش', 'Sales') },
+      { value: 'تدارکات', label: t('تدارکات', 'Procurement') }
+    ]},
+    { name: 'status', label: t('وضعیت', 'Status'), type: 'select', options: [
+      { value: 'تایید شده', label: t('تایید شده', 'Approved') },
+      { value: 'در حال بررسی', label: t('در حال بررسی', 'In Review') },
+      { value: 'رد شده', label: t('رد شده', 'Rejected') }
+    ]},
+  ];
+
+  const handleAdvancedFilter = (values) => {
+    let result = [...mockData];
+    Object.keys(values).forEach(key => {
+      const filterVal = values[key]?.toString().toLowerCase();
+      if (!filterVal) return;
+      result = result.filter(row => row[key]?.toString().toLowerCase().includes(filterVal));
+    });
+    setFilteredData(result);
+  };
+
+  if (!DataGrid || !Button || !PageHeader || !AdvancedFilter) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
   return (
     <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      {/* 1. Header & Breadcrumbs (Standard Component) */}
       <PageHeader 
         title={t('کاتالوگ کامپوننت‌ها', 'Component Showcase')}
-        icon={LayoutGrid}
-        language={language}
+        icon={LayoutGrid} language={language}
         breadcrumbs={[
           { label: t('میز کار', 'Workspace') },
           { label: t('تنظیمات پایه', 'Base Setup') },
@@ -66,7 +93,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         ]}
       />
 
-      {/* 2. Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 mb-4 shrink-0">
         <button onClick={() => setActiveTab('grid')} className={`flex items-center gap-2 px-6 py-2.5 text-[12px] font-black transition-all border-b-2 ${activeTab === 'grid' ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50 rounded-t-lg' : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
           <Table size={16} />{t('نمونه گرید پیشرفته', 'Advanced DataGrid')}
@@ -76,16 +102,23 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         </button>
       </div>
 
-      {/* 3. Content Area */}
       {activeTab === 'grid' && (
-        <div className="flex-1 min-h-0 animate-in fade-in duration-300">
-          <DataGrid 
-            data={mockData} 
-            columns={gridColumns} 
-            actions={gridActions} 
+        <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
+          <AdvancedFilter 
+            fields={advancedFilterFields}
+            onFilter={handleAdvancedFilter}
+            onClear={() => setFilteredData(mockData)}
             language={language}
-            onAdd={() => alert(t('دکمه ایجاد رکورد جدید کلیک شد', 'New item clicked'))}
           />
+          <div className="flex-1 min-h-0">
+            <DataGrid 
+              data={filteredData} 
+              columns={gridColumns} 
+              actions={gridActions} 
+              language={language}
+              onAdd={() => alert(t('دکمه ایجاد رکورد جدید کلیک شد', 'New item clicked'))}
+            />
+          </div>
         </div>
       )}
 

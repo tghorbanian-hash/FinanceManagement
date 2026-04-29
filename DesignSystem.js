@@ -4,7 +4,7 @@ import {
   Loader2, AlertCircle, Search, Download, Upload, Settings, Eye, Edit, Trash2, 
   Paperclip, Printer, Pin, PinOff, GripVertical, ChevronDown, 
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Layers, X, Maximize2, Minimize2, Plus, Home
+  Layers, X, Maximize2, Minimize2, Plus, Home, Filter
 } from 'lucide-react';
 
 // ==========================================
@@ -57,33 +57,7 @@ const TextField = ({ label, error, hint, icon: Icon, disabled = false, required 
 };
 
 // ==========================================
-// 3. Card Component
-// ==========================================
-const Card = ({ title, action, children, className = '', noPadding = false }) => (
-  <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
-    {(title || action) && (
-      <div className="h-12 border-b border-slate-100 flex items-center justify-between px-4 bg-slate-50/50 shrink-0">
-        <h3 className="font-black text-[13px] text-slate-800">{title}</h3>
-        {action && <div>{action}</div>}
-      </div>
-    )}
-    <div className={`flex-1 ${noPadding ? '' : 'p-4'}`}>{children}</div>
-  </div>
-);
-
-// ==========================================
-// 4. Badge Component
-// ==========================================
-const Badge = ({ children, variant = 'gray', className = '' }) => {
-  const variants = {
-    gray: "bg-slate-100 text-slate-600 border border-slate-200", success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
-    warning: "bg-amber-50 text-amber-600 border border-amber-200", danger: "bg-red-50 text-red-600 border border-red-200", indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200"
-  };
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant]} ${className}`}>{children}</span>;
-};
-
-// ==========================================
-// 5. SelectField Component
+// 3. SelectField Component
 // ==========================================
 const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, isRtl = true, ...props }) => {
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
@@ -107,13 +81,35 @@ const SelectField = ({ label, error, options = [], disabled = false, required = 
 };
 
 // ==========================================
-// 6. PageHeader (Breadcrumb & Title)
+// 4. Card & Badge Component
+// ==========================================
+const Card = ({ title, action, children, className = '', noPadding = false }) => (
+  <div className={`bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col ${className}`}>
+    {(title || action) && (
+      <div className="h-12 border-b border-slate-100 flex items-center justify-between px-4 bg-slate-50/50 shrink-0">
+        <h3 className="font-black text-[13px] text-slate-800">{title}</h3>
+        {action && <div>{action}</div>}
+      </div>
+    )}
+    <div className={`flex-1 ${noPadding ? '' : 'p-4'}`}>{children}</div>
+  </div>
+);
+
+const Badge = ({ children, variant = 'gray', className = '' }) => {
+  const variants = {
+    gray: "bg-slate-100 text-slate-600 border border-slate-200", success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
+    warning: "bg-amber-50 text-amber-600 border border-amber-200", danger: "bg-red-50 text-red-600 border border-red-200", indigo: "bg-indigo-50 text-indigo-600 border border-indigo-200"
+  };
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant]} ${className}`}>{children}</span>;
+};
+
+// ==========================================
+// 5. PageHeader Component
 // ==========================================
 const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) => {
   const isRtl = language === 'fa';
   return (
     <div className="flex flex-col gap-1.5 mb-4 shrink-0" dir={isRtl ? 'rtl' : 'ltr'}>
-      {/* Breadcrumbs */}
       {breadcrumbs.length > 0 && (
         <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold overflow-hidden whitespace-nowrap">
           <Home size={12} className="shrink-0" />
@@ -128,13 +124,8 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
           ))}
         </div>
       )}
-      {/* Title & Icon */}
       <div className="flex items-center gap-2 text-slate-800">
-        {Icon && (
-          <div className="p-1.5 bg-white border border-slate-200 shadow-sm text-indigo-600 rounded-lg shrink-0">
-            <Icon size={18} strokeWidth={2.5}/>
-          </div>
-        )}
+        {Icon && <div className="p-1.5 bg-white border border-slate-200 shadow-sm text-indigo-600 rounded-lg shrink-0"><Icon size={18} strokeWidth={2.5}/></div>}
         <h1 className="text-[15px] font-black tracking-tight">{title}</h1>
       </div>
     </div>
@@ -142,7 +133,73 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
 };
 
 // ==========================================
-// 7. DataGrid Component (Advanced & Compact)
+// 6. AdvancedFilter Component (NEW)
+// ==========================================
+const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
+  const isRtl = language === 'fa';
+  const t = (fa, en) => isRtl ? fa : en;
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [values, setValues] = useState({});
+
+  const handleChange = (name, val) => setValues(prev => ({ ...prev, [name]: val }));
+  
+  const handleClear = () => {
+    setValues({});
+    if (onClear) onClear();
+  };
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-4 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
+      {/* هدر فیلتر */}
+      <div 
+        className="h-10 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-lg transition-colors select-none"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-2 text-indigo-600">
+          <Filter size={14} strokeWidth={2.5} />
+          <span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span>
+        </div>
+        <div className="text-slate-400">
+          {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </div>
+      
+      {/* بدنه فرم فیلتر */}
+      {isOpen && (
+        <div className="p-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {fields.map((f, idx) => {
+              if (f.type === 'select') {
+                return (
+                  <SelectField 
+                    key={idx} label={f.label} isRtl={isRtl} options={f.options}
+                    value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)}
+                  />
+                );
+              }
+              return (
+                <TextField 
+                  key={idx} label={f.label} isRtl={isRtl}
+                  type={f.type === 'date' ? 'text' : f.type}
+                  placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''}
+                  value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)}
+                  dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
+                />
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-slate-50">
+            <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
+            <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو و اعمال فیلتر', 'Search')}</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==========================================
+// 7. DataGrid Component (Advanced)
 // ==========================================
 const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd }) => {
   const isRtl = language === 'fa';
@@ -268,6 +325,12 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
     const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `export_${new Date().getTime()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
   };
 
+  const getTemplate = () => {
+    const headers = visibleColumns.map(c => t(c.header_fa, c.header_en)).join(',');
+    const blob = new Blob(['\uFEFF' + headers], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `template.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  };
+
   const getStickyStyles = (field, isAction = false) => {
     if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: 20 };
     if (!pinnedCols.has(field)) return {};
@@ -282,10 +345,10 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       
-      {/* Unified Toolbar (Single Row) */}
+      {/* Unified Toolbar */}
       <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 bg-white gap-2 shrink-0 min-h-[46px]">
         
-        {/* Settings/Columns Menu */}
+        {/* Settings Menu */}
         <div className="relative flex items-center" ref={colMenuRef}>
           <button onClick={() => setShowColMenu(!showColMenu)} className="flex items-center justify-center gap-1.5 h-full px-3 bg-slate-50 border border-slate-200 text-slate-600 rounded-md hover:bg-slate-100 hover:text-indigo-600 text-[11px] font-bold transition-all">
             <Settings size={14} />
@@ -306,7 +369,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
           )}
         </div>
 
-        {/* Grouping Drop Zone (Takes remaining space) */}
+        {/* Grouping Drop Zone */}
         <div 
           className={`flex-1 flex items-center gap-2 px-3 py-1 border border-dashed rounded-md transition-colors overflow-x-auto custom-scrollbar ${groupCols.length > 0 ? 'bg-indigo-50/30 border-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'}`}
           onDragOver={(e) => e.preventDefault()} onDrop={handleGroupDrop}
@@ -334,7 +397,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
           )}
         </div>
 
-        {/* Action Buttons (New, Import, Export) */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-1.5 shrink-0">
           {onAdd && (
             <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3 text-[11px]">
@@ -352,12 +415,12 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
       {/* Grid Container */}
       <div className="overflow-auto custom-scrollbar flex-1 relative bg-white">
         <table className="w-full text-start border-collapse table-fixed min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
-          <thead className="sticky top-0 z-40 shadow-sm">
+          {/* IMPORTANT: bg-slate-200 on thead fixes the 1px transparent gap bug in sticky headers */}
+          <thead className="sticky top-0 z-40 bg-slate-200 shadow-sm">
             <tr>
               {visibleColumns.map((col, index) => {
                 const actualIndex = columnOrder.indexOf(col.field);
                 const isPinned = pinnedCols.has(col.field);
-                // Header z-index: Pinned headers overlap normal headers when scrolling horizontally
                 const headerZIndex = isPinned ? 35 : 30; 
                 return (
                   <th 
@@ -432,7 +495,6 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
               return (
                 <tr key={row.id || rowIndex} className="bg-white hover:bg-slate-50/80 border-b border-slate-100 transition-colors group">
                   {visibleColumns.map((col) => (
-                    // Explicitly inherit the background color of the `tr` so it blocks text underneath when pinned
                     <td key={`${row.id || rowIndex}-${col.field}`} style={getStickyStyles(col.field)} className={`p-1.5 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
                       {row[col.field]}
                     </td>
@@ -485,4 +547,7 @@ const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAd
   );
 };
 
-window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, DataGrid };
+// ==========================================
+// Export to Window Design System
+// ==========================================
+window.DesignSystem = { Button, TextField, Card, Badge, SelectField, PageHeader, AdvancedFilter, DataGrid };
