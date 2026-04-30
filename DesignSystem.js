@@ -1731,9 +1731,82 @@ const TagInput = ({ tags = [], onAdd, onDelete, placeholder, label, isRtl = true
   );
 };
 
+const Alert = ({ type = 'info', title, message, onClose }) => {
+  const typeStyles = {
+    success: 'bg-emerald-50/60 border-emerald-500/30 text-emerald-800',
+    error: 'bg-rose-50/60 border-rose-500/30 text-rose-800',
+    warning: 'bg-amber-50/60 border-amber-500/30 text-amber-800',
+    info: 'bg-sky-50/60 border-sky-500/30 text-sky-800',
+  };
+  
+  const iconPaths = {
+    success: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />,
+    error: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />,
+    warning: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />,
+    info: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  };
+
+  return (
+    <div className={`flex items-start p-4 border rounded-2xl backdrop-blur-lg shadow-sm ${typeStyles[type]} gap-3 transition-all duration-300`}>
+      <div className="flex-shrink-0 pt-0.5">
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {iconPaths[type]}
+        </svg>
+      </div>
+      <div className="flex-1 flex flex-col gap-1">
+        {title && <h3 className="text-sm font-bold">{title}</h3>}
+        <div className="text-sm opacity-90 leading-relaxed">{message}</div>
+      </div>
+      {onClose && (
+        <button onClick={onClose} className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity p-1">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
+    </div>
+  );
+};
+
+const Toast = ({ type = 'success', message, isVisible, onClose }) => {
+  if (!isVisible) return null;
+  
+  const typeStyles = {
+    success: 'bg-emerald-600/90 border-emerald-400/50',
+    error: 'bg-rose-600/90 border-rose-400/50',
+    warning: 'bg-amber-500/90 border-amber-300/50',
+    info: 'bg-sky-600/90 border-sky-400/50',
+  };
+  
+  return (
+    <div className={`fixed bottom-6 end-6 md:start-auto md:end-6 flex items-center p-4 border rounded-2xl backdrop-blur-xl shadow-2xl text-white ${typeStyles[type]} z-50 gap-4 animate-fade-in-up transition-all duration-300`}>
+      <div className="text-sm font-medium">{message}</div>
+      {onClose && (
+        <button onClick={onClose} className="opacity-70 hover:opacity-100 transition-opacity p-1 border-s border-white/20 ps-3">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+      )}
+    </div>
+  );
+};
+
+const Spinner = ({ size = 'md', color = 'text-sky-600' }) => {
+  const sizes = {
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-12 h-12'
+  };
+  
+  return (
+    <svg className={`animate-spin ${sizes[size]} ${color}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  );
+};
+
 window.DesignSystem = { 
   Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, Modal, AdvancedFilter, 
   AttachmentManager, Tabs, DataGrid, HighlightText, Tree, TreeGrid,
   CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
-  ProgressBar, DatePicker, Stepper, TagInput
+  ProgressBar, DatePicker, Stepper, TagInput, Alert, Toast, Spinner
 };
