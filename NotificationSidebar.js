@@ -1,6 +1,6 @@
 /* Filename: NotificationSidebar.js */
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Trash, Loader2, Check } from 'lucide-react';
+import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Loader2, Check } from 'lucide-react';
 
 const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
   const { Button, Badge, EmptyState } = window.DesignSystem || {};
@@ -16,8 +16,10 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
 
   const t = (fa, en) => isRtl ? fa : en;
 
+  // محاسبه تعداد اعلان‌های ناخوانده
   const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
 
+  // ارسال تعداد ناخوانده‌ها به هدر اصلی سیستم
   useEffect(() => {
     if (onUpdateUnread) {
       onUpdateUnread(unreadCount);
@@ -115,58 +117,27 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
           <div className="flex items-center gap-2">
             <Bell size={16} className="text-indigo-600" />
             <span className="font-black text-slate-800 text-[12px]">{t('اعلان‌های سیستم', 'System Notifications')}</span>
-            {Badge ? (
-              <Badge variant={unreadCount > 0 ? 'danger' : 'gray'}>
-                {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
-              </Badge>
-            ) : (
-              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold transition-all ${unreadCount > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-                {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
-              </span>
-            )}
+            <Badge variant={unreadCount > 0 ? 'danger' : 'gray'}>
+              {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
+            </Badge>
           </div>
-          {Button ? (
-             <Button size="sm" variant="ghost" icon={X} onClick={onClose} title={t('بستن', 'Close')} className="!px-1.5" />
-          ) : (
-            <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded text-slate-400 transition-colors">
-              <X size={16} />
-            </button>
-          )}
+          <Button size="sm" variant="ghost" icon={X} onClick={onClose} title={t('بستن', 'Close')} className="!px-1.5" />
         </div>
 
         {notifications.length > 0 && (
           <div className="px-3 py-1.5 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
-            {Button ? (
-              <>
-                <Button 
-                  size="sm" variant="ghost" icon={Check} onClick={markAllAsRead} disabled={unreadCount === 0}
-                  className="!text-indigo-600 hover:!bg-indigo-50 !px-2"
-                >
-                  {t('خواندن همه', 'Mark All Read')}
-                </Button>
-                <Button 
-                  size="sm" variant="danger-outline" icon={Trash2} onClick={deleteAll}
-                  className="!px-2"
-                >
-                  {t('حذف همه', 'Clear All')}
-                </Button>
-              </>
-            ) : (
-              <>
-                <button 
-                  onClick={markAllAsRead} disabled={unreadCount === 0}
-                  className="text-indigo-600 hover:text-indigo-800 text-[10px] font-bold flex items-center gap-1 transition-colors disabled:opacity-50"
-                >
-                  <Check size={12} /> {t('خواندن همه', 'Mark All Read')}
-                </button>
-                <button 
-                  onClick={deleteAll}
-                  className="text-red-500 hover:text-red-700 text-[10px] font-bold flex items-center gap-1 transition-colors bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
-                >
-                  <Trash2 size={12} /> {t('حذف همه', 'Clear All')}
-                </button>
-              </>
-            )}
+            <Button 
+              size="sm" variant="ghost" icon={Check} onClick={markAllAsRead} disabled={unreadCount === 0}
+              className="!text-indigo-600 hover:!bg-indigo-50 !px-2 !h-7 !text-[10px]"
+            >
+              {t('خواندن همه', 'Mark All Read')}
+            </Button>
+            <Button 
+              size="sm" variant="danger-outline" icon={Trash2} onClick={deleteAll}
+              className="!px-2 !h-7 !text-[10px]"
+            >
+              {t('حذف همه', 'Clear All')}
+            </Button>
           </div>
         )}
 
@@ -192,19 +163,23 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
                     <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
                     <span className="text-[8px] text-slate-400 font-medium">{formatTime(notif.created_at)}</span>
                   </div>
-                  <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-all self-start shrink-0">
+                  
+                  {/* دکمه‌های عملیاتی برای هر اعلان */}
+                  <div className="flex flex-col gap-0.5 opacity-60 group-hover:opacity-100 transition-all self-start shrink-0">
                     {!notif.is_read && (
-                      Button ? (
-                        <Button size="sm" variant="ghost" icon={Check} onClick={() => markAsRead(notif.id)} title={t('علامت‌گذاری خوانده شده', 'Mark as read')} className="!text-slate-400 hover:!text-indigo-600 hover:!bg-indigo-50 !px-1.5 !h-6" />
-                      ) : (
-                        <button onClick={() => markAsRead(notif.id)} className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all" title={t('علامت‌گذاری خوانده شده', 'Mark as read')}><Check size={12} /></button>
-                      )
+                      <Button 
+                        size="sm" variant="ghost" icon={Check} 
+                        onClick={() => markAsRead(notif.id)} 
+                        title={t('علامت‌گذاری خوانده شده', 'Mark as read')} 
+                        className="!text-slate-400 hover:!text-indigo-600 hover:!bg-indigo-50 !px-1 !h-6" 
+                      />
                     )}
-                    {Button ? (
-                      <Button size="sm" variant="ghost" icon={Trash} onClick={() => deleteOne(notif.id)} title={t('حذف اعلان', 'Delete')} className="!text-slate-400 hover:!text-red-500 hover:!bg-red-50 !px-1.5 !h-6" />
-                    ) : (
-                      <button onClick={() => deleteOne(notif.id)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all" title={t('حذف اعلان', 'Delete')}><Trash size={12} /></button>
-                    )}
+                    <Button 
+                      size="sm" variant="ghost" icon={Trash2} 
+                      onClick={() => deleteOne(notif.id)} 
+                      title={t('حذف اعلان', 'Delete')} 
+                      className="!text-slate-400 hover:!text-red-500 hover:!bg-red-50 !px-1 !h-6" 
+                    />
                   </div>
                 </div>
                 {!notif.is_read && (
@@ -213,30 +188,23 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
               </div>
             ))
           ) : (
-             EmptyState ? (
-               <div className="h-full flex flex-col items-center justify-center">
-                 <EmptyState 
-                   title={t('هیچ اعلانی یافت نشد', 'No notifications found')} 
-                   description={t('اعلان جدیدی برای نمایش وجود ندارد.', 'There are no new notifications.')} 
-                   icon={Bell} 
-                 />
-               </div>
-             ) : (
-               <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
-                 <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center"><Bell size={20} className="opacity-30" /></div>
-                 <p className="text-[11px] font-medium">{t('هیچ اعلانی یافت نشد.', 'No notifications found.')}</p>
-               </div>
-             )
+             <div className="h-full flex flex-col items-center justify-center">
+               <EmptyState 
+                 title={t('هیچ اعلانی یافت نشد', 'No notifications found')} 
+                 description={t('اعلان جدیدی برای نمایش وجود ندارد.', 'There are no new notifications.')} 
+                 icon={Bell} 
+               />
+             </div>
           )}
         </div>
 
-        {totalPages > 1 && Button && (
+        {totalPages > 1 && (
           <div className="p-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)} className="!px-2 !h-7">{t('قبلی', 'Prev')}</Button>
+            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)} className="!px-2 !h-7 !text-[10px]">{t('قبلی', 'Prev')}</Button>
             <span className="text-[10px] font-bold text-slate-500">
               {t('صفحه', 'Page')} {page} {t('از', 'of')} {totalPages}
             </span>
-            <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="!px-2 !h-7">{t('بعدی', 'Next')}</Button>
+            <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="!px-2 !h-7 !text-[10px]">{t('بعدی', 'Next')}</Button>
           </div>
         )}
       </aside>
