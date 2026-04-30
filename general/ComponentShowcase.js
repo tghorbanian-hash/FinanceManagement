@@ -1,9 +1,19 @@
 /* Filename: general/ComponentShowcase.js */
 import React, { useState, useEffect, useMemo } from 'react';
-import { Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, FileDown, Layers, ListTree } from 'lucide-react';
+import { 
+  Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, 
+  FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, 
+  FileDown, Layers, ListTree, Info, AlertTriangle, CheckCircle2, XCircle, TrendingUp, DollarSign, Users, Briefcase, MoreVertical
+} from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  const { DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid } = window.DesignSystem || {};
+  const { 
+    DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
+    AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
+    CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
+    DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput
+  } = window.DesignSystem || {};
+  
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
@@ -20,6 +30,13 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // States for Tab 3 (Small Components)
+  const [currencyVal, setCurrencyVal] = useState('1250000');
+  const [radioVal, setRadioVal] = useState('opt1');
+  const [dateVal, setDateVal] = useState('');
+  const [progressVal, setProgressVal] = useState(45);
+  const [tags, setTags] = useState(['حسابداری', 'خزانه']);
 
   // Tree Showcase State
   const [treeMode, setTreeMode] = useState('standard'); // 'standard' or 'grid'
@@ -585,8 +602,89 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       )}
 
       {activeShowcaseTab === 'components' && (
-        <div className="flex-1 flex items-center justify-center bg-white border border-slate-200 rounded-lg shadow-sm border-dashed">
-          <span className="text-slate-400 font-bold">{t('محل قرارگیری کامپوننت‌های کوچک...', 'Small components placeholder...')}</span>
+        <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <StatCard label={t('کل نقدینگی', 'Total Liquidity')} value="۱,۲۵۰,۰۰۰,۰۰۰" icon={DollarSign} trend="up" trendValue="۱۲%" color="emerald" language={language} />
+            <StatCard label={t('بدهی معوق', 'Overdue Debt')} value="۴۸۰,۰۰۰,۰۰۰" icon={TrendingUp} trend="down" trendValue="۵%" color="rose" language={language} />
+            <StatCard label={t('کاربران فعال', 'Active Users')} value="۱۲۴" icon={Users} color="blue" language={language} />
+            <StatCard label={t('پروژه‌های باز', 'Open Projects')} value="۱۸" icon={Briefcase} color="amber" language={language} />
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div className="xl:col-span-2 flex flex-col gap-6">
+              <Card title={t('فیلدهای تخصصی ورودی', 'Specialized Inputs')} className="shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <CurrencyField label={t('ورودی مبلغ (جداکننده هزارگان)', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
+                  <DatePicker label={t('انتخاب تاریخ (شمسی/میلادی)', 'Date Picker')} value={dateVal} onChange={setDateVal} isRtl={isRtl} language={language} />
+                  <div className="md:col-span-2">
+                    <TextAreaField label={t('توضیحات طولانی', 'Text Area')} placeholder={t('متن خود را اینجا وارد کنید...', 'Enter long text here...')} rows={3} isRtl={isRtl} />
+                  </div>
+                  <RadioGroup label={t('نوع انتخاب (رادیویی)', 'Selection Type')} value={radioVal} onChange={setRadioVal} options={[{value:'opt1', label:t('گزینه اول','Option 1')}, {value:'opt2', label:t('گزینه دوم','Option 2')}]} isRtl={isRtl} />
+                  <TagInput label={t('برچسب‌ها', 'Tags')} tags={tags} onAdd={(nt) => setTags([...tags, nt])} onDelete={(idx) => setTags(tags.filter((_, i) => i !== idx))} placeholder={t('افزودن برچسب...', 'Add tag...')} isRtl={isRtl} />
+                </div>
+              </Card>
+
+              <Card title={t('وضعیت پیشرفت و مراحل', 'Progress & Stepper')} className="shadow-sm">
+                <div className="flex flex-col gap-6">
+                  <Stepper steps={[{label:t('اطلاعات پایه','Base')}, {label:t('تایید فنی','Technical')}, {label:t('پرداخت نهایی','Payment')}]} currentStep={1} language={language} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <ProgressBar label={t('پیشرفت پروژه','Project Progress')} value={progressVal} color="indigo" showValue />
+                    <ProgressBar label={t('مصرف بودجه','Budget Usage')} value={85} color="amber" size="sm" showValue />
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <Card title={t('تاریخچه و وضعیت', 'Timeline & Feedback')} className="shadow-sm">
+                <Tabs tabs={[{id:'t1', label:t('تاریخچه','Timeline')}, {id:'t2', label:t('وضعیت','Feedback')}]} activeTab="t1" onChange={()=>{}} className="mb-2" />
+                <Timeline items={[
+                  { title: t('سند ایجاد شد', 'Doc Created'), time: '۱۰:۳۰', description: t('توسط مدیر مالی ایجاد گردید', 'Created by Finance Manager'), variant: 'indigo' },
+                  { title: t('تایید مرحله اول', 'Approved Level 1'), time: '۱۱:۱۵', description: t('توسط واحد حسابرسی تایید شد', 'Approved by Audit'), variant: 'success' },
+                  { title: t('خطای سیستمی', 'System Error'), time: '۱۲:۰۰', description: t('عدم انطباق با بودجه سالانه', 'Budget mismatch detected'), variant: 'danger' }
+                ]} language={language} />
+              </Card>
+
+              <Card title={t('اعلان‌ها و راهنما', 'Overlays & Feedback')} className="shadow-sm">
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <Tooltip text={t('اطلاعات بیشتر را بخوانید', 'Read more info')} position="top">
+                      <Button size="sm" variant="outline" icon={Info}>{t('تولتیپ (بالا)', 'Tooltip')}</Button>
+                    </Tooltip>
+                    <DropdownMenu 
+                      trigger={<Button size="sm" variant="secondary" icon={MoreVertical}>{t('منوی عملیات', 'Actions')}</Button>}
+                      items={[
+                        { label: t('ویرایش پروفایل', 'Edit Profile'), icon: Edit },
+                        { label: t('تنظیمات امنیتی', 'Security'), icon: Settings },
+                        { divider: true },
+                        { label: t('خروج', 'Logout'), icon: Trash2, variant: 'danger' }
+                      ]}
+                      language={language}
+                    />
+                  </div>
+                  <div className="p-3 border border-indigo-100 bg-indigo-50/30 rounded-lg flex items-center gap-3">
+                    <Avatar name="Ali Alavi" size="md" />
+                    <div className="flex flex-col">
+                      <span className="text-[11px] font-black text-slate-700">علی علوی</span>
+                      <span className="text-[9px] text-slate-400">مدیر ارشد مالی</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton variant="text" width="60%" />
+                    <Skeleton variant="text" width="90%" />
+                    <div className="flex gap-2">
+                      <Skeleton variant="circle" width="30px" height="30px" />
+                      <div className="flex-1 space-y-1"><Skeleton variant="text" /><Skeleton variant="text" width="40%" /></div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          <div className="mt-6 bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
+             <EmptyState title={t('داده‌ای برای نمایش نیست', 'No Data Found')} description={t('هنوز هیچ رکوردی در این بخش ثبت نشده است. برای شروع می‌توانید از دکمه زیر استفاده کنید.', 'No records have been registered yet.')} icon={Search} action={<Button icon={Plus}>{t('ایجاد اولین رکورد', 'Create First Record')}</Button>} />
+          </div>
         </div>
       )}
 

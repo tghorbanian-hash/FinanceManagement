@@ -5,7 +5,8 @@ import {
   Paperclip, Printer, Pin, PinOff, GripVertical, ChevronDown, 
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Layers, X, Maximize2, Minimize2, Plus, Home, Filter, UploadCloud, FileText, Check,
-  FileSpreadsheet, FileDown, Folder, FolderOpen, File
+  FileSpreadsheet, FileDown, Folder, FolderOpen, File, Info, Calendar, MoreVertical, 
+  ArrowUpRight, ArrowDownRight, Clock, User as UserIcon
 } from 'lucide-react';
 
 const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
@@ -1218,4 +1219,304 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
   );
 };
 
-window.DesignSystem = { Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, Modal, AdvancedFilter, AttachmentManager, Tabs, DataGrid, Tree, TreeGrid };
+const CurrencyField = ({ value, onChange, label, error, size = 'md', isRtl = true, ...props }) => {
+  const format = (v) => {
+    if (!v && v !== 0) return '';
+    const clean = String(v).replace(/,/g, '');
+    return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  };
+
+  const handleInputChange = (e) => {
+    const raw = e.target.value.replace(/,/g, '');
+    if (!isNaN(raw) || raw === '') {
+      onChange(raw);
+    }
+  };
+
+  return (
+    <TextField 
+      {...props} label={label} error={error} size={size} isRtl={isRtl} 
+      value={format(value)} onChange={handleInputChange} dir="ltr"
+    />
+  );
+};
+
+const TextAreaField = ({ label, error, disabled = false, required = false, className = '', id, rows = 3, size = 'md', isRtl = true, ...props }) => {
+  const inputId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
+  return (
+    <div className={`flex flex-col gap-1.5 w-full`}>
+      {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700">{label} {required && <span className="text-red-500">*</span>}</label>}
+      <textarea
+        id={inputId} disabled={disabled} rows={rows}
+        className={`w-full bg-white border rounded-lg text-slate-800 transition-all outline-none p-2.5 text-[13px] placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${className}`}
+        dir={isRtl ? 'rtl' : 'ltr'} {...props}
+      />
+      {error && <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
+    </div>
+  );
+};
+
+const RadioGroup = ({ label, options = [], value, onChange, isRtl = true, inline = true }) => {
+  return (
+    <div className="flex flex-col gap-2">
+      {label && <label className="text-[11px] font-bold text-slate-700">{label}</label>}
+      <div className={`flex ${inline ? 'flex-row gap-4' : 'flex-col gap-2'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        {options.map((opt) => (
+          <label key={opt.value} className="flex items-center gap-2 cursor-pointer group">
+            <div className="relative flex items-center justify-center">
+              <input 
+                type="radio" name={label} value={opt.value} checked={value === opt.value} 
+                onChange={() => onChange(opt.value)} className="sr-only" 
+              />
+              <div className={`w-4 h-4 rounded-full border transition-all ${value === opt.value ? 'border-indigo-600 bg-white' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}></div>
+              {value === opt.value && <div className="absolute w-2 h-2 rounded-full bg-indigo-600 animate-in zoom-in-50 duration-200"></div>}
+            </div>
+            <span className="text-[11px] font-bold text-slate-600 select-none">{opt.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const Tooltip = ({ children, text, position = 'top' }) => {
+  const [show, setShow] = useState(false);
+  const posClasses = {
+    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
+    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
+    left: "right-full top-1/2 -translate-y-1/2 mr-2",
+    right: "left-full top-1/2 -translate-y-1/2 ml-2"
+  };
+  return (
+    <div className="relative inline-block" onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+      {children}
+      {show && (
+        <div className={`absolute z-[200] px-2 py-1 bg-slate-800 text-white text-[10px] font-bold rounded whitespace-nowrap shadow-xl animate-in fade-in zoom-in-95 duration-150 ${posClasses[position]}`}>
+          {text}
+          <div className={`absolute w-1.5 h-1.5 bg-slate-800 rotate-45 ${position === 'top' ? 'top-full -mt-1 left-1/2 -ml-1' : position === 'bottom' ? 'bottom-full -mb-1 left-1/2 -ml-1' : ''}`}></div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const Skeleton = ({ className = '', variant = 'text', width, height }) => {
+  const base = "bg-slate-200 animate-pulse shrink-0";
+  const styles = variant === 'circle' ? 'rounded-full' : 'rounded-lg';
+  return <div className={`${base} ${styles} ${className}`} style={{ width: width || '100%', height: height || (variant === 'text' ? '1rem' : '100%') }}></div>;
+};
+
+const EmptyState = ({ title, description, icon: Icon = Search, action }) => {
+  return (
+    <div className="flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4">
+        <Icon size={32} strokeWidth={1.5} />
+      </div>
+      <h4 className="text-[14px] font-black text-slate-800 mb-1">{title}</h4>
+      <p className="text-[11px] text-slate-400 max-w-[250px] leading-relaxed mb-4">{description}</p>
+      {action}
+    </div>
+  );
+};
+
+const StatCard = ({ label, value, icon: Icon, trend, trendValue, color = 'indigo', language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  const colors = {
+    indigo: "text-indigo-600 bg-indigo-50 border-indigo-100",
+    emerald: "text-emerald-600 bg-emerald-50 border-emerald-100",
+    amber: "text-amber-600 bg-amber-50 border-amber-100",
+    rose: "text-rose-600 bg-rose-50 border-rose-100",
+    blue: "text-blue-600 bg-blue-50 border-blue-100"
+  };
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm group hover:border-indigo-200 transition-all">
+      <div className="flex items-start justify-between mb-3">
+        <div className={`p-2 rounded-lg border ${colors[color]} group-hover:scale-110 transition-transform`}>
+          {Icon && <Icon size={20} />}
+        </div>
+        {trend && (
+          <div className={`flex items-center gap-0.5 text-[10px] font-black px-1.5 py-0.5 rounded-full ${trend === 'up' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+            {trend === 'up' ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+            {trendValue}
+          </div>
+        )}
+      </div>
+      <div className="flex flex-col">
+        <span className="text-[11px] font-bold text-slate-500">{label}</span>
+        <span className="text-[18px] font-black text-slate-800 tracking-tight">{value}</span>
+      </div>
+    </div>
+  );
+};
+
+const Timeline = ({ items = [], language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  return (
+    <div className="flex flex-col gap-4 relative py-2" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className={`absolute top-0 bottom-0 w-0.5 bg-slate-100 ${isRtl ? 'right-2' : 'left-2'}`}></div>
+      {items.map((item, idx) => (
+        <div key={idx} className="flex gap-4 relative z-10">
+          <div className={`w-4 h-4 rounded-full border-2 border-white shadow-sm shrink-0 mt-1 ${item.variant === 'success' ? 'bg-emerald-500' : item.variant === 'danger' ? 'bg-rose-500' : 'bg-indigo-500'}`}></div>
+          <div className="flex flex-col gap-1 min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[12px] font-black text-slate-800">{item.title}</span>
+              <span className="text-[10px] font-bold text-slate-400 whitespace-nowrap">{item.time}</span>
+            </div>
+            {item.description && <p className="text-[11px] text-slate-500 leading-relaxed">{item.description}</p>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const Avatar = ({ src, name, size = 'md', className = '' }) => {
+  const sizes = { sm: 'w-7 h-7 text-[10px]', md: 'w-10 h-10 text-[12px]', lg: 'w-14 h-14 text-[14px]' };
+  const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '?';
+  return (
+    <div className={`${sizes[size]} rounded-full border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0 bg-indigo-100 text-indigo-700 font-black ${className}`}>
+      {src ? <img src={src} alt={name} className="w-full h-full object-cover" /> : initials}
+    </div>
+  );
+};
+
+const DropdownMenu = ({ trigger, items = [], language = 'fa' }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const isRtl = language === 'fa';
+
+  useEffect(() => {
+    const click = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', click);
+    return () => document.removeEventListener('mousedown', click);
+  }, []);
+
+  return (
+    <div className="relative inline-block text-start" ref={ref} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div onClick={() => setOpen(!open)} className="cursor-pointer">{trigger}</div>
+      {open && (
+        <div className={`absolute z-[150] mt-1 w-48 bg-white border border-slate-200 shadow-xl rounded-xl p-1 animate-in zoom-in-95 duration-150 ${isRtl ? 'left-0' : 'right-0'}`}>
+          {items.map((item, i) => (
+            item.divider ? <div key={i} className="h-px bg-slate-100 my-1 mx-1"></div> :
+            <button 
+              key={i} 
+              onClick={() => { item.onClick?.(); setOpen(false); }}
+              className={`flex items-center gap-2.5 w-full px-3 py-2 text-[11px] font-bold rounded-lg transition-colors ${item.variant === 'danger' ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-700 hover:bg-slate-50'}`}
+            >
+              {item.icon && <item.icon size={14} />}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProgressBar = ({ value = 0, max = 100, color = 'indigo', size = 'md', label, showValue = true }) => {
+  const pct = Math.min(100, Math.max(0, (value / max) * 100));
+  const heights = { sm: 'h-1', md: 'h-2', lg: 'h-4' };
+  const colors = { indigo: "bg-indigo-600", emerald: "bg-emerald-500", amber: "bg-amber-500", rose: "bg-rose-500", blue: "bg-blue-500" };
+  return (
+    <div className="w-full flex flex-col gap-1.5">
+      {(label || showValue) && (
+        <div className="flex items-center justify-between text-[10px] font-black text-slate-500">
+          {label && <span>{label}</span>}
+          {showValue && <span>{Math.round(pct)}%</span>}
+        </div>
+      )}
+      <div className={`w-full bg-slate-100 rounded-full overflow-hidden ${heights[size]}`}>
+        <div className={`h-full transition-all duration-500 ease-out rounded-full ${colors[color]}`} style={{ width: `${pct}%` }}></div>
+      </div>
+    </div>
+  );
+};
+
+const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', required = false, size = 'md', disabled = false }) => {
+  const [calendarMode, setCalendarMode] = useState(language === 'fa' ? 'jalali' : 'gregorian');
+  const t = (fa, en) => isRtl ? fa : en;
+
+  return (
+    <div className={`flex flex-col gap-1.5 w-full`}>
+      {label && <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
+      <div className="relative group">
+        <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none`}>
+          <Calendar size={size === 'sm' ? 14 : 16} />
+        </div>
+        <input 
+          type="text" value={value || ''} onChange={(e) => onChange(e.target.value)} disabled={disabled}
+          placeholder={calendarMode === 'jalali' ? '۱۴۰۳/۰۱/۰۱' : '2024/01/01'}
+          className={`w-full ${size === 'sm' ? 'h-8 text-[11px]' : 'h-10 text-[13px]'} bg-white border rounded-lg text-slate-800 transition-all outline-none placeholder:text-slate-400 focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-16' : 'pl-8 pr-16'}`}
+          dir="ltr"
+        />
+        <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} top-1/2 -translate-y-1/2 flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded-md p-0.5`}>
+          <button 
+            type="button" onClick={() => setCalendarMode('jalali')}
+            className={`px-1.5 py-0.5 rounded text-[8px] font-black transition-all ${calendarMode === 'jalali' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            {t('شمسی', 'FA')}
+          </button>
+          <button 
+            type="button" onClick={() => setCalendarMode('gregorian')}
+            className={`px-1.5 py-0.5 rounded text-[8px] font-black transition-all ${calendarMode === 'gregorian' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            {t('میلادی', 'EN')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Stepper = ({ steps = [], currentStep = 0, language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  return (
+    <div className="w-full py-4 px-2" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="flex items-center justify-between relative">
+        <div className="absolute top-4 left-0 right-0 h-0.5 bg-slate-100 z-0"></div>
+        {steps.map((step, idx) => {
+          const isActive = idx === currentStep;
+          const isCompleted = idx < currentStep;
+          return (
+            <div key={idx} className="flex flex-col items-center gap-2 relative z-10 flex-1">
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isCompleted ? 'bg-emerald-500 border-emerald-500 text-white' : isActive ? 'bg-white border-indigo-600 text-indigo-600 scale-110 shadow-lg' : 'bg-white border-slate-200 text-slate-300'}`}>
+                {isCompleted ? <Check size={16} strokeWidth={3} /> : <span className="text-[12px] font-black">{idx + 1}</span>}
+              </div>
+              <span className={`text-[10px] font-black transition-colors ${isActive ? 'text-indigo-600' : isCompleted ? 'text-emerald-600' : 'text-slate-400'}`}>{step.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const TagInput = ({ tags = [], onAdd, onDelete, placeholder, label, isRtl = true }) => {
+  const [val, setVal] = useState('');
+  const handleKeyDown = (e) => { if (e.key === 'Enter' && val) { onAdd(val); setVal(''); } };
+  return (
+    <div className="flex flex-col gap-1.5 w-full">
+      {label && <label className="text-[11px] font-bold text-slate-700">{label}</label>}
+      <div className={`flex flex-wrap gap-1.5 p-1.5 bg-white border border-slate-300 rounded-lg focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 transition-all`} dir={isRtl ? 'rtl' : 'ltr'}>
+        {tags.map((tag, idx) => (
+          <div key={idx} className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md border border-indigo-100 animate-in zoom-in-90 duration-150">
+            <span className="text-[11px] font-bold">{tag}</span>
+            <button onClick={() => onDelete(idx)} className="text-indigo-400 hover:text-rose-500 transition-colors"><X size={10} /></button>
+          </div>
+        ))}
+        <input 
+          type="text" value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={handleKeyDown}
+          placeholder={tags.length === 0 ? placeholder : ''}
+          className="flex-1 min-w-[80px] h-7 bg-transparent border-none outline-none text-[12px] placeholder:text-slate-400"
+        />
+      </div>
+    </div>
+  );
+};
+
+window.DesignSystem = { 
+  Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, Modal, AdvancedFilter, 
+  AttachmentManager, Tabs, DataGrid, HighlightText, Tree, TreeGrid,
+  CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
+  ProgressBar, DatePicker, Stepper, TagInput
+};
