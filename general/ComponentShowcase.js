@@ -441,7 +441,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   <div className="w-full flex flex-col gap-3 h-full">
                     
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
-                      <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
+                      <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm !overflow-visible" headerClassName="h-10 bg-white" isCollapsible language={language}>
                         <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
                           <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
                           <DatePicker size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(v) => setSelectedRow({...selectedRow, docDate: v})} isRtl={isRtl} language={language} />
@@ -606,7 +606,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <div className="xl:col-span-2 flex flex-col gap-5">
-              <Card title={t('فیلدهای تخصصی ورودی', 'Specialized Inputs')} className="shadow-sm">
+              <Card title={t('فیلدهای تخصصی ورودی', 'Specialized Inputs')} className="shadow-sm !overflow-visible">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CurrencyField size="sm" label={t('ورودی مبلغ (جداکننده هزارگان)', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
                   <DatePicker size="sm" label={t('انتخاب تاریخ (شمسی/میلادی)', 'Date Picker')} value={dateVal} onChange={setDateVal} isRtl={isRtl} language={language} />
@@ -639,7 +639,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 ]} language={language} />
               </Card>
 
-              <Card title={t('اعلان‌ها و راهنما', 'Overlays & Feedback')} className="shadow-sm">
+              <Card title={t('اعلان‌ها و راهنما', 'Overlays & Feedback')} className="shadow-sm !overflow-visible">
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center gap-3">
                     <Tooltip text={t('اطلاعات بیشتر را بخوانید', 'Read more info')} position="top">

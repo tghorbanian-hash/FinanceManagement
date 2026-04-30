@@ -1444,6 +1444,45 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
   const t = (fa, en) => isRtl ? fa : en;
 
+  const j2g = (jy, jm, jd) => {
+    let gy = (jy <= 979) ? 621 : 1600;
+    jy -= (jy <= 979) ? 0 : 979;
+    let days = (365 * jy) + parseInt(jy / 33) * 8 + parseInt((jy % 33 + 3) / 4) + 78 + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+    gy += 400 * parseInt(days / 146097);
+    days %= 146097;
+    if (days > 36524) { gy += 100 * parseInt(--days / 36524); days %= 36524; if (days >= 365) days++; }
+    gy += 4 * parseInt(days / 1461);
+    days %= 1461;
+    gy += parseInt((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    let gd = days + 1;
+    let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm;
+    for (gm = 0; gm < 13; gm++) {
+      let v = sal_a[gm];
+      if (gd <= v) break;
+      gd -= v;
+    }
+    return [gy, gm, gd];
+  };
+
+  const g2j = (gy, gm, gd) => {
+    let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let jy = (gy <= 1600) ? 0 : 979;
+    gy -= (gy <= 1600) ? 621 : 1600;
+    let gy2 = (gm > 2) ? (gy + 1) : gy;
+    let days = (365 * gy) + parseInt((gy2 + 3) / 4) - parseInt((gy2 + 99) / 100) + parseInt((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+    jy += 33 * parseInt(days / 12053);
+    days %= 12053;
+    jy += 4 * parseInt(days / 1461);
+    days %= 1461;
+    jy += parseInt((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    let jm = (days < 186) ? 1 + parseInt(days / 31) : 7 + parseInt((days - 186) / 30);
+    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+    return [jy, jm, jd];
+  };
+
   useEffect(() => {
     const clickOutside = (e) => { 
       if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false); 
@@ -1452,12 +1491,25 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
     return () => document.removeEventListener('mousedown', clickOutside);
   }, []);
 
+  useEffect(() => {
+    if (value && value.length === 10) {
+      const parts = value.split('/');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if ((calendarMode === 'jalali' && y < 1500) || (calendarMode === 'gregorian' && y > 1800)) {
+            setCurrentYear(y);
+            setCurrentMonth(m);
+        }
+      }
+    }
+  }, [value, calendarMode]);
+
   const formatDatePicker = (val) => {
     let cleaned = val.replace(/[^\d]/g, '').slice(0, 8);
-    let formatted = cleaned;
-    if (cleaned.length > 4) formatted = cleaned.slice(0, 4) + '/' + cleaned.slice(4);
-    if (cleaned.length > 6) formatted = formatted.slice(0, 7) + '/' + cleaned.slice(6);
-    return formatted;
+    if (cleaned.length > 6) return `${cleaned.slice(0, 4)}/${cleaned.slice(4, 6)}/${cleaned.slice(6)}`;
+    if (cleaned.length > 4) return `${cleaned.slice(0, 4)}/${cleaned.slice(4)}`;
+    return cleaned;
   };
 
   const handleInputChange = (e) => {
@@ -1471,24 +1523,43 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
     setIsOpen(false);
   };
 
-  const nextMonth = () => {
-    if (currentMonth === 12) { setCurrentMonth(1); setCurrentYear(currentYear + 1); } 
-    else { setCurrentMonth(currentMonth + 1); }
+  const toggleCalendarMode = () => {
+    const newMode = calendarMode === 'jalali' ? 'gregorian' : 'jalali';
+    if (value && value.length === 10) {
+      const parts = value.split('/');
+      if (parts.length === 3) {
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const d = parseInt(parts[2], 10);
+        if (calendarMode === 'jalali' && y < 1500) {
+          const [gy, gm, gd] = j2g(y, m, d);
+          onChange(`${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`);
+        } else if (calendarMode === 'gregorian' && y > 1800) {
+          const [jy, jm, jd] = g2j(y, m, d);
+          onChange(`${jy}/${jm < 10 ? '0'+jm : jm}/${jd < 10 ? '0'+jd : jd}`);
+        }
+      }
+    } else {
+       if (newMode === 'jalali') {
+         setCurrentYear(1403); setCurrentMonth(1);
+       } else {
+         setCurrentYear(new Date().getFullYear()); setCurrentMonth(new Date().getMonth() + 1);
+       }
+    }
+    setCalendarMode(newMode);
   };
 
-  const prevMonth = () => {
-    if (currentMonth === 1) { setCurrentMonth(12); setCurrentYear(currentYear - 1); } 
-    else { setCurrentMonth(currentMonth - 1); }
-  };
-
-  const handleModeChange = (mode) => {
-    setCalendarMode(mode);
-    if (mode === 'jalali') { setCurrentYear(1403); setCurrentMonth(1); } 
-    else { setCurrentYear(2025); setCurrentMonth(1); }
-  };
-
-  const daysInMonth = calendarMode === 'jalali' ? (currentMonth <= 6 ? 31 : (currentMonth === 12 ? 29 : 30)) : new Date(currentYear, currentMonth, 0).getDate();
-  const firstDayOffset = calendarMode === 'jalali' ? (currentMonth + currentYear) % 7 : new Date(currentYear, currentMonth - 1, 1).getDay(); 
+  let daysInMonth, firstDayOffset;
+  if (calendarMode === 'jalali') {
+    const isLeap = [1, 5, 9, 13, 17, 22, 26, 30].includes(currentYear % 33);
+    daysInMonth = currentMonth <= 6 ? 31 : (currentMonth === 12 ? (isLeap ? 30 : 29) : 30);
+    const [gy, gm, gd] = j2g(currentYear, currentMonth, 1);
+    const d = new Date(gy, gm - 1, gd).getDay();
+    firstDayOffset = (d + 1) % 7; 
+  } else {
+    daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    firstDayOffset = new Date(currentYear, currentMonth - 1, 1).getDay(); 
+  }
 
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
   const blanksArray = Array.from({ length: firstDayOffset }, (_, i) => i);
@@ -1512,21 +1583,16 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
           id={inputId} type="text" value={value || ''} onChange={handleInputChange} disabled={disabled}
           onClick={() => !disabled && setIsOpen(true)}
           placeholder={calendarMode === 'jalali' ? '1403/01/01' : '2025/01/01'}
-          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[80px]' : 'pl-8 pr-[80px]'} font-mono`}
+          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
           dir="ltr"
         />
-        <div className={`absolute ${isRtl ? 'left-1.5' : 'right-1.5'} flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded p-0.5 z-10`}>
+        <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded p-0.5 z-10`}>
           <button 
-            type="button" onClick={(e) => { e.stopPropagation(); handleModeChange('jalali'); }}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'jalali' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+            type="button" onClick={(e) => { e.stopPropagation(); toggleCalendarMode(); }}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-black transition-all bg-white shadow-sm text-indigo-600 hover:text-indigo-700`}
+            title={t('تغییر نوع تقویم', 'Toggle Calendar Mode')}
           >
-            FA
-          </button>
-          <button 
-            type="button" onClick={(e) => { e.stopPropagation(); handleModeChange('gregorian'); }}
-            className={`px-1.5 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'gregorian' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-          >
-            EN
+            {calendarMode === 'jalali' ? 'FA' : 'EN'}
           </button>
         </div>
       </div>
@@ -1534,12 +1600,12 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
       {isOpen && !disabled && (
         <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} z-[200] w-64 bg-white border border-slate-200 shadow-2xl rounded-xl p-3 animate-in zoom-in-95 duration-150`}>
           <div className="flex items-center justify-between mb-3 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
-            <button type="button" onClick={prevMonth} className="p-1 rounded text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+            <button type="button" onClick={() => { if(currentMonth===1){setCurrentMonth(12); setCurrentYear(currentYear-1)}else setCurrentMonth(currentMonth-1) }} className="p-1 rounded text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
             <div className="text-[12px] font-black text-slate-800 flex items-center gap-1">
               <span>{monthName}</span>
               <span className="text-indigo-600">{currentYear}</span>
             </div>
-            <button type="button" onClick={nextMonth} className="p-1 rounded text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"><ChevronLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+            <button type="button" onClick={() => { if(currentMonth===12){setCurrentMonth(1); setCurrentYear(currentYear+1)}else setCurrentMonth(currentMonth+1) }} className="p-1 rounded text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"><ChevronLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
           </div>
           
           <div className="grid grid-cols-7 gap-1 mb-1" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -1549,7 +1615,9 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
           <div className="grid grid-cols-7 gap-1" dir={isRtl ? 'rtl' : 'ltr'}>
             {blanksArray.map(b => <div key={`blank-${b}`} className="h-7"></div>)}
             {daysArray.map(day => {
-              const isSelected = value === `${currentYear}/${currentMonth < 10 ? '0'+currentMonth : currentMonth}/${day < 10 ? '0'+day : day}`;
+              const dStr = day < 10 ? '0'+day : day;
+              const mStr = currentMonth < 10 ? '0'+currentMonth : currentMonth;
+              const isSelected = value === `${currentYear}/${mStr}/${dStr}`;
               return (
                 <button 
                   key={day} type="button" onClick={() => handleDayClick(day)}
@@ -1560,19 +1628,12 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
               );
             })}
           </div>
-
-          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <span className="text-[9px] font-bold text-slate-400">{t('نوع تقویم:', 'Calendar Type:')}</span>
-            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded p-0.5">
-              <button type="button" onClick={() => handleModeChange('jalali')} className={`px-2 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'jalali' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>FA</button>
-              <button type="button" onClick={() => handleModeChange('gregorian')} className={`px-2 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'gregorian' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>EN</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 };
+
 
 const Stepper = ({ steps = [], currentStep = 0, language = 'fa' }) => {
   const isRtl = language === 'fa';
