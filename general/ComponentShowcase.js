@@ -9,7 +9,7 @@ import {
 const ComponentShowcase = ({ language = 'fa' }) => {
   const { 
     DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
-    AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
+    AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid, Alert, Toast, Spinner,
     CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
     DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput
   } = window.DesignSystem || {};
@@ -57,6 +57,16 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [selectedTreeGridIds, setSelectedTreeGridIds] = useState([]);
   const [treeGridEditingId, setTreeGridEditingId] = useState(null);
   const [treeGridEditData, setTreeGridEditData] = useState({});
+
+  const [toastConfig, setToastConfig] = useState({ isVisible: false, type: 'success', message: '' });
+
+  const showToast = (type, message) => {
+    setToastConfig({ isVisible: false, type, message: '' }); 
+    setTimeout(() => {
+      setToastConfig({ isVisible: true, type, message });
+      setTimeout(() => setToastConfig(prev => ({ ...prev, isVisible: false })), 4000);
+    }, 100);
+  };
 
   const showcaseTabs = [
     { id: 'grid_form', label: t('امکانات گرید و فرم', 'Grid & Form Features'), icon: Table },
@@ -154,13 +164,14 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
   const handleSaveForm = () => {
     setIsSubmitting(true);
-    setTimeout(() => { setIsSubmitting(false); setCurrentView('list'); }, 1000);
+    setTimeout(() => { setIsSubmitting(false); setCurrentView('list'); showToast('success', t('اطلاعات با موفقیت ذخیره شد.', 'Information saved successfully.')); }, 1000);
   };
 
   const handleBulkDelete = (selectedIds) => {
     if (window.confirm(t(`آیا از حذف ${selectedIds.length} مورد انتخاب شده اطمینان دارید؟`, `Are you sure you want to delete ${selectedIds.length} selected items?`))) {
       const updated = mockData.filter(r => !selectedIds.includes(r.id));
       setMockData(updated); setFilteredData(updated);
+      showToast('success', t('موارد انتخاب شده با موفقیت حذف شدند.', 'Selected items deleted successfully.'));
     }
   };
 
@@ -324,6 +335,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
         setSelectedTreeNodeId(null); setTreeFormData({}); setIsCreatingNode(false);
       }
     }
+    showToast('success', t('گره انتخاب شده با موفقیت حذف شد.', 'Selected node deleted successfully.'));
   };
 
   const handleSaveTreeForm = () => {
@@ -335,6 +347,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     } else {
       setTreeData(treeData.map(n => n.id === selectedTreeNodeId ? { ...n, ...treeFormData } : n));
     }
+    showToast('success', t('تغییرات با موفقیت ذخیره شد.', 'Changes saved successfully.'));
   };
 
   const handleCancelTreeForm = () => {
@@ -360,6 +373,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const handleSaveTreeGridEdit = (row) => {
     setTreeData(prev => prev.map(n => n.id === treeGridEditingId ? { ...n, ...treeGridEditData } : n));
     setTreeGridEditingId(null);
+    showToast('success', t('اطلاعات با موفقیت ذخیره شد.', 'Information saved successfully.'));
   };
 
   const handleCancelTreeGridEdit = () => {
@@ -401,7 +415,10 @@ const ComponentShowcase = ({ language = 'fa' }) => {
           {currentView === 'list' && (
             <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
               <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 flex flex-col gap-3">
+                {filteredData.length > 0 && filteredData.length % 2 === 0 && (
+                    <Alert type="info" message={t('اطلاعات با موفقیت بازیابی شد.', 'Data retrieved successfully.')} />
+                )}
                 <DataGrid 
                   data={filteredData} 
                   columns={gridColumns} 
@@ -439,7 +456,9 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               >
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
                   <div className="w-full flex flex-col gap-3 h-full">
-                    
+                    {lineItems.length === 0 && (
+                        <Alert type="warning" message={t('سند حسابداری بدون ردیف است. لطفاً حداقل یک ردیف وارد کنید.', 'Document has no line items. Please add at least one line.')} />
+                    )}
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
                       <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm !overflow-visible" headerClassName="h-10 bg-white" isCollapsible language={language}>
                         <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
@@ -541,6 +560,9 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                             <span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
                           </div>
                         )}
+                        {!treeFormData.isActive && (
+                            <Alert type="error" message={t('این گره غیرفعال است.', 'This node is inactive.')} />
+                        )}
                         <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
                         <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
                         <SelectField size="sm" label={t('ماهیت حساب', 'Account Nature')} value={treeFormData.nature || ''} onChange={(e) => setTreeFormData({...treeFormData, nature: e.target.value})} options={[{value:'بدهکار',label:'بدهکار'}, {value:'بستانکار',label:'بستانکار'}]} isRtl={isRtl} />
@@ -606,6 +628,28 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
             <div className="xl:col-span-2 flex flex-col gap-5">
+              
+              <Card title={t('تست وضعیت پردازش', 'Spinner Test')} className="shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-4 items-center">
+                        <Spinner size="sm" color="text-slate-400" />
+                        <Spinner size="md" color="text-indigo-600" />
+                        <Spinner size="lg" color="text-emerald-500" />
+                        <Spinner size="xl" color="text-rose-500" />
+                    </div>
+                    <Button isLoading={true} variant="primary" size="md">در حال پردازش...</Button>
+                  </div>
+              </Card>
+
+              <Card title={t('تست پاپ‌آپ‌ها', 'Toast Test')} className="shadow-sm">
+                <div className="flex gap-2">
+                  <Button onClick={() => showToast('success', t('عملیات با موفقیت انجام شد.', 'Operation successful.'))} variant="outline" className="text-emerald-600 border-emerald-200">Success</Button>
+                  <Button onClick={() => showToast('error', t('خطایی رخ داد.', 'An error occurred.'))} variant="outline" className="text-rose-600 border-rose-200">Error</Button>
+                  <Button onClick={() => showToast('warning', t('هشدار: اطلاعات ناقص است.', 'Warning: Incomplete.'))} variant="outline" className="text-amber-600 border-amber-200">Warning</Button>
+                  <Button onClick={() => showToast('info', t('در حال دریافت اطلاعات...', 'Loading data...'))} variant="outline" className="text-sky-600 border-sky-200">Info</Button>
+                </div>
+              </Card>
+
               <Card title={t('فیلدهای تخصصی ورودی', 'Specialized Inputs')} className="shadow-sm !overflow-visible">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <CurrencyField size="sm" label={t('ورودی مبلغ (جداکننده هزارگان)', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
@@ -744,19 +788,28 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 const updatedData = mockData.map(r => r.id === selectedRow.id ? { ...r, attachments: [...(r.attachments || []), ...uploaded] } : r);
                 setMockData(updatedData); setFilteredData(updatedData);
                 setSelectedRow(prev => ({ ...prev, attachments: [...(prev.attachments || []), ...uploaded] }));
+                showToast('success', t('فایل‌ها با موفقیت آپلود شدند.', 'Files uploaded successfully.'));
               }} 
               onDelete={(file) => {
                 const updatedData = mockData.map(r => r.id === selectedRow.id ? { ...r, attachments: r.attachments.filter(a => a.id !== file.id) } : r);
                 setMockData(updatedData); setFilteredData(updatedData);
                 setSelectedRow(prev => ({ ...prev, attachments: prev.attachments.filter(a => a.id !== file.id) }));
+                showToast('success', t('فایل با موفقیت حذف شد.', 'File deleted successfully.'));
               }} 
-              onDownload={(file) => alert(`Downloading: ${file.name}`)}
+              onDownload={(file) => showToast('info', t(`در حال دانلود فایل ${file.name}`, `Downloading file ${file.name}`))}
               readOnly={selectedRow.isReadOnly} 
               language={language} 
             />
           </div>
         )}
       </Modal>
+
+      <Toast 
+        isVisible={toastConfig.isVisible} 
+        type={toastConfig.type} 
+        message={toastConfig.message} 
+        onClose={() => setToastConfig(prev => ({ ...prev, isVisible: false }))} 
+      />
 
     </div>
   );
