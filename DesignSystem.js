@@ -1433,55 +1433,69 @@ const ProgressBar = ({ value = 0, max = 100, color = 'indigo', size = 'md', labe
   );
 };
 
+const j2g = (jy, jm, jd) => {
+  let gy = (jy <= 979) ? 621 : 1600;
+  jy -= (jy <= 979) ? 0 : 979;
+  let days = (365 * jy) + parseInt(jy / 33) * 8 + parseInt((jy % 33 + 3) / 4) + 78 + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+  gy += 400 * parseInt(days / 146097);
+  days %= 146097;
+  if (days > 36524) { gy += 100 * parseInt(--days / 36524); days %= 36524; if (days >= 365) days++; }
+  gy += 4 * parseInt(days / 1461);
+  days %= 1461;
+  gy += parseInt((days - 1) / 365);
+  if (days > 365) days = (days - 1) % 365;
+  let gd = days + 1;
+  let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let gm;
+  for (gm = 0; gm < 13; gm++) {
+    let v = sal_a[gm];
+    if (gd <= v) break;
+    gd -= v;
+  }
+  return [gy, gm, gd];
+};
+
+const g2j = (gy, gm, gd) => {
+  let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy = (gy <= 1600) ? 0 : 979;
+  gy -= (gy <= 1600) ? 621 : 1600;
+  let gy2 = (gm > 2) ? (gy + 1) : gy;
+  let days = (365 * gy) + parseInt((gy2 + 3) / 4) - parseInt((gy2 + 99) / 100) + parseInt((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+  jy += 33 * parseInt(days / 12053);
+  days %= 12053;
+  jy += 4 * parseInt(days / 1461);
+  days %= 1461;
+  jy += parseInt((days - 1) / 365);
+  if (days > 365) days = (days - 1) % 365;
+  let jm = (days < 186) ? 1 + parseInt(days / 31) : 7 + parseInt((days - 186) / 30);
+  let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+  return [jy, jm, jd];
+};
+
 const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', required = false, size = 'md', disabled = false, id, wrapperClassName = '' }) => {
+  const getTodayInfo = useCallback((mode) => {
+    const today = new Date();
+    const gy = today.getFullYear();
+    const gm = today.getMonth() + 1;
+    const gd = today.getDate();
+    if (mode === 'jalali') {
+      const [jy, jm, jd] = g2j(gy, gm, gd);
+      return { y: jy, m: jm, d: jd };
+    }
+    return { y: gy, m: gm, d: gd };
+  }, []);
+
   const [calendarMode, setCalendarMode] = useState(language === 'fa' ? 'jalali' : 'gregorian');
   const [isOpen, setIsOpen] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(language === 'fa' ? 1 : 1);
-  const [currentYear, setCurrentYear] = useState(language === 'fa' ? 1403 : 2025);
+  
+  const initToday = getTodayInfo(language === 'fa' ? 'jalali' : 'gregorian');
+  const [currentMonth, setCurrentMonth] = useState(initToday.m);
+  const [currentYear, setCurrentYear] = useState(initToday.y);
   
   const containerRef = useRef(null);
   const inputId = id || `datepicker-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
   const t = (fa, en) => isRtl ? fa : en;
-
-  const j2g = (jy, jm, jd) => {
-    let gy = (jy <= 979) ? 621 : 1600;
-    jy -= (jy <= 979) ? 0 : 979;
-    let days = (365 * jy) + parseInt(jy / 33) * 8 + parseInt((jy % 33 + 3) / 4) + 78 + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
-    gy += 400 * parseInt(days / 146097);
-    days %= 146097;
-    if (days > 36524) { gy += 100 * parseInt(--days / 36524); days %= 36524; if (days >= 365) days++; }
-    gy += 4 * parseInt(days / 1461);
-    days %= 1461;
-    gy += parseInt((days - 1) / 365);
-    if (days > 365) days = (days - 1) % 365;
-    let gd = days + 1;
-    let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    let gm;
-    for (gm = 0; gm < 13; gm++) {
-      let v = sal_a[gm];
-      if (gd <= v) break;
-      gd -= v;
-    }
-    return [gy, gm, gd];
-  };
-
-  const g2j = (gy, gm, gd) => {
-    let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    let jy = (gy <= 1600) ? 0 : 979;
-    gy -= (gy <= 1600) ? 621 : 1600;
-    let gy2 = (gm > 2) ? (gy + 1) : gy;
-    let days = (365 * gy) + parseInt((gy2 + 3) / 4) - parseInt((gy2 + 99) / 100) + parseInt((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
-    jy += 33 * parseInt(days / 12053);
-    days %= 12053;
-    jy += 4 * parseInt(days / 1461);
-    days %= 1461;
-    jy += parseInt((days - 1) / 365);
-    if (days > 365) days = (days - 1) % 365;
-    let jm = (days < 186) ? 1 + parseInt(days / 31) : 7 + parseInt((days - 186) / 30);
-    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
-    return [jy, jm, jd];
-  };
 
   useEffect(() => {
     const clickOutside = (e) => { 
@@ -1523,6 +1537,17 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
     setIsOpen(false);
   };
 
+  const handleOpen = () => {
+    if (!disabled) {
+      if (!value || value.length !== 10) {
+        const ti = getTodayInfo(calendarMode);
+        setCurrentYear(ti.y);
+        setCurrentMonth(ti.m);
+      }
+      setIsOpen(true);
+    }
+  };
+
   const toggleCalendarMode = () => {
     const newMode = calendarMode === 'jalali' ? 'gregorian' : 'jalali';
     if (value && value.length === 10) {
@@ -1540,11 +1565,9 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
         }
       }
     } else {
-       if (newMode === 'jalali') {
-         setCurrentYear(1403); setCurrentMonth(1);
-       } else {
-         setCurrentYear(new Date().getFullYear()); setCurrentMonth(new Date().getMonth() + 1);
-       }
+       const ti = getTodayInfo(newMode);
+       setCurrentYear(ti.y);
+       setCurrentMonth(ti.m);
     }
     setCalendarMode(newMode);
   };
@@ -1572,6 +1595,9 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
   const monthName = calendarMode === 'jalali' ? faMonths[currentMonth - 1] : enMonths[currentMonth - 1];
   const weekDays = calendarMode === 'jalali' ? faDays : enDays;
 
+  const ti = getTodayInfo(calendarMode);
+  const todayStr = `${ti.y}/${ti.m < 10 ? '0'+ti.m : ti.m}/${ti.d < 10 ? '0'+ti.d : ti.d}`;
+
   return (
     <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${wrapperClassName}`}>
       {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
@@ -1581,8 +1607,8 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
         </div>
         <input 
           id={inputId} type="text" value={value || ''} onChange={handleInputChange} disabled={disabled}
-          onClick={() => !disabled && setIsOpen(true)}
-          placeholder={calendarMode === 'jalali' ? '1403/01/01' : '2025/01/01'}
+          onClick={handleOpen}
+          placeholder={todayStr}
           className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
           dir="ltr"
         />
@@ -1617,11 +1643,23 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
             {daysArray.map(day => {
               const dStr = day < 10 ? '0'+day : day;
               const mStr = currentMonth < 10 ? '0'+currentMonth : currentMonth;
-              const isSelected = value === `${currentYear}/${mStr}/${dStr}`;
+              const currentIterDate = `${currentYear}/${mStr}/${dStr}`;
+              const isSelected = value === currentIterDate;
+              const isToday = todayStr === currentIterDate;
+              
+              let btnClass = 'h-7 w-full rounded flex items-center justify-center text-[11px] font-bold transition-all ';
+              if (isSelected) {
+                btnClass += 'bg-indigo-600 text-white shadow-md';
+              } else if (isToday) {
+                btnClass += 'bg-indigo-50 text-indigo-700 border border-indigo-200';
+              } else {
+                btnClass += 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700';
+              }
+
               return (
                 <button 
                   key={day} type="button" onClick={() => handleDayClick(day)}
-                  className={`h-7 w-full rounded flex items-center justify-center text-[11px] font-bold transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'}`}
+                  className={btnClass}
                 >
                   {day}
                 </button>
@@ -1633,7 +1671,6 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
     </div>
   );
 };
-
 
 const Stepper = ({ steps = [], currentStep = 0, language = 'fa' }) => {
   const isRtl = language === 'fa';
