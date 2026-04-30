@@ -31,16 +31,22 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
 
     const fetchNotifications = async () => {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('system_notifications')
-        .select('*')
-        .eq('user_id', MOCK_USER_ID)
-        .order('created_at', { ascending: false });
-        
-      if (!error && data) {
-        setNotifications(data);
+      try {
+        const { data, error } = await supabase
+          .from('system_notifications')
+          .select('*')
+          .eq('user_id', MOCK_USER_ID)
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
+        if (data) {
+          setNotifications(data);
+        }
+      } catch (err) {
+        console.error('Error fetching notifications:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchNotifications();
@@ -68,25 +74,57 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
   }, [supabase]);
 
   const markAsRead = async (id) => {
+    if (!id) return;
+    // تغییر وضعیت محلی (Optimistic)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    await supabase.from('system_notifications').update({ is_read: true }).eq('id', id);
+    try {
+      const { error } = await supabase
+        .from('system_notifications')
+        .update({ is_read: true })
+        .eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error marking as read in DB:', err);
+    }
   };
 
   const markAllAsRead = async () => {
+    const ids = notifications.filter(n => !n.is_read).map(n => n.id);
+    if (ids.length === 0) return;
+    
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    await supabase.from('system_notifications').update({ is_read: true }).eq('user_id', MOCK_USER_ID).eq('is_read', false);
+    try {
+      const { error } = await supabase
+        .from('system_notifications')
+        .update({ is_read: true })
+        .eq('user_id', MOCK_USER_ID)
+        .eq('is_read', false);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error marking all as read in DB:', err);
+    }
   };
 
   const deleteOne = async (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-    await supabase.from('system_notifications').delete().eq('id', id);
+    try {
+      const { error } = await supabase.from('system_notifications').delete().eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
   };
 
   const deleteAll = async () => {
     if (window.confirm(t('آیا از حذف تمام اعلان‌ها اطمینان دارید؟', 'Are you sure you want to delete all notifications?'))) {
       setNotifications([]);
       setPage(1);
-      await supabase.from('system_notifications').delete().eq('user_id', MOCK_USER_ID);
+      try {
+        const { error } = await supabase.from('system_notifications').delete().eq('user_id', MOCK_USER_ID);
+        if (error) throw error;
+      } catch (err) {
+        console.error('Error deleting all notifications:', err);
+      }
     }
   };
 
@@ -164,8 +202,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
                     <span className="text-[8px] text-slate-400 font-medium">{formatTime(notif.created_at)}</span>
                   </div>
                   
-                  {/* دکمه‌های عملیاتی برای هر اعلان */}
-                  <div className="flex flex-col gap-0.5 opacity-60 group-hover:opacity-100 transition-all self-start shrink-0">
+                  <div className="flex flex-col gap-0.5 transition-all self-start shrink-0">
                     {!notif.is_read && (
                       <Button 
                         size="sm" variant="ghost" icon={Check} 
