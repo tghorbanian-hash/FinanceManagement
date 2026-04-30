@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Loader2, Check } from 'lucide-react';
 
 const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
-  const { Button, Badge, EmptyState, Toast, Alert } = window.DesignSystem || {};
+  const { Button, Badge, EmptyState } = window.DesignSystem || {};
   const supabase = window.supabase;
   
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
@@ -13,18 +13,8 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
-  
-  const [toastConfig, setToastConfig] = useState({ isVisible: false, type: 'success', message: '' });
 
   const t = (fa, en) => isRtl ? fa : en;
-
-  const showToast = (type, message) => {
-    setToastConfig({ isVisible: false, type, message: '' }); 
-    setTimeout(() => {
-      setToastConfig({ isVisible: true, type, message });
-      setTimeout(() => setToastConfig(prev => ({ ...prev, isVisible: false })), 4000);
-    }, 100);
-  };
 
   // محاسبه تعداد اعلان‌های ناخوانده
   const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
@@ -37,10 +27,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
   }, [unreadCount, onUpdateUnread]);
 
   useEffect(() => {
-    if (!supabase) {
-        setLoading(false);
-        return;
-    }
+    if (!supabase) return;
 
     const fetchNotifications = async () => {
       setLoading(true);
@@ -57,7 +44,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
         }
       } catch (err) {
         console.error('Error fetching notifications:', err);
-        showToast('error', t('خطا در دریافت اعلان‌ها', 'Error fetching notifications'));
       } finally {
         setLoading(false);
       }
@@ -85,13 +71,12 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, t]);
+  }, [supabase]);
 
   const markAsRead = async (id) => {
     if (!id) return;
     // تغییر وضعیت محلی (Optimistic)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    if(!supabase) return;
     try {
       const { error } = await supabase
         .from('system_notifications')
@@ -100,8 +85,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
       if (error) throw error;
     } catch (err) {
       console.error('Error marking as read in DB:', err);
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
-      showToast('error', t('خطا در بروزرسانی وضعیت', 'Error updating status'));
     }
   };
 
@@ -110,8 +93,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
     if (ids.length === 0) return;
     
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    showToast('success', t('تمامی اعلان‌ها خوانده شدند', 'All notifications marked as read'));
-    if(!supabase) return;
     try {
       const { error } = await supabase
         .from('system_notifications')
@@ -121,14 +102,11 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
       if (error) throw error;
     } catch (err) {
       console.error('Error marking all as read in DB:', err);
-      showToast('error', t('خطا در بروزرسانی وضعیت', 'Error updating status'));
     }
   };
 
   const deleteOne = async (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-    showToast('success', t('اعلان حذف شد', 'Notification deleted'));
-    if(!supabase) return;
     try {
       const { error } = await supabase.from('system_notifications').delete().eq('id', id);
       if (error) throw error;
@@ -141,8 +119,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
     if (window.confirm(t('آیا از حذف تمام اعلان‌ها اطمینان دارید؟', 'Are you sure you want to delete all notifications?'))) {
       setNotifications([]);
       setPage(1);
-      showToast('success', t('تمامی اعلان‌ها حذف شدند', 'All notifications deleted'));
-      if(!supabase) return;
       try {
         const { error } = await supabase.from('system_notifications').delete().eq('user_id', MOCK_USER_ID);
         if (error) throw error;
@@ -204,11 +180,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
         )}
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1.5">
-          {!supabase && !loading && (
-             <div className="mb-2">
-               <Alert type="warning" message={t('اتصال به دیتابیس برقرار نیست. اعلان‌ها موقتی هستند.', 'No database connection. Notifications are temporary.')} />
-             </div>
-          )}
           {loading ? (
             <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>
           ) : currentData.length > 0 ? (
@@ -274,13 +245,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
           </div>
         )}
       </aside>
-
-      <Toast 
-        isVisible={toastConfig.isVisible} 
-        type={toastConfig.type} 
-        message={toastConfig.message} 
-        onClose={() => setToastConfig(prev => ({ ...prev, isVisible: false }))} 
-      />
     </>
   );
 };
