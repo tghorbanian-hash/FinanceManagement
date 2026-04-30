@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Trash, Loader2, Check } from 'lucide-react';
 
 const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
-  const { Button } = window.DesignSystem || {};
+  const { Button, Badge, EmptyState } = window.DesignSystem || {};
   const supabase = window.supabase;
   
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
@@ -16,10 +16,8 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
 
   const t = (fa, en) => isRtl ? fa : en;
 
-  // محاسبه تعداد اعلان‌های ناخوانده
   const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
 
-  // ارسال تعداد ناخوانده‌ها به هدر اصلی سیستم (NavigationSystem)
   useEffect(() => {
     if (onUpdateUnread) {
       onUpdateUnread(unreadCount);
@@ -45,7 +43,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
 
     fetchNotifications();
 
-    // اضافه شدن آپدیت بلادرنگ برای (UPDATE) وضعیت خوانده شدن
     const channel = supabase.channel('realtime_notifications')
       .on('postgres_changes', { 
         event: '*', 
@@ -68,15 +65,11 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
     };
   }, [supabase]);
 
-  // متد جدید: خواندن یک اعلان
   const markAsRead = async (id) => {
-    // آپدیت سریع در رابط کاربری
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-    // ثبت در دیتابیس
     await supabase.from('system_notifications').update({ is_read: true }).eq('id', id);
   };
 
-  // متد جدید: خواندن تمام اعلان‌ها
   const markAllAsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     await supabase.from('system_notifications').update({ is_read: true }).eq('user_id', MOCK_USER_ID).eq('is_read', false);
@@ -113,113 +106,137 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
       <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] transition-opacity" onClick={onClose} />
       
       <aside 
-        className={`fixed top-0 bottom-0 w-full max-w-[380px] bg-white shadow-2xl z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 w-full max-w-[340px] bg-white shadow-2xl z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
           isRtl ? 'left-0 animate-slide-in-left' : 'right-0 animate-slide-in-right'
         }`}
         dir={isRtl ? 'rtl' : 'ltr'}
       >
-        <div className="h-14 border-b border-slate-100 flex items-center justify-between px-5 shrink-0 bg-slate-50/50">
+        <div className="h-12 border-b border-slate-100 flex items-center justify-between px-4 shrink-0 bg-slate-50/50">
           <div className="flex items-center gap-2">
-            <Bell size={18} className="text-indigo-600" />
-            <span className="font-black text-slate-800 text-[14px]">{t('اعلان‌های سیستم', 'System Notifications')}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${unreadCount > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
-              {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
-            </span>
+            <Bell size={16} className="text-indigo-600" />
+            <span className="font-black text-slate-800 text-[12px]">{t('اعلان‌های سیستم', 'System Notifications')}</span>
+            {Badge ? (
+              <Badge variant={unreadCount > 0 ? 'danger' : 'gray'}>
+                {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
+              </Badge>
+            ) : (
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold transition-all ${unreadCount > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-500'}`}>
+                {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
+              </span>
+            )}
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-slate-200 rounded-md text-slate-400 transition-colors">
-            <X size={18} />
-          </button>
+          {Button ? (
+             <Button size="sm" variant="ghost" icon={X} onClick={onClose} title={t('بستن', 'Close')} className="!px-1.5" />
+          ) : (
+            <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded text-slate-400 transition-colors">
+              <X size={16} />
+            </button>
+          )}
         </div>
 
-        {/* Action Bar (اضافه شدن دکمه خواندن همه) */}
         {notifications.length > 0 && (
-          <div className="px-4 py-2 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
-            <button 
-              onClick={markAllAsRead}
-              disabled={unreadCount === 0}
-              className="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Check size={14} />
-              {t('خواندن همه', 'Mark All Read')}
-            </button>
-            <button 
-              onClick={deleteAll}
-              className="text-red-500 hover:text-red-700 text-[11px] font-bold flex items-center gap-1.5 transition-colors bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-md"
-            >
-              <Trash2 size={14} />
-              {t('حذف همه', 'Clear All')}
-            </button>
+          <div className="px-3 py-1.5 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            {Button ? (
+              <>
+                <Button 
+                  size="sm" variant="ghost" icon={Check} onClick={markAllAsRead} disabled={unreadCount === 0}
+                  className="!text-indigo-600 hover:!bg-indigo-50 !px-2"
+                >
+                  {t('خواندن همه', 'Mark All Read')}
+                </Button>
+                <Button 
+                  size="sm" variant="danger-outline" icon={Trash2} onClick={deleteAll}
+                  className="!px-2"
+                >
+                  {t('حذف همه', 'Clear All')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <button 
+                  onClick={markAllAsRead} disabled={unreadCount === 0}
+                  className="text-indigo-600 hover:text-indigo-800 text-[10px] font-bold flex items-center gap-1 transition-colors disabled:opacity-50"
+                >
+                  <Check size={12} /> {t('خواندن همه', 'Mark All Read')}
+                </button>
+                <button 
+                  onClick={deleteAll}
+                  className="text-red-500 hover:text-red-700 text-[10px] font-bold flex items-center gap-1 transition-colors bg-red-50 hover:bg-red-100 px-2 py-1 rounded"
+                >
+                  <Trash2 size={12} /> {t('حذف همه', 'Clear All')}
+                </button>
+              </>
+            )}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1.5">
           {loading ? (
             <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>
           ) : currentData.length > 0 ? (
             currentData.map((notif) => (
               <div 
                 key={notif.id} 
-                className={`group relative border rounded-lg p-3 transition-all animate-in fade-in slide-in-from-bottom-2 ${
+                className={`group relative border rounded-lg p-2.5 transition-all animate-in fade-in slide-in-from-bottom-2 ${
                   notif.is_read 
                     ? 'bg-white border-slate-100 hover:border-slate-200' 
                     : 'bg-indigo-50/40 border-indigo-100 hover:border-indigo-200 hover:shadow-sm'
                 }`}
               >
-                <div className="flex gap-2.5">
+                <div className="flex gap-2">
                   <div className={`mt-0.5 shrink-0 ${notif.is_read ? 'opacity-50' : ''} ${notif.type === 'success' ? 'text-emerald-500' : notif.type === 'error' ? 'text-red-500' : 'text-blue-500'}`}>
-                    {notif.type === 'success' ? <CheckCircle2 size={16} /> : notif.type === 'error' ? <AlertCircle size={16} /> : <Info size={16} />}
+                    {notif.type === 'success' ? <CheckCircle2 size={14} /> : notif.type === 'error' ? <AlertCircle size={14} /> : <Info size={14} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className={`text-[12px] font-bold mb-1 leading-tight ${notif.is_read ? 'text-slate-600' : 'text-slate-800'}`}>{notif.title}</h4>
-                    <p className={`text-[11px] leading-relaxed mb-1.5 line-clamp-2 ${notif.is_read ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
-                    <span className="text-[9px] text-slate-400 font-medium">{formatTime(notif.created_at)}</span>
+                    <h4 className={`text-[11px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600' : 'text-slate-800'}`}>{notif.title}</h4>
+                    <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
+                    <span className="text-[8px] text-slate-400 font-medium">{formatTime(notif.created_at)}</span>
                   </div>
-                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-all self-start shrink-0">
+                  <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-all self-start shrink-0">
                     {!notif.is_read && (
-                      <button 
-                        onClick={() => markAsRead(notif.id)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-all"
-                        title={t('علامت‌گذاری خوانده شده', 'Mark as read')}
-                      >
-                        <Check size={14} />
-                      </button>
+                      Button ? (
+                        <Button size="sm" variant="ghost" icon={Check} onClick={() => markAsRead(notif.id)} title={t('علامت‌گذاری خوانده شده', 'Mark as read')} className="!text-slate-400 hover:!text-indigo-600 hover:!bg-indigo-50 !px-1.5 !h-6" />
+                      ) : (
+                        <button onClick={() => markAsRead(notif.id)} className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-all" title={t('علامت‌گذاری خوانده شده', 'Mark as read')}><Check size={12} /></button>
+                      )
                     )}
-                    <button 
-                      onClick={() => deleteOne(notif.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-all"
-                      title={t('حذف اعلان', 'Delete')}
-                    >
-                      <Trash size={14} />
-                    </button>
+                    {Button ? (
+                      <Button size="sm" variant="ghost" icon={Trash} onClick={() => deleteOne(notif.id)} title={t('حذف اعلان', 'Delete')} className="!text-slate-400 hover:!text-red-500 hover:!bg-red-50 !px-1.5 !h-6" />
+                    ) : (
+                      <button onClick={() => deleteOne(notif.id)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-all" title={t('حذف اعلان', 'Delete')}><Trash size={12} /></button>
+                    )}
                   </div>
                 </div>
-                {/* نشانگر بصری اعلان جدید */}
                 {!notif.is_read && (
-                  <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-0 w-1 rounded-l-md' : 'left-0 w-1 rounded-r-md'} h-8 bg-indigo-500`} />
+                  <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-0 w-1 rounded-l-md' : 'left-0 w-1 rounded-r-md'} h-6 bg-indigo-500`} />
                 )}
               </div>
             ))
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-3">
-              <div className="w-14 h-14 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center"><Bell size={24} className="opacity-30" /></div>
-              <p className="text-[12px] font-medium">{t('هیچ اعلانی یافت نشد.', 'No notifications found.')}</p>
-            </div>
+             EmptyState ? (
+               <div className="h-full flex flex-col items-center justify-center">
+                 <EmptyState 
+                   title={t('هیچ اعلانی یافت نشد', 'No notifications found')} 
+                   description={t('اعلان جدیدی برای نمایش وجود ندارد.', 'There are no new notifications.')} 
+                   icon={Bell} 
+                 />
+               </div>
+             ) : (
+               <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                 <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center"><Bell size={20} className="opacity-30" /></div>
+                 <p className="text-[11px] font-medium">{t('هیچ اعلانی یافت نشد.', 'No notifications found.')}</p>
+               </div>
+             )
           )}
         </div>
 
         {totalPages > 1 && Button && (
-          <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-            <Button 
-              size="sm" variant="outline" disabled={page === 1}
-              onClick={() => setPage(p => p - 1)}
-            >{t('قبلی', 'Prev')}</Button>
-            <span className="text-[11px] font-bold text-slate-500">
+          <div className="p-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)} className="!px-2 !h-7">{t('قبلی', 'Prev')}</Button>
+            <span className="text-[10px] font-bold text-slate-500">
               {t('صفحه', 'Page')} {page} {t('از', 'of')} {totalPages}
             </span>
-            <Button 
-              size="sm" variant="outline" disabled={page === totalPages}
-              onClick={() => setPage(p => p + 1)}
-            >{t('بعدی', 'Next')}</Button>
+            <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="!px-2 !h-7">{t('بعدی', 'Next')}</Button>
           </div>
         )}
       </aside>
