@@ -1,9 +1,9 @@
 /* Filename: general/ComponentShowcase.js */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, 
   FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, 
-  FileDown, Layers, ListTree, Info, AlertTriangle, CheckCircle2, XCircle, TrendingUp, DollarSign, Users, Briefcase, MoreVertical
+  FileDown, Layers, ListTree, Info, AlertTriangle, CheckCircle2, XCircle, TrendingUp, DollarSign, Users, Briefcase, MoreVertical, Calendar, UploadCloud, Download
 } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
@@ -216,19 +216,19 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     { 
       field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '120px', type: 'date',
       render: (val, row) => editingLineItemId === row.id 
-        ? <TextField size="sm" type="date" value={editingLineData.docDate} onChange={(e) => setEditingLineData({...editingLineData, docDate: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
+        ? <DatePicker size="sm" value={editingLineData.docDate} onChange={(v) => setEditingLineData({...editingLineData, docDate: v})} isRtl={isRtl} language={language} wrapperClassName="m-0" />
         : val 
     },
     { 
       field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '130px', 
       render: (val, row) => editingLineItemId === row.id 
-        ? <TextField size="sm" type="number" value={editingLineData.debit} onChange={(e) => setEditingLineData({...editingLineData, debit: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
+        ? <CurrencyField size="sm" value={editingLineData.debit} onChange={(v) => setEditingLineData({...editingLineData, debit: v})} isRtl={isRtl} wrapperClassName="m-0" />
         : val 
     },
     { 
       field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '130px', 
       render: (val, row) => editingLineItemId === row.id 
-        ? <TextField size="sm" type="number" value={editingLineData.credit} onChange={(e) => setEditingLineData({...editingLineData, credit: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="m-0" />
+        ? <CurrencyField size="sm" value={editingLineData.credit} onChange={(v) => setEditingLineData({...editingLineData, credit: v})} isRtl={isRtl} wrapperClassName="m-0" />
         : val 
     },
     { 
@@ -392,7 +392,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
   return (
-    <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
+    <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
       
       <PageHeader 
         title={t('کاتالوگ کامپوننت‌ها (Showcase)', 'Component Showcase')}
@@ -432,35 +432,35 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
                 noPadding={true}
                 className="flex-1 flex flex-col border border-slate-200 shadow-sm min-h-0"
-                headerClassName="bg-white border-b-2 border-indigo-100 h-14"
+                headerClassName="bg-white border-b-2 border-indigo-100 h-10"
                 action={
                   <div className="flex items-center gap-1.5">
                     <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)} title={t('ضمائم', 'Attachments')} />
                     <Button size="sm" variant="ghost" icon={Printer} onClick={() => alert('Print Preview')} title={t('چاپ', 'Print')} />
                     <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت', 'Back')}</Button>
-                    <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
-                    <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
+                    <div className="w-px h-4 bg-slate-200 mx-0.5"></div>
+                    <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره', 'Save')}</Button>
                   </div>
                 }
               >
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
-                  <div className="w-full flex flex-col gap-3 h-full">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 bg-slate-50/50 min-h-0">
+                  <div className="w-full flex flex-col gap-2 h-full">
                     
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
-                      <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
-                        <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-2 shrink-0">
+                      <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm" headerClassName="h-9 bg-white" isCollapsible language={language}>
+                        <div className="p-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 bg-white">
                           <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
-                          <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(e) => setSelectedRow({...selectedRow, docDate: e.target.value})} isRtl={isRtl} type="date" />
+                          <DatePicker size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(v) => setSelectedRow({...selectedRow, docDate: v})} isRtl={isRtl} language={language} />
                           <div className="lg:col-span-2">
                             <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} onChange={(row) => setSelectedRow({...selectedRow, department: row})} data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
                           </div>
-                          <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} onChange={(e) => setSelectedRow({...selectedRow, amount: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName="lg:col-span-1" />
+                          <CurrencyField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} onChange={(v) => setSelectedRow({...selectedRow, amount: v})} isRtl={isRtl} wrapperClassName="lg:col-span-1" />
                           <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} onChange={(e) => setSelectedRow({...selectedRow, description: e.target.value})} isRtl={isRtl} wrapperClassName="lg:col-span-3" />
                         </div>
                       </Card>
 
-                      <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
-                        <div className="p-3 flex flex-col gap-4 bg-white h-full justify-center">
+                      <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-9 bg-white" isCollapsible language={language}>
+                        <div className="p-2 flex flex-col gap-3 bg-white h-full justify-center">
                           <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
                           <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
                         </div>
@@ -469,7 +469,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
                     <Card 
                       title={t('اقلام سند (Inline Edit)', 'Line Items')} 
-                      noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
+                      noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-9 bg-white shrink-0" 
                     >
                       <div className="flex-1 flex flex-col min-h-0">
                         <DataGrid 
@@ -482,7 +482,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                           onRowReorder={handleRowReorder}
                           onAdd={handleAddLineItem}
                           onDownloadSample={() => alert(t('دانلود نمونه فایل اکسل', 'Download Excel Sample'))}
-                          bulkActions={[{ label: t('حذف ردیف‌های انتخاب شده', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setLineItems(lineItems.filter(l => !ids.includes(l.id))) }]}
+                          bulkActions={[{ label: t('حذف انتخاب‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setLineItems(lineItems.filter(l => !ids.includes(l.id))) }]}
                         />
                       </div>
                     </Card>
@@ -497,19 +497,19 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
       {activeShowcaseTab === 'tree' && (
         <div className="flex-1 flex flex-col animate-in fade-in min-h-0">
-          <div className="flex items-center justify-between mb-3 shrink-0 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between mb-2 shrink-0 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-md"><ListTree size={18}/></div>
-              <span className="text-[13px] font-black text-slate-800">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
+              <div className="p-1 bg-indigo-100 text-indigo-600 rounded-md"><ListTree size={16}/></div>
+              <span className="text-[12px] font-black text-slate-800">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
             </div>
-            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
-              <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درختی', 'Tree View')}</button>
-              <button onClick={() => setTreeMode('grid')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
+            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-md">
+              <button onClick={() => setTreeMode('standard')} className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${treeMode === 'standard' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درختی', 'Tree View')}</button>
+              <button onClick={() => setTreeMode('grid')} className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${treeMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
             </div>
           </div>
 
           {treeMode === 'standard' ? (
-            <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
+            <div className="flex-1 flex gap-2 min-h-0 overflow-hidden">
               <div className="w-full md:w-[40%] h-full min-h-0 shadow-sm overflow-auto">
                 <Tree 
                   data={treeData}
@@ -532,7 +532,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                   headerClassName="bg-slate-50/80"
                   action={
                     (selectedTreeNodeId || isCreatingNode) && (
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1">
                         <Button size="sm" variant="ghost" icon={Trash2} className="!text-red-500 hover:!bg-red-50" onClick={() => !isCreatingNode && handleDeleteTreeNode(treeData.find(n => n.id === selectedTreeNodeId))} disabled={isCreatingNode} title={t('حذف', 'Delete')}/>
                       </div>
                     )
@@ -540,26 +540,26 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 >
                   {(selectedTreeNodeId || isCreatingNode) ? (
                     <div className="flex flex-col h-full">
-                      <div className="flex-1 space-y-4">
+                      <div className="flex-1 space-y-3">
                         {isCreatingNode && newTargetParentId && (
-                          <div className="p-2 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 flex items-center gap-1.5 mb-4">
+                          <div className="p-1.5 bg-blue-50 border border-blue-100 rounded text-[10px] text-blue-800 flex items-center gap-1.5 mb-2">
                             <Layers size={14}/>
-                            <span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
+                            <span>{t('ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
                           </div>
                         )}
                         <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
                         <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
                         <SelectField size="sm" label={t('ماهیت حساب', 'Account Nature')} value={treeFormData.nature || ''} onChange={(e) => setTreeFormData({...treeFormData, nature: e.target.value})} options={[{value:'بدهکار',label:'بدهکار'}, {value:'بستانکار',label:'بستانکار'}]} isRtl={isRtl} />
-                        <ToggleField size="sm" label={t('وضعیت فعال بودن (نمایش در سیستم)', 'Active Status')} checked={treeFormData.isActive !== false} onChange={(v) => setTreeFormData({...treeFormData, isActive: v})} isRtl={isRtl} wrapperClassName="pt-2" />
+                        <ToggleField size="sm" label={t('وضعیت فعال بودن', 'Active Status')} checked={treeFormData.isActive !== false} onChange={(v) => setTreeFormData({...treeFormData, isActive: v})} isRtl={isRtl} wrapperClassName="pt-1" />
                       </div>
-                      <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-1.5 shrink-0">
                         <Button size="sm" variant="ghost" onClick={handleCancelTreeForm}>{t('لغو', 'Cancel')}</Button>
-                        <Button size="sm" variant="primary" icon={Save} onClick={handleSaveTreeForm}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
+                        <Button size="sm" variant="primary" icon={Save} onClick={handleSaveTreeForm}>{t('ذخیره', 'Save')}</Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 text-[12px] font-medium">
-                      <div className="p-3 bg-slate-50 rounded-full"><ListTree size={24} className="text-slate-300"/></div>
+                    <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2 text-[11px] font-medium">
+                      <div className="p-2 bg-slate-50 rounded-full"><ListTree size={20} className="text-slate-300"/></div>
                       <span>{t('نودی انتخاب نشده است', 'No node selected')}</span>
                     </div>
                   )}
@@ -591,7 +591,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 onAddChild={handleAddTreeGridChild}
                 onAddRoot={handleAddTreeGridRoot}
                 onDelete={handleDeleteTreeNode}
-                onExport={() => alert(t('خروجی اکسل درخت-جدول', 'Export TreeGrid Excel'))}
+                onExport={() => alert(t('خروجی اکسل', 'Export Excel'))}
                 onImport={(file) => alert(`${t('فایل انتخاب شد:', 'File selected:')} ${file.name}`)}
                 onDownloadSample={() => alert(t('دانلود نمونه فایل', 'Download Sample Excel'))}
                 language={language}
@@ -602,32 +602,32 @@ const ComponentShowcase = ({ language = 'fa' }) => {
       )}
 
       {activeShowcaseTab === 'components' && (
-        <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <StatCard label={t('کل نقدینگی', 'Total Liquidity')} value="۱,۲۵۰,۰۰۰,۰۰۰" icon={DollarSign} trend="up" trendValue="۱۲%" color="emerald" language={language} />
             <StatCard label={t('بدهی معوق', 'Overdue Debt')} value="۴۸۰,۰۰۰,۰۰۰" icon={TrendingUp} trend="down" trendValue="۵%" color="rose" language={language} />
             <StatCard label={t('کاربران فعال', 'Active Users')} value="۱۲۴" icon={Users} color="blue" language={language} />
             <StatCard label={t('پروژه‌های باز', 'Open Projects')} value="۱۸" icon={Briefcase} color="amber" language={language} />
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 flex flex-col gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            <div className="xl:col-span-2 flex flex-col gap-4">
               <Card title={t('فیلدهای تخصصی ورودی', 'Specialized Inputs')} className="shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <CurrencyField label={t('ورودی مبلغ (جداکننده هزارگان)', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
-                  <DatePicker label={t('انتخاب تاریخ (شمسی/میلادی)', 'Date Picker')} value={dateVal} onChange={setDateVal} isRtl={isRtl} language={language} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <CurrencyField size="sm" label={t('ورودی مبلغ', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
+                  <DatePicker size="sm" label={t('انتخاب تاریخ', 'Date Picker')} value={dateVal} onChange={setDateVal} isRtl={isRtl} language={language} />
                   <div className="md:col-span-2">
-                    <TextAreaField label={t('توضیحات طولانی', 'Text Area')} placeholder={t('متن خود را اینجا وارد کنید...', 'Enter long text here...')} rows={3} isRtl={isRtl} />
+                    <TextAreaField size="sm" label={t('توضیحات طولانی', 'Text Area')} placeholder={t('متن خود را اینجا وارد کنید...', 'Enter long text here...')} rows={2} isRtl={isRtl} />
                   </div>
-                  <RadioGroup label={t('نوع انتخاب (رادیویی)', 'Selection Type')} value={radioVal} onChange={setRadioVal} options={[{value:'opt1', label:t('گزینه اول','Option 1')}, {value:'opt2', label:t('گزینه دوم','Option 2')}]} isRtl={isRtl} />
-                  <TagInput label={t('برچسب‌ها', 'Tags')} tags={tags} onAdd={(nt) => setTags([...tags, nt])} onDelete={(idx) => setTags(tags.filter((_, i) => i !== idx))} placeholder={t('افزودن برچسب...', 'Add tag...')} isRtl={isRtl} />
+                  <RadioGroup label={t('نوع انتخاب', 'Selection Type')} value={radioVal} onChange={setRadioVal} options={[{value:'opt1', label:t('گزینه اول','Option 1')}, {value:'opt2', label:t('گزینه دوم','Option 2')}]} isRtl={isRtl} />
+                  <TagInput size="sm" label={t('برچسب‌ها', 'Tags')} tags={tags} onAdd={(nt) => setTags([...tags, nt])} onDelete={(idx) => setTags(tags.filter((_, i) => i !== idx))} placeholder={t('افزودن...', 'Add...')} isRtl={isRtl} />
                 </div>
               </Card>
 
               <Card title={t('وضعیت پیشرفت و مراحل', 'Progress & Stepper')} className="shadow-sm">
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-4">
                   <Stepper steps={[{label:t('اطلاعات پایه','Base')}, {label:t('تایید فنی','Technical')}, {label:t('پرداخت نهایی','Payment')}]} currentStep={1} language={language} />
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <ProgressBar label={t('پیشرفت پروژه','Project Progress')} value={progressVal} color="indigo" showValue />
                     <ProgressBar label={t('مصرف بودجه','Budget Usage')} value={85} color="amber" size="sm" showValue />
                   </div>
@@ -635,9 +635,9 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               </Card>
             </div>
 
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               <Card title={t('تاریخچه و وضعیت', 'Timeline & Feedback')} className="shadow-sm">
-                <Tabs tabs={[{id:'t1', label:t('تاریخچه','Timeline')}, {id:'t2', label:t('وضعیت','Feedback')}]} activeTab="t1" onChange={()=>{}} className="mb-2" />
+                <Tabs tabs={[{id:'t1', label:t('تاریخچه','Timeline')}, {id:'t2', label:t('وضعیت','Feedback')}]} activeTab="t1" onChange={()=>{}} className="mb-1" />
                 <Timeline items={[
                   { title: t('سند ایجاد شد', 'Doc Created'), time: '۱۰:۳۰', description: t('توسط مدیر مالی ایجاد گردید', 'Created by Finance Manager'), variant: 'indigo' },
                   { title: t('تایید مرحله اول', 'Approved Level 1'), time: '۱۱:۱۵', description: t('توسط واحد حسابرسی تایید شد', 'Approved by Audit'), variant: 'success' },
@@ -646,13 +646,13 @@ const ComponentShowcase = ({ language = 'fa' }) => {
               </Card>
 
               <Card title={t('اعلان‌ها و راهنما', 'Overlays & Feedback')} className="shadow-sm">
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
                     <Tooltip text={t('اطلاعات بیشتر را بخوانید', 'Read more info')} position="top">
-                      <Button size="sm" variant="outline" icon={Info}>{t('تولتیپ (بالا)', 'Tooltip')}</Button>
+                      <Button size="sm" variant="outline" icon={Info}>{t('تولتیپ', 'Tooltip')}</Button>
                     </Tooltip>
                     <DropdownMenu 
-                      trigger={<Button size="sm" variant="secondary" icon={MoreVertical}>{t('منوی عملیات', 'Actions')}</Button>}
+                      trigger={<Button size="sm" variant="secondary" icon={MoreVertical}>{t('عملیات', 'Actions')}</Button>}
                       items={[
                         { label: t('ویرایش پروفایل', 'Edit Profile'), icon: Edit },
                         { label: t('تنظیمات امنیتی', 'Security'), icon: Settings },
@@ -662,18 +662,18 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                       language={language}
                     />
                   </div>
-                  <div className="p-3 border border-indigo-100 bg-indigo-50/30 rounded-lg flex items-center gap-3">
+                  <div className="p-2 border border-indigo-100 bg-indigo-50/30 rounded-lg flex items-center gap-2">
                     <Avatar name="Ali Alavi" size="md" />
                     <div className="flex flex-col">
-                      <span className="text-[11px] font-black text-slate-700">علی علوی</span>
-                      <span className="text-[9px] text-slate-400">مدیر ارشد مالی</span>
+                      <span className="text-[10px] font-black text-slate-700">علی علوی</span>
+                      <span className="text-[8px] text-slate-400">مدیر ارشد مالی</span>
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 mt-1">
                     <Skeleton variant="text" width="60%" />
                     <Skeleton variant="text" width="90%" />
                     <div className="flex gap-2">
-                      <Skeleton variant="circle" width="30px" height="30px" />
+                      <Skeleton variant="circle" width="24px" height="24px" />
                       <div className="flex-1 space-y-1"><Skeleton variant="text" /><Skeleton variant="text" width="40%" /></div>
                     </div>
                   </div>
@@ -682,55 +682,55 @@ const ComponentShowcase = ({ language = 'fa' }) => {
             </div>
           </div>
 
-          <div className="mt-6 bg-white border border-slate-200 rounded-xl p-8 shadow-sm">
-             <EmptyState title={t('داده‌ای برای نمایش نیست', 'No Data Found')} description={t('هنوز هیچ رکوردی در این بخش ثبت نشده است. برای شروع می‌توانید از دکمه زیر استفاده کنید.', 'No records have been registered yet.')} icon={Search} action={<Button icon={Plus}>{t('ایجاد اولین رکورد', 'Create First Record')}</Button>} />
+          <div className="mt-4 bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+             <EmptyState title={t('داده‌ای برای نمایش نیست', 'No Data Found')} description={t('هیچ رکوردی در این بخش ثبت نشده است.', 'No records have been registered yet.')} icon={Search} action={<Button size="sm" icon={Plus}>{t('ایجاد رکورد', 'Create Record')}</Button>} />
           </div>
         </div>
       )}
 
       <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
         {selectedRow && (
-          <div className="space-y-3 p-4">
-            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
-              <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white">
+          <div className="space-y-2 p-3">
+            <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true} className="border border-slate-200" headerClassName="h-9">
+              <div className="p-2 grid grid-cols-1 md:grid-cols-4 gap-2 bg-white">
                 <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
-                <TextField size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} dir="ltr" />
+                <DatePicker size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} language={language} />
                 <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} disabled data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
-                <TextField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} dir="ltr" />
+                <CurrencyField size="sm" label={t('مبلغ کل (ریال)', 'Amount')} value={selectedRow.amount} disabled isRtl={isRtl} />
                 
                 <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
                 
                 <div className="flex flex-col gap-1 w-full">
                   <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
-                  <div className="flex items-center h-8">
+                  <div className="flex items-center h-7">
                     <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : selectedRow.status === 'پیش‌نویس' ? 'orange' : 'gray'}>
                       {selectedRow.status}
                     </Badge>
                   </div>
                 </div>
 
-                <div className="md:col-span-4 flex items-center gap-6 pt-2 border-t border-slate-100">
+                <div className="md:col-span-4 flex items-center gap-4 pt-1 border-t border-slate-100">
                   <ToggleField size="sm" label={t('فعال', 'Active')} checked={selectedRow.isActive} disabled isRtl={isRtl} />
                   <CheckboxField size="sm" label={t('کنترل شده', 'Controlled')} checked={selectedRow.isControlled} disabled isRtl={isRtl} />
                 </div>
               </div>
             </Card>
 
-            <Card title={t('اقلام سند', 'Line Items')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
-              <div className="h-[250px]">
+            <Card title={t('اقلام سند', 'Line Items')} noPadding={true} className="border border-slate-200" headerClassName="h-9">
+              <div className="h-[200px]">
                 <DataGrid 
                   data={[
                     { id: 1, account: lovAccounts[0], costCenter: 'تهران', docDate: selectedRow.docDate, debit: selectedRow.amount, credit: '0', note: 'بابت فاکتور فروش شماره 1020' },
                     { id: 2, account: lovAccounts[3], costCenter: 'مرکزی', docDate: selectedRow.docDate, debit: '0', credit: selectedRow.amount, note: 'شناسایی درآمد' }
                   ]}
                   columns={[
-                    { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px' },
-                    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px', render: val => val?.title },
-                    { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
-                    { field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '100px', type: 'date' },
-                    { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
-                    { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px' },
-                    { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px' }
+                    { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '50px' },
+                    { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '150px', render: val => val?.title },
+                    { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '120px' },
+                    { field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '90px', type: 'date' },
+                    { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '110px' },
+                    { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '110px' },
+                    { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '200px' }
                   ]}
                   language={language}
                 />
@@ -742,7 +742,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
 
       <Modal isOpen={attachModalOpen} onClose={() => setAttachModalOpen(false)} title={`${t('ضمائم سند شماره', 'Attachments for Doc #')} ${selectedRow?.id || ''}`} width="max-w-xl" language={language} showMaximize={false}>
         {selectedRow && (
-          <div className="p-4 h-[350px]">
+          <div className="p-3 h-[300px]">
             <AttachmentManager 
               files={selectedRow.attachments} 
               onUpload={(newFiles) => {
