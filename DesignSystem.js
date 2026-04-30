@@ -1435,8 +1435,22 @@ const ProgressBar = ({ value = 0, max = 100, color = 'indigo', size = 'md', labe
 
 const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', required = false, size = 'md', disabled = false, id, wrapperClassName = '' }) => {
   const [calendarMode, setCalendarMode] = useState(language === 'fa' ? 'jalali' : 'gregorian');
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(language === 'fa' ? 1 : 1);
+  const [currentYear, setCurrentYear] = useState(language === 'fa' ? 1403 : 2025);
+  
+  const containerRef = useRef(null);
   const inputId = id || `datepicker-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+  const t = (fa, en) => isRtl ? fa : en;
+
+  useEffect(() => {
+    const clickOutside = (e) => { 
+      if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false); 
+    };
+    document.addEventListener('mousedown', clickOutside);
+    return () => document.removeEventListener('mousedown', clickOutside);
+  }, []);
 
   const formatDatePicker = (val) => {
     let cleaned = val.replace(/[^\d]/g, '').slice(0, 8);
@@ -1450,8 +1464,45 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
     onChange(formatDatePicker(e.target.value));
   };
 
+  const handleDayClick = (day) => {
+    const d = day < 10 ? `0${day}` : day;
+    const m = currentMonth < 10 ? `0${currentMonth}` : currentMonth;
+    onChange(`${currentYear}/${m}/${d}`);
+    setIsOpen(false);
+  };
+
+  const nextMonth = () => {
+    if (currentMonth === 12) { setCurrentMonth(1); setCurrentYear(currentYear + 1); } 
+    else { setCurrentMonth(currentMonth + 1); }
+  };
+
+  const prevMonth = () => {
+    if (currentMonth === 1) { setCurrentMonth(12); setCurrentYear(currentYear - 1); } 
+    else { setCurrentMonth(currentMonth - 1); }
+  };
+
+  const handleModeChange = (mode) => {
+    setCalendarMode(mode);
+    if (mode === 'jalali') { setCurrentYear(1403); setCurrentMonth(1); } 
+    else { setCurrentYear(2025); setCurrentMonth(1); }
+  };
+
+  const daysInMonth = calendarMode === 'jalali' ? (currentMonth <= 6 ? 31 : (currentMonth === 12 ? 29 : 30)) : new Date(currentYear, currentMonth, 0).getDate();
+  const firstDayOffset = calendarMode === 'jalali' ? (currentMonth + currentYear) % 7 : new Date(currentYear, currentMonth - 1, 1).getDay(); 
+
+  const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+  const blanksArray = Array.from({ length: firstDayOffset }, (_, i) => i);
+
+  const faDays = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
+  const enDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const faMonths = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+  const enMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const monthName = calendarMode === 'jalali' ? faMonths[currentMonth - 1] : enMonths[currentMonth - 1];
+  const weekDays = calendarMode === 'jalali' ? faDays : enDays;
+
   return (
-    <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+    <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${wrapperClassName}`}>
       {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
       <div className="relative group flex items-center">
         <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 group-hover:text-indigo-500 transition-colors pointer-events-none z-10`}>
@@ -1459,25 +1510,66 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
         </div>
         <input 
           id={inputId} type="text" value={value || ''} onChange={handleInputChange} disabled={disabled}
+          onClick={() => !disabled && setIsOpen(true)}
           placeholder={calendarMode === 'jalali' ? '1403/01/01' : '2025/01/01'}
-          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
+          className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[80px]' : 'pl-8 pr-[80px]'} font-mono`}
           dir="ltr"
         />
-        <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded p-0.5 z-10`}>
+        <div className={`absolute ${isRtl ? 'left-1.5' : 'right-1.5'} flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded p-0.5 z-10`}>
           <button 
-            type="button" onClick={() => setCalendarMode('jalali')}
+            type="button" onClick={(e) => { e.stopPropagation(); handleModeChange('jalali'); }}
             className={`px-1.5 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'jalali' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
             FA
           </button>
           <button 
-            type="button" onClick={() => setCalendarMode('gregorian')}
+            type="button" onClick={(e) => { e.stopPropagation(); handleModeChange('gregorian'); }}
             className={`px-1.5 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'gregorian' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
             EN
           </button>
         </div>
       </div>
+
+      {isOpen && !disabled && (
+        <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} z-[200] w-64 bg-white border border-slate-200 shadow-2xl rounded-xl p-3 animate-in zoom-in-95 duration-150`}>
+          <div className="flex items-center justify-between mb-3 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+            <button type="button" onClick={prevMonth} className="p-1 rounded text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+            <div className="text-[12px] font-black text-slate-800 flex items-center gap-1">
+              <span>{monthName}</span>
+              <span className="text-indigo-600">{currentYear}</span>
+            </div>
+            <button type="button" onClick={nextMonth} className="p-1 rounded text-slate-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm transition-all"><ChevronLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1 mb-1" dir={isRtl ? 'rtl' : 'ltr'}>
+            {weekDays.map((d, i) => <div key={i} className="text-center text-[10px] font-bold text-slate-400 py-1">{d}</div>)}
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1" dir={isRtl ? 'rtl' : 'ltr'}>
+            {blanksArray.map(b => <div key={`blank-${b}`} className="h-7"></div>)}
+            {daysArray.map(day => {
+              const isSelected = value === `${currentYear}/${currentMonth < 10 ? '0'+currentMonth : currentMonth}/${day < 10 ? '0'+day : day}`;
+              return (
+                <button 
+                  key={day} type="button" onClick={() => handleDayClick(day)}
+                  className={`h-7 w-full rounded flex items-center justify-center text-[11px] font-bold transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-700 hover:bg-indigo-50 hover:text-indigo-700'}`}
+                >
+                  {day}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[9px] font-bold text-slate-400">{t('نوع تقویم:', 'Calendar Type:')}</span>
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded p-0.5">
+              <button type="button" onClick={() => handleModeChange('jalali')} className={`px-2 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'jalali' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>FA</button>
+              <button type="button" onClick={() => handleModeChange('gregorian')} className={`px-2 py-0.5 rounded text-[9px] font-black transition-all ${calendarMode === 'gregorian' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}>EN</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -31,14 +31,12 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // States for Tab 3 (Small Components)
   const [currencyVal, setCurrencyVal] = useState('1250000');
   const [radioVal, setRadioVal] = useState('opt1');
   const [dateVal, setDateVal] = useState('');
   const [progressVal, setProgressVal] = useState(45);
   const [tags, setTags] = useState(['حسابداری', 'خزانه']);
 
-  // Tree Showcase State
   const [treeMode, setTreeMode] = useState('standard');
   const [treeData, setTreeData] = useState([
     { id: 1, parentId: null, code: '1', title: 'دارایی‌ها', nature: 'بدهکار', isActive: true },
@@ -51,13 +49,11 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     { id: 8, parentId: 7, code: '2101', title: 'حساب‌های پرداختنی', nature: 'بستانکار', isActive: false },
   ]);
   
-  // States for Standard Tree
   const [selectedTreeNodeId, setSelectedTreeNodeId] = useState(null);
   const [treeFormData, setTreeFormData] = useState({ code: '', title: '', nature: '', isActive: true });
   const [isCreatingNode, setIsCreatingNode] = useState(false);
   const [newTargetParentId, setNewTargetParentId] = useState(null);
   
-  // States for TreeGrid Editing
   const [selectedTreeGridIds, setSelectedTreeGridIds] = useState([]);
   const [treeGridEditingId, setTreeGridEditingId] = useState(null);
   const [treeGridEditData, setTreeGridEditData] = useState({});
@@ -276,7 +272,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     setLineItems(reordered);
   };
 
-  // --- STANDARD Tree Event Handlers ---
   const handleSelectTreeNode = (node) => {
     setSelectedTreeNodeId(node.id);
     setTreeFormData({ ...node });
@@ -357,7 +352,6 @@ const ComponentShowcase = ({ language = 'fa' }) => {
     }
   };
 
-  // --- TREE GRID Inline Edit Handlers ---
   const handleStartTreeGridEdit = (row) => {
     setTreeGridEditingId(row.id);
     setTreeGridEditData({ ...row });
@@ -432,7 +426,7 @@ const ComponentShowcase = ({ language = 'fa' }) => {
                 title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
                 noPadding={true}
                 className="flex-1 flex flex-col border border-slate-200 shadow-sm min-h-0"
-                headerClassName="bg-white border-b-2 border-indigo-100 h-12"
+                headerClassName="bg-white border-b-2 border-indigo-100 h-14"
                 action={
                   <div className="flex items-center gap-1.5">
                     <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)} title={t('ضمائم', 'Attachments')} />
