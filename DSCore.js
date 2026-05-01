@@ -1,10 +1,12 @@
 /* Filename: DSCore.js */
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
+// در محیط Babel Standalone، import از window خوانده می‌شود
+const React = window.React;
+const { useState, useEffect, useRef, useCallback } = React;
+const { 
   Loader2, AlertCircle, Search, ChevronDown, ChevronLeft, ChevronRight, 
   Home, UploadCloud, FileText, Download, Trash2, ArrowUpRight, 
   ArrowDownRight, Calendar, Check, X 
-} from 'lucide-react';
+} = window.LucideIcons || {};
 
 const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
