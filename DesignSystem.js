@@ -1788,6 +1788,95 @@ const Toast = ({ type = 'success', message, isVisible, onClose }) => {
   );
 };
 
+const Banner = ({ type = 'info', message, action, onClose }) => {
+  const typeStyles = {
+    success: 'bg-emerald-600',
+    error: 'bg-rose-600',
+    warning: 'bg-amber-500',
+    info: 'bg-indigo-600',
+  };
+  
+  const iconPaths = {
+    success: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />,
+    error: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />,
+    warning: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />,
+    info: <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  };
+
+  return (
+    <div className={`w-full flex items-center justify-between px-4 py-2 text-white shadow-md transition-all duration-300 ${typeStyles[type]} z-40`}>
+      <div className="flex items-center gap-3">
+        <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {iconPaths[type]}
+        </svg>
+        <span className="text-[12px] font-bold">{message}</span>
+      </div>
+      <div className="flex items-center gap-4">
+        {action && (
+          <button onClick={action.onClick} className="text-[11px] font-black uppercase bg-black/20 hover:bg-black/30 px-3 py-1.5 rounded-md border border-white/20 transition-all">
+            {action.label}
+          </button>
+        )}
+        {onClose && (
+          <button onClick={onClose} className="opacity-70 hover:opacity-100 hover:bg-black/10 p-1 rounded transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Dialog = ({ isOpen, title, children, onConfirm, onCancel, confirmLabel = 'تایید', cancelLabel = 'انصراف', type = 'info', language = 'fa' }) => {
+  const isRtl = language === 'fa';
+  
+  useEffect(() => {
+    const handleEsc = (e) => { if (e.key === 'Escape' && isOpen) onCancel && onCancel(); };
+    if (isOpen) document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onCancel]);
+
+  if (!isOpen) return null;
+
+  const headerColors = {
+    success: "bg-emerald-600",
+    error: "bg-rose-600",
+    warning: "bg-amber-500",
+    info: "bg-slate-800"
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={onCancel} />
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative z-10 flex flex-col animate-in zoom-in-95 duration-200">
+        <div className={`px-5 py-4 flex items-center justify-between text-white ${headerColors[type]}`}>
+          <h3 className="font-black text-[14px]">{title}</h3>
+          <button onClick={onCancel} className="opacity-70 hover:opacity-100 hover:bg-white/10 p-1 rounded transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="p-6">
+          <div className="text-slate-600 text-[13px] leading-relaxed font-medium">
+            {children}
+          </div>
+          <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-4">
+            {onCancel && (
+              <Button variant="outline" size="sm" onClick={onCancel}>
+                {cancelLabel}
+              </Button>
+            )}
+            {onConfirm && (
+              <Button variant={type === 'error' ? 'danger' : 'primary'} size="sm" onClick={onConfirm}>
+                {confirmLabel}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Spinner = ({ size = 'md', color = 'text-sky-600' }) => {
   const sizes = {
     sm: 'w-4 h-4',
@@ -1808,5 +1897,5 @@ window.DesignSystem = {
   Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, Modal, AdvancedFilter, 
   AttachmentManager, Tabs, DataGrid, HighlightText, Tree, TreeGrid,
   CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
-  ProgressBar, DatePicker, Stepper, TagInput, Alert, Toast, Spinner
+  ProgressBar, DatePicker, Stepper, TagInput, Alert, Toast, Banner, Dialog, Spinner
 };

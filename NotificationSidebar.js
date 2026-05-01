@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Loader2, Check } from 'lucide-react';
 
 const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
-  const { Button, Badge, EmptyState } = window.DesignSystem || {};
+  const { Button, Badge, EmptyState, Dialog, Toast } = window.DesignSystem || {};
   const supabase = window.supabase;
   
   const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
@@ -14,7 +14,21 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
   const [page, setPage] = useState(1);
   const itemsPerPage = 20;
 
+  const [dialogState, setDialogState] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
+  const [toastState, setToastState] = useState({ isVisible: false, message: '', type: 'success' });
+
   const t = (fa, en) => isRtl ? fa : en;
+
+  const showToast = (message, type = 'info') => {
+    setToastState({ isVisible: true, message, type });
+    setTimeout(() => setToastState(prev => ({ ...prev, isVisible: false })), 3000);
+  };
+
+  const showDialog = (title, message, type, onConfirm) => {
+    setDialogState({ isOpen: true, title, message, type, onConfirm });
+  };
+
+  const closeDialog = () => setDialogState(prev => ({ ...prev, isOpen: false }));
 
   // محاسبه تعداد اعلان‌های ناخوانده
   const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
@@ -44,6 +58,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
         }
       } catch (err) {
         console.error('Error fetching notifications:', err);
+        showToast(t('خطا در دریافت اطلاعات اعلان‌ها.', 'Error fetching notifications.'), 'error');
       } finally {
         setLoading(false);
       }
@@ -85,6 +100,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
       if (error) throw error;
     } catch (err) {
       console.error('Error marking as read in DB:', err);
+      showToast(t('خطا در ثبت وضعیت خوانده شده.', 'Error marking as read.'), 'error');
     }
   };
 
@@ -102,6 +118,7 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
       if (error) throw error;
     } catch (err) {
       console.error('Error marking all as read in DB:', err);
+      showToast(t('خطا در ثبت وضعیت خوانده شده برای همه اعلان‌ها.', 'Error marking all as read.'), 'error');
     }
   };
 
@@ -112,20 +129,29 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
       if (error) throw error;
     } catch (err) {
       console.error('Error deleting notification:', err);
+      showToast(t('خطا در حذف اعلان.', 'Error deleting notification.'), 'error');
     }
   };
 
   const deleteAll = async () => {
-    if (window.confirm(t('آیا از حذف تمام اعلان‌ها اطمینان دارید؟', 'Are you sure you want to delete all notifications?'))) {
-      setNotifications([]);
-      setPage(1);
-      try {
-        const { error } = await supabase.from('system_notifications').delete().eq('user_id', MOCK_USER_ID);
-        if (error) throw error;
-      } catch (err) {
-        console.error('Error deleting all notifications:', err);
+    showDialog(
+      t('حذف تمام اعلان‌ها', 'Delete All Notifications'),
+      t('آیا از حذف تمام اعلان‌ها اطمینان دارید؟', 'Are you sure you want to delete all notifications?'),
+      'error',
+      async () => {
+        closeDialog();
+        setNotifications([]);
+        setPage(1);
+        try {
+          const { error } = await supabase.from('system_notifications').delete().eq('user_id', MOCK_USER_ID);
+          if (error) throw error;
+          showToast(t('تمام اعلان‌ها با موفقیت حذف شدند.', 'All notifications deleted successfully.'), 'success');
+        } catch (err) {
+          console.error('Error deleting all notifications:', err);
+          showToast(t('خطا در حذف گروهی اعلان‌ها.', 'Error deleting notifications.'), 'error');
+        }
       }
-    }
+    );
   };
 
   const formatTime = (isoString) => {
@@ -245,6 +271,29 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
           </div>
         )}
       </aside>
+      
+      {Dialog && (
+        <Dialog 
+          isOpen={dialogState.isOpen} 
+          title={dialogState.title} 
+          type={dialogState.type} 
+          onConfirm={dialogState.onConfirm} 
+          onCancel={closeDialog} 
+          confirmLabel={t('تایید', 'Confirm')} 
+          cancelLabel={t('انصراف', 'Cancel')}
+        >
+          {dialogState.message}
+        </Dialog>
+      )}
+      
+      {Toast && (
+        <Toast 
+          isVisible={toastState.isVisible} 
+          message={toastState.message} 
+          type={toastState.type} 
+          onClose={() => setToastState(prev => ({ ...prev, isVisible: false }))} 
+        />
+      )}
     </>
   );
 };
