@@ -5,9 +5,10 @@ import {
   Plus, Trash2, Maximize2, Minimize2, Search, FileDown, Upload, FileSpreadsheet, 
   Check, X, Layers 
 } from 'lucide-react';
-import { Button, ToggleField, Badge } from './DSCore.js';
 
-export const HighlightText = ({ text, term }) => {
+const { Button, ToggleField, Badge } = window.DSCore || {};
+
+const HighlightText = ({ text, term }) => {
   if (!term || !text) return <span>{text}</span>;
   const parts = String(text).split(new RegExp(`(${term})`, 'gi'));
   return (
@@ -19,7 +20,7 @@ export const HighlightText = ({ text, term }) => {
   );
 };
 
-export const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
+const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
@@ -202,7 +203,7 @@ export const Tree = ({ data = [], idField = 'id', parentField = 'parentId', disp
   );
 };
 
-export const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
+const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
   const isRtl = language === 'fa';
   const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
@@ -512,3 +513,5 @@ export const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField 
     </div>
   );
 };
+
+window.DSTree = { HighlightText, Tree, TreeGrid };

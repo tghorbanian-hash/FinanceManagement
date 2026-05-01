@@ -1,9 +1,10 @@
 /* Filename: DSFeedback.js */
 import React, { useState, useEffect } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
-import { Button } from './DSCore.js';
 
-export const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
+const { Button } = window.DSCore || {};
+
+const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
   const isRtl = language === 'fa';
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -32,7 +33,7 @@ export const Modal = ({ isOpen, onClose, title, children, showMaximize = true, w
   );
 };
 
-export const Tooltip = ({ children, text, position = 'top' }) => {
+const Tooltip = ({ children, text, position = 'top' }) => {
   const [show, setShow] = useState(false);
   const posClasses = {
     top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
@@ -53,7 +54,7 @@ export const Tooltip = ({ children, text, position = 'top' }) => {
   );
 };
 
-export const Alert = ({ type = 'info', title, message, onClose }) => {
+const Alert = ({ type = 'info', title, message, onClose }) => {
   const typeStyles = {
     success: 'bg-emerald-50/60 border-emerald-500/30 text-emerald-800',
     error: 'bg-rose-50/60 border-rose-500/30 text-rose-800',
@@ -88,7 +89,7 @@ export const Alert = ({ type = 'info', title, message, onClose }) => {
   );
 };
 
-export const Toast = ({ type = 'success', message, isVisible, onClose }) => {
+const Toast = ({ type = 'success', message, isVisible, onClose }) => {
   if (!isVisible) return null;
   
   const typeStyles = {
@@ -110,7 +111,7 @@ export const Toast = ({ type = 'success', message, isVisible, onClose }) => {
   );
 };
 
-export const Banner = ({ type = 'info', message, action, onClose }) => {
+const Banner = ({ type = 'info', message, action, onClose }) => {
   const typeStyles = {
     success: 'bg-emerald-600',
     error: 'bg-rose-600',
@@ -149,7 +150,7 @@ export const Banner = ({ type = 'info', message, action, onClose }) => {
   );
 };
 
-export const Dialog = ({ isOpen, title, children, onConfirm, onCancel, confirmLabel = 'تایید', cancelLabel = 'انصراف', type = 'info', language = 'fa' }) => {
+const Dialog = ({ isOpen, title, children, onConfirm, onCancel, confirmLabel = 'تایید', cancelLabel = 'انصراف', type = 'info', language = 'fa' }) => {
   const isRtl = language === 'fa';
   
   useEffect(() => {
@@ -198,3 +199,5 @@ export const Dialog = ({ isOpen, title, children, onConfirm, onCancel, confirmLa
     </div>
   );
 };
+
+window.DSFeedback = { Modal, Tooltip, Alert, Toast, Banner, Dialog };

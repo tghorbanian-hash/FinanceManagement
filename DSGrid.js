@@ -5,10 +5,11 @@ import {
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Layers, X, Maximize2, Minimize2, Plus, Filter, Upload, FileSpreadsheet, FileDown
 } from 'lucide-react';
-import { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } from './DSCore.js';
-import { Modal } from './DSFeedback.js';
 
-export const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
+const { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } = window.DSCore || {};
+const { Modal } = window.DSFeedback || {};
+
+const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const t = (fa, en) => isRtl ? fa : en;
   
@@ -33,7 +34,7 @@ export const LOVField = ({ label, displayValue, onChange, data, columns, disable
   );
 };
 
-export const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
+const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -70,7 +71,7 @@ export const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language
   );
 };
 
-export const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
+const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
@@ -468,3 +469,5 @@ export const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa
     </div>
   );
 };
+
+window.DSGrid = { LOVField, AdvancedFilter, DataGrid };
