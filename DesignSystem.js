@@ -1,55 +1,56 @@
 /* Filename: DesignSystem.js */
+(() => {
+  const { 
+    Button, TextField, SelectField, ToggleField, CheckboxField, 
+    Card, Badge, PageHeader, Tabs, CurrencyField, TextAreaField, RadioGroup, 
+    Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
+    ProgressBar, AttachmentManager, DatePicker, Stepper, TagInput, Spinner 
+  } = window.DSCore || {};
 
-const { 
-  Button, TextField, SelectField, ToggleField, CheckboxField, 
-  Card, Badge, PageHeader, Tabs, CurrencyField, TextAreaField, RadioGroup, 
-  Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
-  ProgressBar, AttachmentManager, DatePicker, Stepper, TagInput, Spinner 
-} = window.DSCore || {};
+  const { AdvancedFilter, DataGrid, LOVField } = window.DSGrid || {};
 
-const { AdvancedFilter, DataGrid, LOVField } = window.DSGrid || {};
+  const { HighlightText, Tree, TreeGrid } = window.DSTree || {};
 
-const { HighlightText, Tree, TreeGrid } = window.DSTree || {};
+  const { Modal, Tooltip, Alert, Toast, Banner, Dialog } = window.DSFeedback || {};
 
-const { Modal, Tooltip, Alert, Toast, Banner, Dialog } = window.DSFeedback || {};
+  const DesignSystem = { 
+    Button, 
+    TextField, 
+    SelectField, 
+    ToggleField, 
+    CheckboxField, 
+    LOVField, 
+    Card, 
+    Badge, 
+    PageHeader, 
+    Modal, 
+    AdvancedFilter, 
+    AttachmentManager, 
+    Tabs, 
+    DataGrid, 
+    HighlightText, 
+    Tree, 
+    TreeGrid,
+    CurrencyField, 
+    TextAreaField, 
+    RadioGroup, 
+    Tooltip, 
+    Skeleton, 
+    EmptyState, 
+    StatCard, 
+    Timeline, 
+    Avatar, 
+    DropdownMenu, 
+    ProgressBar, 
+    DatePicker, 
+    Stepper, 
+    TagInput, 
+    Alert, 
+    Toast, 
+    Banner, 
+    Dialog, 
+    Spinner
+  };
 
-const DesignSystem = { 
-  Button, 
-  TextField, 
-  SelectField, 
-  ToggleField, 
-  CheckboxField, 
-  LOVField, 
-  Card, 
-  Badge, 
-  PageHeader, 
-  Modal, 
-  AdvancedFilter, 
-  AttachmentManager, 
-  Tabs, 
-  DataGrid, 
-  HighlightText, 
-  Tree, 
-  TreeGrid,
-  CurrencyField, 
-  TextAreaField, 
-  RadioGroup, 
-  Tooltip, 
-  Skeleton, 
-  EmptyState, 
-  StatCard, 
-  Timeline, 
-  Avatar, 
-  DropdownMenu, 
-  ProgressBar, 
-  DatePicker, 
-  Stepper, 
-  TagInput, 
-  Alert, 
-  Toast, 
-  Banner, 
-  Dialog, 
-  Spinner
-};
-
-window.DesignSystem = DesignSystem;
+  window.DesignSystem = DesignSystem
+})();
