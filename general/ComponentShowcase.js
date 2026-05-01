@@ -1,13 +1,14 @@
 /* Filename: general/ComponentShowcase.js */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
+const React = window.React;
+const { useState, useEffect, useMemo, useRef } = React;
+const LucideIcons = window.LucideIcons || {};
+const { 
   Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, 
   FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, 
   FileDown, Layers, ListTree, Info, AlertTriangle, CheckCircle2, XCircle, TrendingUp, DollarSign, Users, Briefcase, MoreVertical, Calendar, UploadCloud, Download
-} from 'lucide-react';
+} = LucideIcons;
 
 const ComponentShowcase = ({ language = 'fa' }) => {
-  // استخراج تمام کامپوننت‌ها از دیزاین سیستم گلوبال
   const { 
     DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
     AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
@@ -847,5 +848,4 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   );
 };
 
-// به جای export، آن را روی window قرار می‌دهیم
 window.ComponentShowcase = ComponentShowcase;

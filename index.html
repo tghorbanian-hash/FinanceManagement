@@ -21,18 +21,16 @@
         }
     </script>
 
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.344.0",
-        "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
-      }
-    }
-    </script>
-    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
+
+    <script>
+        // مپ کردن آیکون‌های Lucide روی Window برای دسترسی در فایل‌های Babel
+        window.LucideIcons = window.lucideReact || window.LucideReact || {};
+    </script>
 
     <style>
         body { font-family: 'Vazirmatn', sans-serif !important; margin: 0; overflow: hidden; background-color: #f8fafc; }
@@ -47,22 +45,18 @@
 <body>
     <div id="root"></div>
 
-    <!-- ۱. تنظیمات دیتابیس -->
     <script type="text/babel" data-presets="react" src="./supabaseConfig.js"></script>
     
-    <!-- ۲. دیزاین سیستم (به ترتیب وابستگی) -->
     <script type="text/babel" data-presets="react" src="./DSCore.js"></script>
     <script type="text/babel" data-presets="react" src="./DSFeedback.js"></script>
     <script type="text/babel" data-presets="react" src="./DSGrid.js"></script>
     <script type="text/babel" data-presets="react" src="./DSTree.js"></script>
     <script type="text/babel" data-presets="react" src="./DesignSystem.js"></script>
 
-    <!-- ۳. کامپوننت‌های اصلی سیستم -->
     <script type="text/babel" data-presets="react" src="./NotificationSidebar.js"></script>
     <script type="text/babel" data-presets="react" src="./general/ComponentShowcase.js"></script>
     <script type="text/babel" data-presets="react" src="./NavigationSystem.js"></script>
     
-    <!-- ۴. نقطه شروع اپلیکیشن -->
     <script type="text/babel" data-presets="react" src="./app.js"></script>
 </body>
 </html>

@@ -1,6 +1,5 @@
 /* Filename: DesignSystem.js */
 
-// جمع‌آوری تمام کامپوننت‌ها از متغیرهای گلوبالی که در فایل‌های قبلی تعریف کردیم
 const { 
   Button, TextField, SelectField, ToggleField, CheckboxField, 
   Card, Badge, PageHeader, Tabs, CurrencyField, TextAreaField, RadioGroup, 
@@ -14,7 +13,6 @@ const { HighlightText, Tree, TreeGrid } = window.DSTree || {};
 
 const { Modal, Tooltip, Alert, Toast, Banner, Dialog } = window.DSFeedback || {};
 
-// ایجاد شیء نهایی دیزاین سیستم
 const DesignSystem = { 
   Button, 
   TextField, 
@@ -54,7 +52,4 @@ const DesignSystem = {
   Spinner
 };
 
-// قرار دادن دیزاین سیستم یکپارچه روی window برای استفاده در کل پروژه
 window.DesignSystem = DesignSystem;
-
-export default DesignSystem;

@@ -1,16 +1,16 @@
 /* Filename: DSGrid.js */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import {
+const React = window.React;
+const { useState, useEffect, useMemo, useRef } = React;
+const {
   Search, Settings, Trash2, Pin, PinOff, GripVertical, ChevronDown, 
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Layers, X, Maximize2, Minimize2, Plus, Filter, Upload, FileSpreadsheet, FileDown
-} from 'lucide-react';
+} = window.LucideIcons || {};
 
-// خواندن کامپوننت‌های پایه و فیدبک از متغیرهای گلوبال (بدون نیاز به import محلی که مرورگر را دچار مشکل کند)
 const { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } = window.DSCore || {};
 const { Modal } = window.DSFeedback || {};
 
-export const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
+const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const t = (fa, en) => isRtl ? fa : en;
   
@@ -37,7 +37,7 @@ export const LOVField = ({ label, displayValue, onChange, data, columns, disable
   );
 };
 
-export const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
+const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -74,7 +74,7 @@ export const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language
   );
 };
 
-export const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
+const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 

@@ -3,8 +3,9 @@
 // به دلیل لود ناهمگام اسکریپت‌ها در مرورگر، استفاده از setInterval برای اطمینان از بارگذاری کامل کامپوننت‌ها کاملاً ضروری است.
 // این کد همان منطق پایدار و دقیق شماست که برگردانده شد.
 
-import React, { useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
+const React = window.React;
+const { useState, useEffect } = React;
+const { createRoot } = window.ReactDOM;
 
 const App = () => {
   const [isReady, setIsReady] = useState(false);

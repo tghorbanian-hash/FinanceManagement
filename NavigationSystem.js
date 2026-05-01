@@ -1,11 +1,12 @@
 /* Filename: NavigationSystem.js */
-import React, { useState, useEffect, useMemo } from 'react';
-import * as LucideIcons from 'lucide-react';
-import { 
+const React = window.React;
+const { useState, useEffect, useMemo } = React;
+const LucideIcons = window.LucideIcons || {};
+const { 
   Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
   ListTree, FileText, Bell, Monitor, Clock,
   Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
-} from 'lucide-react';
+} = LucideIcons;
 
 const FormLoader = ({ path, language }) => {
   if (!path) return null;
@@ -423,7 +424,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
             <div className="w-px h-5 bg-slate-200"></div>
             <button onClick={() => setIsNotifOpen(true)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 relative transition-all">
               <Bell size={20} />
-              {/* نمایش پویای تعداد اعلان‌ها یا نقطه قرمز رنگ روی زنگوله */}
               {unreadNotifCount > 0 && (
                 <span className={`absolute top-1.5 ${isRtl ? 'right-1.5' : 'left-1.5'} flex h-2.5 w-2.5 items-center justify-center rounded-full bg-red-500 border-2 border-white`}></span>
               )}
@@ -444,7 +444,6 @@ const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
         </div>
       </main>
 
-      {/* پاس دادن کالبک به NotificationSidebar جهت آپدیت تعداد نوتیف‌های ناخوانده در هدر */}
       {NotificationSidebarComponent && (
         <NotificationSidebarComponent 
           isOpen={isNotifOpen} 
