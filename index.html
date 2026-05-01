@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-    <!-- ... (بخش هد بدون تغییر می‌ماند) ... -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سیستم یکپارچه سازمانی (جدید)</title>
@@ -48,22 +47,18 @@
 <body>
     <div id="root"></div>
 
-    <!-- اسکریپت‌های مربوط به دیزاین سیستم (حذف data-type="module") -->
-    <script type="text/babel" data-presets="react" src="./DSCore.js"></script>
-    <script type="text/babel" data-presets="react" src="./DSFeedback.js"></script>
-    <script type="text/babel" data-presets="react" src="./DSGrid.js"></script>
-    <script type="text/babel" data-presets="react" src="./DSTree.js"></script>
-    <script type="text/babel" data-presets="react" src="./DesignSystem.js"></script>
-
-    <!-- فایل Showcase -->
-    <script type="text/babel" data-presets="react" src="./general/ComponentShowcase.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./supabaseConfig.js"></script>
     
-    <!-- در صورتی که فایل‌های زیر (app, NavigationSystem, NotificationSidebar) 
-         دارای import/export هستند، می‌توانید data-type="module" را نگه دارید. 
-         در غیر این صورت، از آن‌ها هم حذف کنید. برای اطمینان فعلا حذف می‌کنیم تا دیزاین سیستم لود شود. -->
-    <script type="text/babel" data-presets="react" src="./NotificationSidebar.js"></script>
-    <script type="text/babel" data-presets="react" src="./NavigationSystem.js"></script>
-    <script type="text/babel" data-presets="react" src="./supabaseConfig.js"></script>
-    <script type="text/babel" data-presets="react" src="./app.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./DSCore.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./DSFeedback.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./DSGrid.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./DSTree.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./DesignSystem.js"></script>
+
+    <script type="text/babel" data-presets="react" data-type="module" src="./NotificationSidebar.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./general/ComponentShowcase.js"></script>
+    
+    <script type="text/babel" data-presets="react" data-type="module" src="./NavigationSystem.js"></script>
+    <script type="text/babel" data-presets="react" data-type="module" src="./app.js"></script>
 </body>
 </html>

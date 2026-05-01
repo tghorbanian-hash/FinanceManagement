@@ -30,10 +30,8 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
 
   const closeDialog = () => setDialogState(prev => ({ ...prev, isOpen: false }));
 
-  // محاسبه تعداد اعلان‌های ناخوانده
   const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications]);
 
-  // ارسال تعداد ناخوانده‌ها به هدر اصلی سیستم
   useEffect(() => {
     if (onUpdateUnread) {
       onUpdateUnread(unreadCount);
@@ -90,7 +88,6 @@ const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread 
 
   const markAsRead = async (id) => {
     if (!id) return;
-    // تغییر وضعیت محلی (Optimistic)
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
     try {
       const { error } = await supabase

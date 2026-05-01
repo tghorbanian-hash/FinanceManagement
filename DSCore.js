@@ -6,7 +6,7 @@ import {
   ArrowDownRight, Calendar, Check, X 
 } from 'lucide-react';
 
-const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
+export const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
   const variants = {
     primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-sm shadow-indigo-200",
@@ -30,7 +30,7 @@ const Button = ({ children, variant = 'primary', size = 'md', isLoading = false,
   );
 };
 
-const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
+export const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
   const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
   
@@ -50,7 +50,7 @@ const TextField = ({ label, error, hint, icon: Icon, disabled = false, required 
   );
 };
 
-const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, ...props }) => {
+export const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, ...props }) => {
   const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
   const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
 
@@ -73,7 +73,7 @@ const SelectField = ({ label, error, options = [], disabled = false, required = 
   );
 };
 
-const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label, wrapperClassName = '' }) => {
+export const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label, wrapperClassName = '' }) => {
   return (
     <div className={`flex items-center gap-2 ${disabled ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} ${wrapperClassName}`} onClick={() => !disabled && onChange(!checked)}>
       <div className={`w-8 h-4 rounded-full relative transition-colors duration-200 ease-in-out ${checked ? 'bg-indigo-600' : 'bg-slate-300'}`}>
@@ -84,7 +84,7 @@ const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label,
   );
 };
 
-const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClassName = '' }) => {
+export const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClassName = '' }) => {
   return (
     <label className={`flex items-center gap-2 ${disabled ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'} ${wrapperClassName}`}>
       <input 
@@ -99,7 +99,7 @@ const CheckboxField = ({ checked, onChange, disabled = false, label, wrapperClas
   );
 };
 
-const Card = ({ title, action, children, className = '', noPadding = false, headerClassName = '', isCollapsible = false, defaultCollapsed = false, language = 'fa' }) => {
+export const Card = ({ title, action, children, className = '', noPadding = false, headerClassName = '', isCollapsible = false, defaultCollapsed = false, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   
@@ -130,7 +130,7 @@ const Card = ({ title, action, children, className = '', noPadding = false, head
   );
 };
 
-const Badge = ({ children, variant = 'gray', className = '' }) => {
+export const Badge = ({ children, variant = 'gray', className = '' }) => {
   const variants = {
     gray: "bg-slate-100 text-slate-600 border border-slate-200", 
     success: "bg-emerald-50 text-emerald-600 border border-emerald-200",
@@ -143,7 +143,7 @@ const Badge = ({ children, variant = 'gray', className = '' }) => {
   return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
 };
 
-const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) => {
+export const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) => {
   const isRtl = language === 'fa';
   return (
     <div className="flex flex-col gap-1.5 mb-3 shrink-0" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -169,7 +169,7 @@ const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) =>
   );
 };
 
-const Tabs = ({ tabs = [], activeTab, onChange, className = '' }) => {
+export const Tabs = ({ tabs = [], activeTab, onChange, className = '' }) => {
   return (
     <div className={`flex items-center gap-1 border-b border-slate-200 mb-4 overflow-x-auto custom-scrollbar ${className}`}>
       {tabs.map(tab => {
@@ -190,7 +190,7 @@ const Tabs = ({ tabs = [], activeTab, onChange, className = '' }) => {
   );
 };
 
-const CurrencyField = ({ value, onChange, label, error, size = 'md', isRtl = true, ...props }) => {
+export const CurrencyField = ({ value, onChange, label, error, size = 'md', isRtl = true, ...props }) => {
   const format = (v) => {
     if (!v && v !== 0) return '';
     const clean = String(v).replace(/,/g, '');
@@ -212,7 +212,7 @@ const CurrencyField = ({ value, onChange, label, error, size = 'md', isRtl = tru
   );
 };
 
-const TextAreaField = ({ label, error, disabled = false, required = false, className = '', id, rows = 3, size = 'md', isRtl = true, ...props }) => {
+export const TextAreaField = ({ label, error, disabled = false, required = false, className = '', id, rows = 3, size = 'md', isRtl = true, ...props }) => {
   const inputId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
   return (
     <div className={`flex flex-col gap-1.5 w-full`}>
@@ -227,7 +227,7 @@ const TextAreaField = ({ label, error, disabled = false, required = false, class
   );
 };
 
-const RadioGroup = ({ label, options = [], value, onChange, isRtl = true, inline = true }) => {
+export const RadioGroup = ({ label, options = [], value, onChange, isRtl = true, inline = true }) => {
   return (
     <div className="flex flex-col gap-2">
       {label && <label className="text-[11px] font-bold text-slate-700">{label}</label>}
@@ -250,13 +250,13 @@ const RadioGroup = ({ label, options = [], value, onChange, isRtl = true, inline
   );
 };
 
-const Skeleton = ({ className = '', variant = 'text', width, height }) => {
+export const Skeleton = ({ className = '', variant = 'text', width, height }) => {
   const base = "bg-slate-200 animate-pulse shrink-0";
   const styles = variant === 'circle' ? 'rounded-full' : 'rounded-lg';
   return <div className={`${base} ${styles} ${className}`} style={{ width: width || '100%', height: height || (variant === 'text' ? '1rem' : '100%') }}></div>;
 };
 
-const EmptyState = ({ title, description, icon: Icon = Search, action }) => {
+export const EmptyState = ({ title, description, icon: Icon = Search, action }) => {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-4">
@@ -269,7 +269,7 @@ const EmptyState = ({ title, description, icon: Icon = Search, action }) => {
   );
 };
 
-const StatCard = ({ label, value, icon: Icon, trend, trendValue, color = 'indigo', language = 'fa' }) => {
+export const StatCard = ({ label, value, icon: Icon, trend, trendValue, color = 'indigo', language = 'fa' }) => {
   const isRtl = language === 'fa';
   const colors = {
     indigo: "text-indigo-600 bg-indigo-50 border-indigo-100",
@@ -299,7 +299,7 @@ const StatCard = ({ label, value, icon: Icon, trend, trendValue, color = 'indigo
   );
 };
 
-const Timeline = ({ items = [], language = 'fa' }) => {
+export const Timeline = ({ items = [], language = 'fa' }) => {
   const isRtl = language === 'fa';
   return (
     <div className="flex flex-col gap-4 relative py-2" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -320,7 +320,7 @@ const Timeline = ({ items = [], language = 'fa' }) => {
   );
 };
 
-const Avatar = ({ src, name, size = 'md', className = '' }) => {
+export const Avatar = ({ src, name, size = 'md', className = '' }) => {
   const sizes = { sm: 'w-7 h-7 text-[10px]', md: 'w-10 h-10 text-[12px]', lg: 'w-14 h-14 text-[14px]' };
   const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : '?';
   return (
@@ -330,7 +330,7 @@ const Avatar = ({ src, name, size = 'md', className = '' }) => {
   );
 };
 
-const DropdownMenu = ({ trigger, items = [], language = 'fa' }) => {
+export const DropdownMenu = ({ trigger, items = [], language = 'fa' }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const isRtl = language === 'fa';
@@ -363,7 +363,7 @@ const DropdownMenu = ({ trigger, items = [], language = 'fa' }) => {
   );
 };
 
-const ProgressBar = ({ value = 0, max = 100, color = 'indigo', size = 'md', label, showValue = true }) => {
+export const ProgressBar = ({ value = 0, max = 100, color = 'indigo', size = 'md', label, showValue = true }) => {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   const heights = { sm: 'h-1', md: 'h-2', lg: 'h-4' };
   const colors = { indigo: "bg-indigo-600", emerald: "bg-emerald-500", amber: "bg-amber-500", rose: "bg-rose-500", blue: "bg-blue-500" };
@@ -382,7 +382,7 @@ const ProgressBar = ({ value = 0, max = 100, color = 'indigo', size = 'md', labe
   );
 };
 
-const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa' }) => {
+export const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
   const [isDragging, setIsDragging] = useState(false);
@@ -463,7 +463,7 @@ const g2j = (gy, gm, gd) => {
   return [jy, jm, jd];
 };
 
-const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', required = false, size = 'md', disabled = false, id, wrapperClassName = '' }) => {
+export const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', required = false, size = 'md', disabled = false, id, wrapperClassName = '' }) => {
   const getTodayInfo = useCallback((mode) => {
     const today = new Date();
     const gy = today.getFullYear();
@@ -663,7 +663,7 @@ const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', req
   );
 };
 
-const Stepper = ({ steps = [], currentStep = 0, language = 'fa' }) => {
+export const Stepper = ({ steps = [], currentStep = 0, language = 'fa' }) => {
   const isRtl = language === 'fa';
   return (
     <div className="w-full py-4 px-2" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -686,7 +686,7 @@ const Stepper = ({ steps = [], currentStep = 0, language = 'fa' }) => {
   );
 };
 
-const TagInput = ({ tags = [], onAdd, onDelete, placeholder, label, isRtl = true, size = 'md', wrapperClassName = '' }) => {
+export const TagInput = ({ tags = [], onAdd, onDelete, placeholder, label, isRtl = true, size = 'md', wrapperClassName = '' }) => {
   const [val, setVal] = useState('');
   const handleKeyDown = (e) => { if (e.key === 'Enter' && val) { onAdd(val); setVal(''); e.preventDefault(); } };
   const minHeights = { sm: 'min-h-[32px]', md: 'min-h-[40px]', lg: 'min-h-[48px]' };
@@ -711,7 +711,7 @@ const TagInput = ({ tags = [], onAdd, onDelete, placeholder, label, isRtl = true
   );
 };
 
-const Spinner = ({ size = 'md', color = 'text-sky-600' }) => {
+export const Spinner = ({ size = 'md', color = 'text-sky-600' }) => {
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-8 h-8', xl: 'w-12 h-12' };
   return (
     <svg className={`animate-spin ${sizes[size]} ${color}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -719,11 +719,4 @@ const Spinner = ({ size = 'md', color = 'text-sky-600' }) => {
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
     </svg>
   );
-};
-
-window.DSCore = {
-  Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
-  Tabs, CurrencyField, TextAreaField, RadioGroup, Skeleton, EmptyState, StatCard, 
-  Timeline, Avatar, DropdownMenu, ProgressBar, AttachmentManager, DatePicker, Stepper, 
-  TagInput, Spinner
 };

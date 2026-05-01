@@ -1,4 +1,8 @@
 /* Filename: app.js */
+// حق کاملاً با شماست. کد قدیمی شما برای این معماری (Babel Standalone) بسیار هوشمندانه‌تر بود.
+// به دلیل لود ناهمگام اسکریپت‌ها در مرورگر، استفاده از setInterval برای اطمینان از بارگذاری کامل کامپوننت‌ها کاملاً ضروری است.
+// این کد همان منطق پایدار و دقیق شماست که برگردانده شد.
+
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -6,18 +10,16 @@ const App = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // هر ۱۰۰ میلی‌ثانیه چک می‌کند که آیا هم کامپوننت منو و هم دیتابیس آماده هستند یا خیر
     const timer = setInterval(() => {
       if (window.NavigationSystem && window.supabase) {
         setIsReady(true);
-        clearInterval(timer); // به محض پیدا کردن، جستجو متوقف می‌شود
+        clearInterval(timer);
       }
     }, 100);
     
     return () => clearInterval(timer);
   }, []);
 
-  // نمایش لودینگ تا زمان آماده شدن کامل زیرساخت‌ها
   if (!isReady) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-[#f4f5f8]" dir="rtl">
@@ -29,7 +31,6 @@ const App = () => {
     );
   }
 
-  // وقتی همه‌چیز آماده بود، سیستم را رندر می‌کند
   const NavigationComponent = window.NavigationSystem;
 
   return (

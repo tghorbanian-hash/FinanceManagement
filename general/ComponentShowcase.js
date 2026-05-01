@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 const ComponentShowcase = ({ language = 'fa' }) => {
+  // استخراج تمام کامپوننت‌ها از دیزاین سیستم گلوبال
   const { 
     DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
     AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
@@ -846,4 +847,5 @@ const ComponentShowcase = ({ language = 'fa' }) => {
   );
 };
 
+// به جای export، آن را روی window قرار می‌دهیم
 window.ComponentShowcase = ComponentShowcase;

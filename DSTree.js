@@ -6,9 +6,10 @@ import {
   Check, X, Layers 
 } from 'lucide-react';
 
+// خواندن کامپوننت‌های پایه از متغیر گلوبال
 const { Button, ToggleField, Badge } = window.DSCore || {};
 
-const HighlightText = ({ text, term }) => {
+export const HighlightText = ({ text, term }) => {
   if (!term || !text) return <span>{text}</span>;
   const parts = String(text).split(new RegExp(`(${term})`, 'gi'));
   return (
@@ -20,7 +21,7 @@ const HighlightText = ({ text, term }) => {
   );
 };
 
-const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
+export const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
   const isRtl = language === 'fa';
   const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
@@ -203,7 +204,7 @@ const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayFiel
   );
 };
 
-const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
+export const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
   const isRtl = language === 'fa';
   const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
@@ -513,5 +514,3 @@ const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'pare
     </div>
   );
 };
-
-window.DSTree = { HighlightText, Tree, TreeGrid };

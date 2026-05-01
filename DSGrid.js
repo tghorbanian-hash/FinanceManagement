@@ -6,10 +6,11 @@ import {
   Layers, X, Maximize2, Minimize2, Plus, Filter, Upload, FileSpreadsheet, FileDown
 } from 'lucide-react';
 
+// خواندن کامپوننت‌های پایه و فیدبک از متغیرهای گلوبال (بدون نیاز به import محلی که مرورگر را دچار مشکل کند)
 const { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } = window.DSCore || {};
 const { Modal } = window.DSFeedback || {};
 
-const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
+export const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const t = (fa, en) => isRtl ? fa : en;
   
@@ -22,19 +23,21 @@ const LOVField = ({ label, displayValue, onChange, data, columns, disabled = fal
           <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
         </div>
       </div>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
-        <div className="h-[350px] p-2 bg-slate-50/50">
-          <DataGrid 
-            data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
-            onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
-          />
-        </div>
-      </Modal>
+      {Modal && (
+        <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
+          <div className="h-[350px] p-2 bg-slate-50/50">
+            <DataGrid 
+              data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
+              onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
+            />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
 
-const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
+export const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -71,7 +74,7 @@ const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa'
   );
 };
 
-const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
+export const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
   const isRtl = language === 'fa';
   const t = (fa, en) => isRtl ? fa : en;
 
