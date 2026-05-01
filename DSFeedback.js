@@ -1,7 +1,7 @@
 /* Filename: DSFeedback.js */
 import React, { useState, useEffect } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
-import { Button } from './DSCore';
+import { Button } from './DSCore.js';
 
 export const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
   const isRtl = language === 'fa';

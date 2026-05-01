@@ -1,16 +1,16 @@
 /* Filename: DesignSystem.js */
 import { 
-  Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, 
+  Button, TextField, SelectField, ToggleField, CheckboxField, 
   Card, Badge, PageHeader, Tabs, CurrencyField, TextAreaField, RadioGroup, 
   Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
   ProgressBar, AttachmentManager, DatePicker, Stepper, TagInput, Spinner 
-} from './DSCore';
+} from './DSCore.js';
 
-import { AdvancedFilter, DataGrid } from './DSGrid';
+import { AdvancedFilter, DataGrid, LOVField } from './DSGrid.js';
 
-import { HighlightText, Tree, TreeGrid } from './DSTree';
+import { HighlightText, Tree, TreeGrid } from './DSTree.js';
 
-import { Modal, Tooltip, Alert, Toast, Banner, Dialog } from './DSFeedback';
+import { Modal, Tooltip, Alert, Toast, Banner, Dialog } from './DSFeedback.js';
 
 const DesignSystem = { 
   Button, 

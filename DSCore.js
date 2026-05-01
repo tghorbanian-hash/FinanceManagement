@@ -6,10 +6,6 @@ import {
   ArrowDownRight, Calendar, Check, X 
 } from 'lucide-react';
 
-// در یک پروژه واقعی، این دو کامپوننت از فایل‌های مربوطه ایمپورت می‌شوند
-import { Modal } from './DSFeedback';
-import { DataGrid } from './DSGrid';
-
 export const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
   const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
   const variants = {
@@ -100,31 +96,6 @@ export const CheckboxField = ({ checked, onChange, disabled = false, label, wrap
       />
       {label && <span className="text-[11px] font-bold text-slate-700 select-none">{label}</span>}
     </label>
-  );
-};
-
-export const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const t = (fa, en) => isRtl ? fa : en;
-  
-  return (
-    <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
-      {label && <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
-      <div className="relative flex items-center" onClick={() => !disabled && setIsOpen(true)}>
-        <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 pointer-events-none`}><Search size={size === 'sm' ? 14 : 16} /></div>
-        <div className={`w-full ${size === 'sm' ? 'h-8 text-[11px]' : 'h-10 text-[13px]'} bg-white border rounded-lg text-slate-800 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'cursor-pointer hover:border-indigo-400 border-slate-300'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
-          <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
-        </div>
-      </div>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
-        <div className="h-[350px] p-2 bg-slate-50/50">
-          <DataGrid 
-            data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
-            onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
-          />
-        </div>
-      </Modal>
-    </div>
   );
 };
 

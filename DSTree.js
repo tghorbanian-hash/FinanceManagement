@@ -5,7 +5,7 @@ import {
   Plus, Trash2, Maximize2, Minimize2, Search, FileDown, Upload, FileSpreadsheet, 
   Check, X, Layers 
 } from 'lucide-react';
-import { Button, ToggleField, Badge } from './DSCore';
+import { Button, ToggleField, Badge } from './DSCore.js';
 
 export const HighlightText = ({ text, term }) => {
   if (!term || !text) return <span>{text}</span>;

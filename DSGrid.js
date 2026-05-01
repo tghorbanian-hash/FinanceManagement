@@ -5,7 +5,33 @@ import {
   ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Layers, X, Maximize2, Minimize2, Plus, Filter, Upload, FileSpreadsheet, FileDown
 } from 'lucide-react';
-import { Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, DatePicker, Badge } from './DSCore';
+import { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } from './DSCore.js';
+import { Modal } from './DSFeedback.js';
+
+export const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const t = (fa, en) => isRtl ? fa : en;
+  
+  return (
+    <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+      {label && <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
+      <div className="relative flex items-center" onClick={() => !disabled && setIsOpen(true)}>
+        <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 pointer-events-none`}><Search size={size === 'sm' ? 14 : 16} /></div>
+        <div className={`w-full ${size === 'sm' ? 'h-8 text-[11px]' : 'h-10 text-[13px]'} bg-white border rounded-lg text-slate-800 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'cursor-pointer hover:border-indigo-400 border-slate-300'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
+          <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
+        </div>
+      </div>
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
+        <div className="h-[350px] p-2 bg-slate-50/50">
+          <DataGrid 
+            data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
+            onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
+          />
+        </div>
+      </Modal>
+    </div>
+  );
+};
 
 export const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
   const isRtl = language === 'fa';
