@@ -4,7 +4,7 @@
   const { useState, useEffect, useMemo, useCallback } = React;
   const { 
     DollarSign, Plus, Edit, Trash2, RefreshCw, History, Check, X,
-    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle, Clock, Calendar
+    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle, Clock, Calendar, Settings
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
