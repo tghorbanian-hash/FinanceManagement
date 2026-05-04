@@ -4,7 +4,7 @@
   const { useState, useEffect, useMemo } = React;
   const { 
     DollarSign, Plus, Edit, Trash2, RefreshCw, History, 
-    Calculator, Save, Search, X, Globe, Lock, ArrowRightLeft, TrendingUp 
+    Calculator, Save, Search, X, Globe, Lock, Unlock, ArrowRightLeft, TrendingUp 
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
