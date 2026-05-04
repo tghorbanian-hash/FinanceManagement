@@ -8,9 +8,10 @@
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
+    // اصلاح: StatCard به لیست کامپوننت‌ها اضافه شد
     const { 
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
-      AdvancedFilter, Modal, Tabs, LineChart, CurrencyField, DatePicker, Toast, Dialog 
+      AdvancedFilter, Modal, Tabs, LineChart, CurrencyField, DatePicker, Toast, Dialog, StatCard 
     } = window.DesignSystem || {};
 
     const isRtl = language === 'fa';
