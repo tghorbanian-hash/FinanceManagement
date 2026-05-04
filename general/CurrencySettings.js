@@ -8,8 +8,9 @@
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
+    // اصلاح: CheckboxField به لیست کامپوننت‌های دریافتی اضافه شد
     const { 
-      DataGrid, Button, TextField, SelectField, ToggleField, Card, Badge, PageHeader, 
+      DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, Tabs, LineChart, StatCard, Toast, Dialog, LOVField
     } = window.DesignSystem || {};
 
@@ -22,7 +23,6 @@
     const [selectedCurrency, setSelectedCurrency] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
 
-    // Mock Data - در فاز بعد به Supabase متصل می‌شود
     useEffect(() => {
       setCurrencies([
         { id: 1, code: 'USD', title: 'دلار آمریکا', symbol: '$', isActive: true, targets: ['IRR'] },
@@ -120,6 +120,20 @@
                 <p className="font-bold">{t('بخش مدیریت نرخ‌های روزانه در حال بارگذاری...', 'Daily rates management loading...')}</p>
              </div>
           )}
+          
+          {activeTab === 'history' && (
+             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">
+                <History size={48} className="mb-4 opacity-20" />
+                <p className="font-bold">{t('بخش تاریخچه در حال بارگذاری...', 'History section loading...')}</p>
+             </div>
+          )}
+          
+          {activeTab === 'converter' && (
+             <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-300">
+                <Calculator size={48} className="mb-4 opacity-20" />
+                <p className="font-bold">{t('بخش تبدیل‌گر در حال بارگذاری...', 'Converter section loading...')}</p>
+             </div>
+          )}
         </div>
 
         <Modal 
@@ -129,10 +143,10 @@
           language={language}
         >
           <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <TextField label={t('کد ارز (مثلاً USD)', 'Currency Code')} value={selectedCurrency?.code} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value})} isRtl={isRtl} required />
-            <TextField label={t('عنوان فارسی', 'Title (FA)')} value={selectedCurrency?.title} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required />
-            <TextField label={t('نماد ارز', 'Symbol')} value={selectedCurrency?.symbol} onChange={(e) => setSelectedCurrency({...selectedCurrency, symbol: e.target.value})} isRtl={isRtl} />
-            <ToggleField label={t('وضعیت فعال بودن', 'Active Status')} checked={selectedCurrency?.isActive} onChange={(val) => setSelectedCurrency({...selectedCurrency, isActive: val})} isRtl={isRtl} wrapperClassName="mt-6" />
+            <TextField label={t('کد ارز (مثلاً USD)', 'Currency Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required />
+            <TextField label={t('عنوان فارسی', 'Title (FA)')} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required />
+            <TextField label={t('نماد ارز', 'Symbol')} value={selectedCurrency?.symbol || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, symbol: e.target.value})} isRtl={isRtl} />
+            <ToggleField label={t('وضعیت فعال بودن', 'Active Status')} checked={selectedCurrency?.isActive ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, isActive: val})} isRtl={isRtl} wrapperClassName="mt-6" />
             
             <div className="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
                <label className="text-[11px] font-black text-slate-700 mb-2 block">{t('ارزهای هدف برای تعیین نرخ:', 'Target Currencies for Rates:')}</label>
@@ -141,11 +155,11 @@
                     <CheckboxField 
                       key={c.code} 
                       label={`${c.title} (${c.code})`} 
-                      checked={selectedCurrency?.targets?.includes(c.code)}
+                      checked={(selectedCurrency?.targets || []).includes(c.code)}
                       onChange={(checked) => {
                         const newTargets = checked 
-                          ? [...(selectedCurrency.targets || []), c.code]
-                          : (selectedCurrency.targets || []).filter(t => t !== c.code);
+                          ? [...(selectedCurrency?.targets || []), c.code]
+                          : (selectedCurrency?.targets || []).filter(t => t !== c.code);
                         setSelectedCurrency({...selectedCurrency, targets: newTargets});
                       }}
                     />
