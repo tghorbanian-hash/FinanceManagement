@@ -38,11 +38,17 @@
     );
   };
 
-  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false, children }) => {
+  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false, initialValues = {}, children }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isOpen, setIsOpen] = useState(defaultOpen);
-    const [values, setValues] = useState({});
+    const [values, setValues] = useState(initialValues);
+
+    useEffect(() => {
+      if (initialValues && Object.keys(initialValues).length > 0 && Object.keys(values).length === 0) {
+        setValues(initialValues);
+      }
+    }, [initialValues]);
 
     const handleChange = (name, val) => setValues(prev => ({ ...prev, [name]: val }));
     const handleClear = () => { setValues({}); if (onClear) onClear(); };
@@ -323,9 +329,12 @@
               <div className="flex items-center gap-1.5" ref={headerMenuRef}>
                 {headerMenus.map((menu, idx) => (
                   <div key={idx} className="relative h-full">
-                    <Button size="sm" variant={menu.variant || 'outline'} icon={menu.icon} onClick={() => setActiveHeaderMenu(activeHeaderMenu === idx ? null : idx)} className={`h-full ${menu.className || ''}`}>
-                      {menu.label}
-                      <ChevronDown size={14} className="ml-1 opacity-70" />
+                    <Button size="sm" variant={menu.variant || 'outline'} onClick={() => setActiveHeaderMenu(activeHeaderMenu === idx ? null : idx)} className={`h-full flex items-center justify-between gap-4 min-w-[130px] ${menu.className || ''}`}>
+                      <span className="flex items-center gap-1.5">
+                        {menu.icon && <menu.icon size={14} className="shrink-0" />}
+                        {menu.label}
+                      </span>
+                      <ChevronDown size={14} className="opacity-70 shrink-0" />
                     </Button>
                     {activeHeaderMenu === idx && (
                       <div className="absolute top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-1.5 z-50 min-w-[180px] right-0 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5">

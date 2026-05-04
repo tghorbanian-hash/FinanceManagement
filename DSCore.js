@@ -1,7 +1,7 @@
 /* Filename: DSCore.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useRef, useCallback } = React;
+  const { useState, useEffect, useRef, useCallback, useMemo } = React;
   const { 
     Loader2, AlertCircle, Search, ChevronDown, ChevronLeft, ChevronRight, 
     Home, UploadCloud, FileText, Download, Trash2, ArrowUpRight, 
@@ -52,24 +52,83 @@
     );
   };
 
-  const SelectField = ({ label, error, options = [], disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, ...props }) => {
+  const SelectField = ({ label, error, options = [], value, onChange, disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, placeholder = '' }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const containerRef = useRef(null);
+    const inputRef = useRef(null);
+    const t = (fa, en) => isRtl ? fa : en;
     const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const selectedOption = options.find(o => String(o.value) === String(value));
+    const displayValue = selectedOption ? selectedOption.label : '';
+
+    useEffect(() => {
+      const handleClickOutside = (e) => {
+        if (containerRef.current && !containerRef.current.contains(e.target)) {
+          setIsOpen(false);
+          setSearchTerm('');
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+      if (isOpen && inputRef.current) inputRef.current.focus();
+    }, [isOpen]);
+
+    const filteredOptions = options.filter(o => 
+      o.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      String(o.value).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
 
     return (
-      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${wrapperClassName}`}>
         {label && <label htmlFor={selectId} className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{label} {required && <span className="text-red-500">*</span>}</label>}
-        <div className="relative">
-          <select
-            id={selectId} disabled={disabled}
-            className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none appearance-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pl-8 pr-2.5' : 'pr-8 pl-2.5'} ${className}`}
-            dir={isRtl ? 'rtl' : 'ltr'} {...props}
-          >
-            <option value="" disabled hidden>انتخاب کنید...</option>
-            {options.map((opt, idx) => <option key={idx} value={opt.value}>{opt.label}</option>)}
-          </select>
-          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-2.5' : 'right-2.5'} pointer-events-none text-slate-400`}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div 
+          className={`relative w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all flex items-center ${disabled ? 'bg-slate-100/50 text-slate-500 cursor-not-allowed border-slate-200' : 'cursor-pointer border-slate-300 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 hover:border-slate-400'} ${className}`}
+          onClick={() => !disabled && setIsOpen(true)}
+        >
+          {isOpen ? (
+            <input
+              ref={inputRef} type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={displayValue || placeholder || t('جستجو...', 'Search...')}
+              className={`w-full h-full bg-transparent border-none outline-none ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}
+              dir={isRtl ? 'rtl' : 'ltr'}
+            />
+          ) : (
+            <div className={`w-full h-full flex items-center truncate ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+              <span className={displayValue ? 'text-slate-800' : 'text-slate-400'}>{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
+            </div>
+          )}
+          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-2.5' : 'right-2.5'} pointer-events-none text-slate-400`}>
+            <ChevronDown size={14} />
+          </div>
         </div>
+        
+        {isOpen && (
+          <div className={`absolute top-full mt-1 w-full bg-white border border-slate-200 shadow-xl rounded-lg z-50 max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
+            {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
+              <div 
+                key={idx} 
+                className={`px-3 py-2 text-[12px] cursor-pointer hover:bg-indigo-50 hover:text-indigo-700 transition-colors ${String(value) === String(opt.value) ? 'bg-indigo-50 text-indigo-700 font-bold' : 'text-slate-700'}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if(onChange) onChange({ target: { value: opt.value } });
+                  setIsOpen(false);
+                  setSearchTerm('');
+                }}
+              >
+                {opt.label}
+              </div>
+            )) : (
+              <div className="px-3 py-4 text-center text-[11px] text-slate-400">{t('موردی یافت نشد', 'No results')}</div>
+            )}
+          </div>
+        )}
         {error && <div className="flex items-center gap-1 text-red-500 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
       </div>
     );
@@ -145,28 +204,31 @@
     return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
   };
 
-  const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa' }) => {
+  const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa', actions }) => {
     const isRtl = language === 'fa';
     return (
-      <div className="flex flex-col gap-1.5 mb-3 shrink-0" dir={isRtl ? 'rtl' : 'ltr'}>
-        {breadcrumbs.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold overflow-hidden whitespace-nowrap">
-            <Home size={12} className="shrink-0" />
-            {breadcrumbs.map((bc, idx) => (
-              <React.Fragment key={idx}>
-                <span className="opacity-40 shrink-0">{isRtl ? <ChevronLeft size={10} strokeWidth={3}/> : <ChevronRight size={10} strokeWidth={3}/>}</span>
-                <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 cursor-pointer transition-colors">
-                  {bc.icon && <bc.icon size={12} />}
-                  {bc.label}
-                </span>
-              </React.Fragment>
-            ))}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="flex flex-col gap-1.5">
+          {breadcrumbs.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-bold overflow-hidden whitespace-nowrap">
+              <Home size={12} className="shrink-0" />
+              {breadcrumbs.map((bc, idx) => (
+                <React.Fragment key={idx}>
+                  <span className="opacity-40 shrink-0">{isRtl ? <ChevronLeft size={10} strokeWidth={3}/> : <ChevronRight size={10} strokeWidth={3}/>}</span>
+                  <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 cursor-pointer transition-colors">
+                    {bc.icon && <bc.icon size={12} />}
+                    {bc.label}
+                  </span>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-slate-800">
+            {Icon && <div className="p-1.5 bg-white border border-slate-200 shadow-sm text-indigo-600 rounded-lg shrink-0"><Icon size={18} strokeWidth={2.5}/></div>}
+            <h1 className="text-[14px] font-black tracking-tight">{title}</h1>
           </div>
-        )}
-        <div className="flex items-center gap-2 text-slate-800">
-          {Icon && <div className="p-1.5 bg-white border border-slate-200 shadow-sm text-indigo-600 rounded-lg shrink-0"><Icon size={18} strokeWidth={2.5}/></div>}
-          <h1 className="text-[14px] font-black tracking-tight">{title}</h1>
         </div>
+        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
     );
   };
@@ -481,7 +543,7 @@
     const [calendarMode, setCalendarMode] = useState(language === 'fa' ? 'jalali' : 'gregorian');
     const [isOpen, setIsOpen] = useState(false);
     
-    const initToday = getTodayInfo(language === 'fa' ? 'jalali' : 'gregorian');
+    const initToday = getTodayInfo(calendarMode);
     const [currentMonth, setCurrentMonth] = useState(initToday.m);
     const [currentYear, setCurrentYear] = useState(initToday.y);
     
@@ -502,31 +564,55 @@
       if (value && value.length === 10) {
         const parts = value.split('/');
         if (parts.length === 3) {
-          const y = parseInt(parts[0], 10);
-          const m = parseInt(parts[1], 10);
-          if ((calendarMode === 'jalali' && y < 1500) || (calendarMode === 'gregorian' && y > 1800)) {
-              setCurrentYear(y);
-              setCurrentMonth(m);
+          const gy = parseInt(parts[0], 10);
+          const gm = parseInt(parts[1], 10);
+          const gd = parseInt(parts[2], 10);
+          if (calendarMode === 'jalali') {
+            const [jy, jm, jd] = g2j(gy, gm, gd);
+            setCurrentYear(jy);
+            setCurrentMonth(jm);
+          } else {
+            setCurrentYear(gy);
+            setCurrentMonth(gm);
           }
         }
       }
     }, [value, calendarMode]);
 
-    const formatDatePicker = (val) => {
-      let cleaned = val.replace(/[^\d]/g, '').slice(0, 8);
-      if (cleaned.length > 6) return `${cleaned.slice(0, 4)}/${cleaned.slice(4, 6)}/${cleaned.slice(6)}`;
-      if (cleaned.length > 4) return `${cleaned.slice(0, 4)}/${cleaned.slice(4)}`;
-      return cleaned;
-    };
-
-    const handleInputChange = (e) => {
-      onChange(formatDatePicker(e.target.value));
-    };
+    const displayValue = useMemo(() => {
+      if (!value || value.length !== 10) return '';
+      const parts = value.split('/');
+      if (parts.length === 3) {
+        const gy = parseInt(parts[0], 10);
+        const gm = parseInt(parts[1], 10);
+        const gd = parseInt(parts[2], 10);
+        if (calendarMode === 'jalali') {
+          const [jy, jm, jd] = g2j(gy, gm, gd);
+          return `${jy}/${jm < 10 ? '0'+jm : jm}/${jd < 10 ? '0'+jd : jd}`;
+        }
+        return `${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`;
+      }
+      return value;
+    }, [value, calendarMode]);
 
     const handleDayClick = (day) => {
-      const d = day < 10 ? `0${day}` : day;
-      const m = currentMonth < 10 ? `0${currentMonth}` : currentMonth;
-      onChange(`${currentYear}/${m}/${d}`);
+      if (calendarMode === 'jalali') {
+        const [gy, gm, gd] = j2g(currentYear, currentMonth, day);
+        onChange(`${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`);
+      } else {
+        const m = currentMonth < 10 ? `0${currentMonth}` : currentMonth;
+        const d = day < 10 ? `0${day}` : day;
+        onChange(`${currentYear}/${m}/${d}`);
+      }
+      setIsOpen(false);
+    };
+
+    const handleTodayClick = () => {
+      const d = new Date();
+      const gy = d.getFullYear();
+      const gm = d.getMonth() + 1;
+      const gd = d.getDate();
+      onChange(`${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`);
       setIsOpen(false);
     };
 
@@ -543,21 +629,7 @@
 
     const toggleCalendarMode = () => {
       const newMode = calendarMode === 'jalali' ? 'gregorian' : 'jalali';
-      if (value && value.length === 10) {
-        const parts = value.split('/');
-        if (parts.length === 3) {
-          const y = parseInt(parts[0], 10);
-          const m = parseInt(parts[1], 10);
-          const d = parseInt(parts[2], 10);
-          if (calendarMode === 'jalali' && y < 1500) {
-            const [gy, gm, gd] = j2g(y, m, d);
-            onChange(`${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`);
-          } else if (calendarMode === 'gregorian' && y > 1800) {
-            const [jy, jm, jd] = g2j(y, m, d);
-            onChange(`${jy}/${jm < 10 ? '0'+jm : jm}/${jd < 10 ? '0'+jd : jd}`);
-          }
-        }
-      } else {
+      if (!value || value.length !== 10) {
          const ti = getTodayInfo(newMode);
          setCurrentYear(ti.y);
          setCurrentMonth(ti.m);
@@ -599,10 +671,10 @@
             <Calendar size={size === 'sm' ? 14 : 16} />
           </div>
           <input 
-            id={inputId} type="text" value={value || ''} onChange={handleInputChange} disabled={disabled}
+            id={inputId} type="text" value={displayValue} readOnly disabled={disabled}
             onClick={handleOpen}
             placeholder={todayStr}
-            className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
+            className={`w-full ${inputHeights[size]} bg-white border rounded-lg text-slate-800 transition-all outline-none cursor-pointer focus:bg-white focus:ring-2 ${disabled ? 'bg-slate-100/50 text-slate-500 border-slate-200 cursor-not-allowed' : 'border-slate-300 focus:border-indigo-400 focus:ring-indigo-100 hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
             dir="ltr"
           />
           <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 border border-slate-200 rounded p-0.5 z-10`}>
@@ -636,9 +708,11 @@
               {daysArray.map(day => {
                 const dStr = day < 10 ? '0'+day : day;
                 const mStr = currentMonth < 10 ? '0'+currentMonth : currentMonth;
-                const currentIterDate = `${currentYear}/${mStr}/${dStr}`;
+                const currentIterDate = calendarMode === 'jalali' 
+                  ? (() => { const [gy,gm,gd] = j2g(currentYear, currentMonth, day); return `${gy}/${gm<10?'0'+gm:gm}/${gd<10?'0'+gd:gd}`; })()
+                  : `${currentYear}/${mStr}/${dStr}`;
                 const isSelected = value === currentIterDate;
-                const isToday = todayStr === currentIterDate;
+                const isToday = (() => { const d=new Date(); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`})() === currentIterDate;
                 
                 let btnClass = 'h-7 w-full rounded flex items-center justify-center text-[11px] font-bold transition-all ';
                 if (isSelected) {
@@ -658,6 +732,16 @@
                   </button>
                 );
               })}
+            </div>
+            
+            <div className="mt-2 pt-2 border-t border-slate-100 flex justify-center">
+              <button 
+                type="button" 
+                onClick={(e) => { e.stopPropagation(); handleTodayClick(); }}
+                className="text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 px-4 py-1.5 rounded transition-colors w-full border border-indigo-100"
+              >
+                {t('امروز', 'Today')}
+              </button>
             </div>
           </div>
         )}

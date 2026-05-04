@@ -4,7 +4,8 @@
   const { useState, useEffect, useMemo, useCallback } = React;
   const { 
     DollarSign, Plus, Edit, Trash2, RefreshCw, History, Check, X,
-    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle, Clock, Calendar, Settings
+    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle, 
+    Clock, Calendar, Settings, Zap, ArrowLeft, ArrowRight
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
@@ -15,6 +16,13 @@
 
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+
+    const getTodayGregorian = () => {
+      const d = new Date();
+      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const todayStr = getTodayGregorian();
 
     const [activeTab, setActiveTab] = useState('list');
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
@@ -27,7 +35,7 @@
 
     // States: Rates
     const [rates, setRates] = useState([]);
-    const [rateFilters, setRateFilters] = useState({});
+    const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     
     // States: Manual Update Modal
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -183,7 +191,7 @@
          });
       });
       setManualRatesList(list);
-      setManualDate(new Date().toISOString().split('T')[0]);
+      setManualDate(getTodayGregorian());
       
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, '0');
@@ -205,13 +213,14 @@
            return;
         }
 
-        const dateTimeStr = `${manualDate}T${manualTime}:00.000Z`;
+        const formattedDate = manualDate.replace(/\//g, '-');
+        const dateTimeStr = `${formattedDate}T${manualTime}:00.000Z`;
 
         const payloads = validRates.map(r => ({
            base_currency: r.base,
            target_currency: r.target,
            rate: parseFloat(String(r.rate).replace(/,/g, '')),
-           rate_date: manualDate,
+           rate_date: formattedDate,
            created_at: dateTimeStr,
            source: 'Manual'
         }));
@@ -261,7 +270,9 @@
     const getRateValue = (baseCode, targetCode, targetDate) => {
       if (baseCode === targetCode) return 1;
       
-      const validRates = targetDate ? rates.filter(r => r.rate_date === targetDate) : rates;
+      const formattedDate = targetDate ? targetDate.replace(/\//g, '-') : null;
+      const validRates = formattedDate ? rates.filter(r => r.rate_date === formattedDate) : rates;
+      
       if (validRates.length === 0) return null;
 
       let direct = validRates.find(r => r.base_currency === baseCode && r.target_currency === targetCode);
@@ -292,12 +303,12 @@
       const amount = parseFloat(String(convAmount).replace(/,/g, ''));
       if (isNaN(amount)) return null;
       const rate = getRateValue(convFrom, convTo, convDate);
-      if (rate === null) return t('نرخ یافت نشد', 'Rate not found');
+      if (rate === null) return t('نرخ در تاریخ انتخابی یافت نشد', 'Rate not found for selected date');
       return (amount * rate).toLocaleString(undefined, { maximumFractionDigits: 4 });
     }, [convAmount, convFrom, convTo, convDate, rates]);
 
     const openConverter = () => {
-       setConvDate(new Date().toISOString().split('T')[0]);
+       setConvDate(getTodayGregorian());
        setConvFrom(currencies[0]?.code || '');
        setConvTo(currencies[1]?.code || '');
        setIsConverterOpen(true);
@@ -368,7 +379,16 @@
       if (rateFilters.base) result = result.filter(r => r.base_currency === rateFilters.base);
       if (rateFilters.target) result = result.filter(r => r.target_currency === rateFilters.target);
       if (rateFilters.source) result = result.filter(r => r.source === rateFilters.source);
-      if (rateFilters.date) result = result.filter(r => r.rate_date === rateFilters.date);
+      
+      if (rateFilters.fromDate) {
+        const fromDateHyphen = rateFilters.fromDate.replace(/\//g, '-');
+        result = result.filter(r => r.rate_date >= fromDateHyphen);
+      }
+      if (rateFilters.toDate) {
+        const toDateHyphen = rateFilters.toDate.replace(/\//g, '-');
+        result = result.filter(r => r.rate_date <= toDateHyphen);
+      }
+      
       return result;
     }, [rates, rateFilters]);
 
@@ -411,9 +431,11 @@
                 fields={[
                   { name: 'base', label: t('ارز پایه', 'Base Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
                   { name: 'target', label: t('ارز هدف', 'Target Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
-                  { name: 'date', label: t('تاریخ ثبت', 'Date'), type: 'date' },
+                  { name: 'fromDate', label: t('از تاریخ', 'From Date'), type: 'date' },
+                  { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' },
                   { name: 'source', label: t('منبع', 'Source'), type: 'select', options: [{value:'XE', label:'XE (اتوماتیک)'}, {value:'Manual', label:'دستی'}] }
                 ]}
+                initialValues={{ fromDate: todayStr, toDate: todayStr }}
                 onFilter={setRateFilters}
                 onClear={() => setRateFilters({})}
                 language={language}
@@ -432,7 +454,7 @@
                    headerMenus={[
                      {
                        label: t('عملیات نرخ‌گذاری', 'Rate Operations'),
-                       icon: Settings,
+                       icon: Zap,
                        className: 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200',
                        items: [
                          { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 hover:text-emerald-800' },
@@ -517,13 +539,15 @@
                  </div>
               </div>
 
-              <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+              <div className="flex flex-col max-h-[350px] overflow-y-auto custom-scrollbar pr-1 bg-white border border-slate-200 rounded-lg">
                  {manualRatesList.map((item, idx) => (
-                    <div key={`${item.base}-${item.target}`} className="flex items-center gap-4 p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-indigo-200 transition-colors">
-                       <div className="w-20 font-black text-slate-800 text-[13px] text-center">{item.base}</div>
-                       <ArrowRightLeft size={14} className="text-slate-300 shrink-0" />
-                       <div className="w-20 font-black text-slate-800 text-[13px] text-center">{item.target}</div>
-                       <div className="flex-1 border-l border-slate-100 pl-4 ml-2">
+                    <div key={`${item.base}-${item.target}`} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-3 transition-colors">
+                       <div className="w-16 font-black text-slate-800 text-[13px] text-center">{item.base}</div>
+                       <div className="text-indigo-400 shrink-0 flex items-center justify-center">
+                          {isRtl ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
+                       </div>
+                       <div className="w-16 font-black text-slate-800 text-[13px] text-center">{item.target}</div>
+                       <div className="flex-1 ml-2">
                           <CurrencyField size="sm" value={item.rate} onChange={(v) => {
                               const newList = [...manualRatesList];
                               newList[idx].rate = v;
@@ -533,7 +557,7 @@
                     </div>
                  ))}
                  {manualRatesList.length === 0 && (
-                    <div className="p-8 text-center text-slate-400 text-[12px] font-bold bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                    <div className="p-8 text-center text-slate-400 text-[12px] font-bold bg-slate-50">
                        {t('هیچ ارزی با تنظیم دریافت دستی و دارای ارز هدف در سیستم یافت نشد.', 'No manual currencies with targets found.')}
                     </div>
                  )}
