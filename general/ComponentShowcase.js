@@ -14,7 +14,7 @@
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
-      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Dialog, Toast,
+      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
       Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
     } = window.DesignSystem || {};
     
@@ -41,21 +41,17 @@
     const [progressVal, setProgressVal] = useState(45);
     const [tags, setTags] = useState(['حسابداری', 'خزانه']);
     
-    // تنظیمات پاپ‌اور
     const [popoverSettings, setPopoverSettings] = useState({ email: true, autoApprove: false });
     const [drawerOpen, setDrawerOpen] = useState(false);
 
-    // داشبورد و نمودارها - استیت‌ها
     const [dashFilterYear, setDashFilterYear] = useState('1402');
     const [activeChartMonth, setActiveChartMonth] = useState(null);
     const [activeChartCategory, setActiveChartCategory] = useState(null);
     
-    // استیت‌های Mode نمودارها
-    const [lineChartMode, setLineChartMode] = useState('monthly'); // 'monthly' | 'yearly'
-    const [barChartMode, setBarChartMode] = useState('amount'); // 'amount' | 'count'
-    const [pieChartMode, setPieChartMode] = useState('amount'); // 'amount' | 'count'
+    const [lineChartMode, setLineChartMode] = useState('monthly');
+    const [barChartMode, setBarChartMode] = useState('amount');
+    const [pieChartMode, setPieChartMode] = useState('amount');
 
-    // دیتای خام برای فیلتر متقاطع
     const rawDashboardData = useMemo(() => [
       { id:1, year: '1401', month: 'اسفند', category: 'فروش', amount: 900, count: 8 },
       { id:2, year: '1401', month: 'اسفند', category: 'خدمات', amount: 500, count: 5 },
@@ -76,9 +72,7 @@
       { id:17, year: '1403', month: 'اردیبهشت', category: 'فروش', amount: 2200, count: 25 },
     ], []);
 
-    // دیتای پردازش شده برای نمودارها بر اساس فیلترها و Modeها
     const processedChartData = useMemo(() => {
-      // 1. لاین چارت (نمودار روند)
       let trendData = [];
       if (lineChartMode === 'yearly') {
         const yearGroups = {};
@@ -101,10 +95,8 @@
         trendData = Object.keys(monthGroups).map(m => ({ label: m, value: monthGroups[m] }));
       }
 
-      // فیلتر اصلی سال برای بقیه نمودارها
       let filtered = rawDashboardData.filter(d => d.year === dashFilterYear);
       
-      // 2. بار چارت (توزیع ماهانه)
       const barGroups = {};
       filtered.forEach(d => {
         if (!activeChartCategory || activeChartCategory === d.category) {
@@ -114,7 +106,6 @@
       });
       const barData = Object.keys(barGroups).map(m => ({ label: m, value: barGroups[m] }));
 
-      // 3. پای چارت / دونات چارت (سهم دسته‌بندی‌ها)
       const pieGroups = {};
       filtered.forEach(d => {
         if (!activeChartMonth || activeChartMonth === d.month) {
@@ -126,7 +117,6 @@
 
       return { barData, pieData, trendData };
     }, [rawDashboardData, dashFilterYear, activeChartMonth, activeChartCategory, lineChartMode, barChartMode, pieChartMode]);
-
 
     const [treeMode, setTreeMode] = useState('standard');
     const [treeData, setTreeData] = useState([
@@ -813,7 +803,6 @@
                 </div>
               </div>
 
-              {/* Overlays Section in Small Components */}
               <Card title={t('لایه های شناور (Overlays)', 'Overlays')} className="shadow-sm !overflow-visible mt-2">
                 <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div className="flex flex-col gap-3">
@@ -954,6 +943,35 @@
                 </Card>
               </div>
 
+              <div className="border-t border-slate-200 pt-6 mt-6">
+                 <h3 className="text-[14px] font-black text-slate-800 mb-4">{t('سایر امکانات شناور', 'Other Overlay Features')}</h3>
+                 <div className="flex gap-4">
+                    <Button variant="outline" icon={Layers} onClick={() => setDrawerOpen(true)}>{t('باز کردن سایدبار متغیر', 'Open Drawer')}</Button>
+                    
+                    <ContextMenu items={[
+                      { label: t('مشاهده جزئیات', 'View Details'), icon: Eye },
+                      { label: t('ویرایش رکورد', 'Edit Record'), icon: Edit },
+                      { divider: true },
+                      { label: t('حذف رکورد', 'Delete Record'), icon: Trash2, variant: 'danger' }
+                    ]} language={language}>
+                       <div className="bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-200 border-dashed rounded-xl px-6 h-10 flex items-center justify-center text-indigo-600 text-[12px] font-bold transition-colors cursor-context-menu select-none shadow-sm">
+                          {t('کلیک راست کنید', 'Right click here')}
+                       </div>
+                    </ContextMenu>
+
+                    <Popover 
+                      language={language}
+                      position="bottom"
+                      trigger={<Button variant="secondary" icon={Settings}>{t('پاپ‌اور تنظیمات', 'Settings Popover')}</Button>}
+                    >
+                      <div className="w-[200px] flex flex-col gap-3 text-[11px]">
+                         <div className="font-bold text-slate-800 border-b border-slate-100 pb-2 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
+                         <ToggleField label={t('ارسال ایمیل', 'Send Email')} checked={true} isRtl={isRtl} onChange={()=>{}} />
+                         <ToggleField label={t('تایید خودکار', 'Auto Approve')} checked={false} isRtl={isRtl} onChange={()=>{}} />
+                      </div>
+                    </Popover>
+                 </div>
+              </div>
             </div>
           )}
 
@@ -1074,6 +1092,8 @@
             onClose={() => setToastState(prev => ({ ...prev, isVisible: false }))} 
           />
         )}
+        
+        {Alert && <div className="hidden"><Alert /></div> /* Ensure Alert is instantiated/available if needed by other components indirectly without rendering a visible one here */}
       </>
     );
   };
