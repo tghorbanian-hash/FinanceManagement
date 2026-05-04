@@ -14,7 +14,7 @@
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
-      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
+      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Dialog, Toast,
       Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
     } = window.DesignSystem || {};
     
@@ -511,7 +511,7 @@
       setTreeGridEditData(newNode);
     };
 
-    if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid || !Alert || !Dialog || !Toast) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+    if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
     return (
       <>
@@ -850,9 +850,9 @@
           )}
 
           {activeShowcaseTab === 'advanced_components' && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2">
+            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-5">
               
-              <div className="mb-5 sticky top-0 z-30">
+              <div className="sticky top-0 z-30">
                 <AdvancedFilter 
                   title={t('فیلتر پیشرفته داشبورد', 'Dashboard Advanced Filter')}
                   fields={[
@@ -861,26 +861,28 @@
                   onFilter={(vals) => setDashFilterYear(vals.year || '1402')}
                   onClear={() => setDashFilterYear('1402')}
                   language={language}
-                />
-                
-                {(activeChartMonth || activeChartCategory) && (
-                  <div className="flex items-center gap-2 mt-3 p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg animate-in fade-in duration-300">
-                    <span className="text-[11px] font-black text-indigo-800">{t('فیلترهای اعمال شده از روی نمودار:', 'Active Chart Filters:')}</span>
-                    {activeChartMonth && (
-                      <Badge variant="indigo" className="flex items-center gap-1.5 px-2 py-1 shadow-sm">
-                        <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
-                        <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={12} strokeWidth={2.5} /></button>
-                      </Badge>
-                    )}
-                    {activeChartCategory && (
-                      <Badge variant="emerald" className="flex items-center gap-1.5 px-2 py-1 shadow-sm">
-                        <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
-                        <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={12} strokeWidth={2.5} /></button>
-                      </Badge>
-                    )}
-                    <Button variant="ghost" size="sm" onClick={() => {setActiveChartMonth(null); setActiveChartCategory(null);}} className="text-[10px] h-7 text-slate-500 hover:text-red-600 border border-transparent hover:bg-white">{t('پاک کردن همه', 'Clear All')}</Button>
-                  </div>
-                )}
+                >
+                  {(activeChartMonth || activeChartCategory) && (
+                    <div className="flex items-center gap-3 w-full animate-in fade-in duration-300">
+                      <span className="text-[11px] font-bold text-slate-500">{t('فیلترهای فعال از روی نمودارها:', 'Active Chart Filters:')}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {activeChartMonth && (
+                          <Badge variant="indigo" className="flex items-center gap-1.5 shadow-sm">
+                            <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
+                            <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                          </Badge>
+                        )}
+                        {activeChartCategory && (
+                          <Badge variant="emerald" className="flex items-center gap-1.5 shadow-sm">
+                            <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
+                            <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                          </Badge>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => {setActiveChartMonth(null); setActiveChartCategory(null);}} className="text-[10px] !h-6 !px-2 text-slate-400 hover:text-red-500 mr-auto">{t('پاک کردن همه', 'Clear All')}</Button>
+                    </div>
+                  )}
+                </AdvancedFilter>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -889,8 +891,8 @@
                     title={t('نمودار روند یکپارچه', 'Integrated Trend Chart')}
                     action={
                       <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                        <button onClick={() => setLineChartMode('monthly')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${lineChartMode === 'monthly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('ماهانه', 'Monthly')}</button>
-                        <button onClick={() => setLineChartMode('yearly')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${lineChartMode === 'yearly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('سالیانه', 'Yearly')}</button>
+                        <button onClick={() => setLineChartMode('monthly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'monthly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('ماهانه', 'Monthly')}</button>
+                        <button onClick={() => setLineChartMode('yearly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'yearly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('سالیانه', 'Yearly')}</button>
                       </div>
                     }
                     data={processedChartData.trendData} 
@@ -905,8 +907,8 @@
                   title={t('نمودار توزیع زمانی', 'Time Distribution Chart')}
                   action={
                     <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                      <button onClick={() => setBarChartMode('amount')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${barChartMode === 'amount' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('مبلغ', 'Amount')}</button>
-                      <button onClick={() => setBarChartMode('count')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${barChartMode === 'count' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('تعداد', 'Count')}</button>
+                      <button onClick={() => setBarChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'amount' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('مبلغ', 'Amount')}</button>
+                      <button onClick={() => setBarChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'count' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('تعداد', 'Count')}</button>
                     </div>
                   }
                   data={processedChartData.barData} 
@@ -921,8 +923,8 @@
                   title={t('نمودار سهم دسته‌بندی', 'Category Share Chart')}
                   action={
                     <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                      <button onClick={() => setPieChartMode('amount')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${pieChartMode === 'amount' ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('مبلغ', 'Amount')}</button>
-                      <button onClick={() => setPieChartMode('count')} className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${pieChartMode === 'count' ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('تعداد', 'Count')}</button>
+                      <button onClick={() => setPieChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'amount' ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('مبلغ', 'Amount')}</button>
+                      <button onClick={() => setPieChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'count' ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('تعداد', 'Count')}</button>
                     </div>
                   }
                   data={processedChartData.pieData} 

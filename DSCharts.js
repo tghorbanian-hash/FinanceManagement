@@ -26,44 +26,56 @@
     );
   };
 
-  const ChartContainer = ({ isMaximized, setIsMaximized, children, height, isRtl, t }) => {
+  const ChartContainer = ({ title, action, isMaximized, setIsMaximized, children, height, isRtl, t }) => {
+    const renderHeader = (isMaxMode = false) => {
+      if (!title && !action) return null;
+      return (
+        <div className={`flex items-center justify-between border-b border-slate-200 px-3 shrink-0 ${isMaxMode ? 'h-10 bg-slate-50 rounded-t-xl' : 'h-10 bg-white rounded-t-xl'}`}>
+           <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setIsMaximized(!isMaxMode)} 
+                className={`p-1 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
+                title={isMaxMode ? t('بستن', 'Close') : t('بزرگنمایی', 'Maximize')}
+              >
+                {isMaxMode ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
+              </button>
+              <h3 className="text-[12px] font-black text-slate-800">{title}</h3>
+           </div>
+           {action && <div className="flex items-center gap-2">{action}</div>}
+        </div>
+      );
+    };
+
     if (isMaximized) {
       return (
-        <>
+        <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
+          {renderHeader(false)}
+          <div className="flex-1 min-h-0 relative w-full p-4" style={{ height }}>
+            {children}
+          </div>
+          
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
-          <div className="fixed inset-6 sm:inset-12 md:inset-24 z-[9950] bg-white rounded-2xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl shrink-0">
-               <h3 className="font-black text-[15px] text-slate-800">{t('نمایش دقیق نمودار', 'Detailed Chart View')}</h3>
-               <button onClick={() => setIsMaximized(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-rose-600 rounded-xl transition-colors">
-                  <X size={20}/>
-               </button>
-            </div>
-            <div className="flex-1 p-6 md:p-10 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
+          <div className="fixed inset-4 sm:inset-8 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+            {renderHeader(true)}
+            <div className="flex-1 p-4 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
                {children}
             </div>
           </div>
-        </>
+        </div>
       );
     }
     
     return (
-      <div className="w-full relative group flex flex-col" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
-         <button 
-           onClick={() => setIsMaximized(true)} 
-           className="absolute top-0 p-1.5 text-slate-400 bg-white/90 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-[40] border border-slate-200 shadow-sm backdrop-blur-sm" 
-           style={{ [isRtl ? 'left' : 'right']: '0px', [isRtl ? 'right' : 'auto']: 'auto' }}
-           title={t('بزرگنمایی', 'Maximize')}
-         >
-            <Maximize2 size={16} />
-         </button>
-         <div className="flex-1 min-h-0 flex flex-col relative w-full h-full">
+      <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
+         {renderHeader(false)}
+         <div className="flex-1 min-h-0 flex flex-col relative w-full p-4" style={{ height }}>
             {children}
          </div>
       </div>
     );
   };
 
-  const BarChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
+  const BarChart = ({ title, action, data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
@@ -76,7 +88,7 @@
     }, [data]);
 
     return (
-      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+      <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 relative pt-6 pb-2 border-b border-slate-100 w-full h-full">
           {data.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400">
@@ -114,7 +126,7 @@
     );
   };
 
-  const LineChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
+  const LineChart = ({ title, action, data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
@@ -163,7 +175,7 @@
     };
 
     return (
-      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+      <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="flex-1 relative w-full h-full mb-6">
           {data.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400">
@@ -187,7 +199,7 @@
                 return (
                   <div 
                     key={i} 
-                    className={`absolute w-3 h-3 -ml-[6px] -mt-[6px] rounded-full cursor-pointer z-10 transition-all duration-300 ${isActive ? 'opacity-100 hover:scale-150' : 'opacity-40'}`}
+                    className={`absolute w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full cursor-pointer z-10 transition-all duration-300 ${isActive ? 'opacity-100 hover:scale-150' : 'opacity-40'}`}
                     style={{
                       left: `${pt.x}%`,
                       top: `${pt.y}%`,
@@ -219,7 +231,7 @@
     );
   };
 
-  const DonutChart = ({ data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
+  const DonutChart = ({ title, action, data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
@@ -240,9 +252,9 @@
     const hoveredSeg = tooltip.visible ? segments.find(s => s.label === tooltip.label) : null;
 
     return (
-      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
-        <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col md:flex-row' : ''}`}>
-          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-h-[160px]'}`}>
+      <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
+          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-[160px]'}`}>
             {data.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 border-4 border-slate-100 rounded-full">
                 {t('بدون داده', 'No data')}
@@ -276,7 +288,7 @@
             )}
           </div>
 
-          <div className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 py-2 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-w-[120px]'}`}>
+          <div className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 py-2 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-w-[120px]'}`}>
             {segments.map((seg, i) => {
               const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
               return (
@@ -302,7 +314,7 @@
     );
   };
 
-  const PieChart = ({ data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
+  const PieChart = ({ title, action, data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
@@ -321,9 +333,9 @@
     });
 
     return (
-      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
-        <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col md:flex-row' : ''}`}>
-          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-h-[160px]'}`}>
+      <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
+          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-[160px]'}`}>
             {data.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 bg-slate-50 rounded-full">
                 {t('بدون داده', 'No data')}
@@ -348,7 +360,7 @@
             )}
           </div>
 
-          <div className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 py-2 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-w-[120px]'}`}>
+          <div className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 py-2 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-w-[120px]'}`}>
             {segments.map((seg, i) => {
               const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
               return (
@@ -374,7 +386,7 @@
     );
   };
 
-  const GaugeChart = ({ value = 0, min = 0, max = 100, label = '', height = 160, color = 'indigo', language = 'fa' }) => {
+  const GaugeChart = ({ title, action, value = 0, min = 0, max = 100, label = '', height = 160, color = 'indigo', language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
@@ -390,7 +402,7 @@
     const dashValue = (percent / 100) * C;
 
     return (
-      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+      <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="w-full h-full flex flex-col items-center justify-center font-sans relative">
           <div 
             className={`relative w-full ${isMaximized ? 'max-w-[400px]' : 'max-w-[200px]'}`} 

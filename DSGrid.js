@@ -38,7 +38,7 @@
     );
   };
 
-  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false }) => {
+  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false, children }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -49,7 +49,7 @@
 
     return (
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-3 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-lg transition-colors select-none" onClick={() => setIsOpen(!isOpen)}>
+        <div className="h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-t-lg transition-colors select-none" onClick={() => setIsOpen(!isOpen)}>
           <div className="flex items-center gap-2 text-indigo-600"><Filter size={14} strokeWidth={2.5} /><span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span></div>
           <div className="text-slate-400">{isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
         </div>
@@ -69,6 +69,11 @@
               <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
               <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
             </div>
+          </div>
+        )}
+        {children && (
+          <div className="px-3 py-2 border-t border-slate-100 bg-slate-50/50 rounded-b-lg">
+            {children}
           </div>
         )}
       </div>
