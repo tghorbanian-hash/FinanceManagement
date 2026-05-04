@@ -14,7 +14,7 @@
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
-      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Dialog, Toast,
+      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
       Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
     } = window.DesignSystem || {};
     
@@ -521,11 +521,11 @@
       setTreeGridEditData(newNode);
     };
 
-    if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+    if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid || !Alert || !Dialog || !Toast) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
     return (
       <>
-        <div className="p-6 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
           
           <PageHeader 
             title={t('کاتالوگ کامپوننت‌ها (Showcase)', 'Component Showcase')}
@@ -688,10 +688,10 @@
                         <div className="flex flex-col h-full">
                           <div className="flex-1 space-y-4">
                             {isCreatingNode && newTargetParentId && (
-                              <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-800 text-[12px]">
-                                <Info size={16} className="text-indigo-500" />
-                                <span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
-                              </div>
+                              <Alert 
+                                type="info" 
+                                message={<span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>} 
+                              />
                             )}
                             <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
                             <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
@@ -748,7 +748,7 @@
           )}
 
           {activeShowcaseTab === 'components' && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-1 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label={t('کل نقدینگی', 'Total Liquidity')} value="۱,۲۵۰,۰۰۰,۰۰۰" icon={DollarSign} trend="up" trendValue="۱۲%" color="emerald" language={language} />
                 <StatCard label={t('بدهی معوق', 'Overdue Debt')} value="۴۸۰,۰۰۰,۰۰۰" icon={TrendingUp} trend="down" trendValue="۵%" color="rose" language={language} />
@@ -860,7 +860,7 @@
           )}
 
           {activeShowcaseTab === 'advanced_components' && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-1 space-y-4">
               
               <div className="sticky top-0 z-30">
                 <AdvancedFilter 
@@ -875,19 +875,24 @@
                     setActiveChartCategory(null);
                   }}
                   language={language}
-                  defaultOpen={true}
+                  defaultOpen={false}
                 >
-                  {activeChartMonth && (
-                    <Badge variant="indigo" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
-                      <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
-                      <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
-                    </Badge>
-                  )}
-                  {activeChartCategory && (
-                    <Badge variant="emerald" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
-                      <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
-                      <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
-                    </Badge>
+                  {(activeChartMonth || activeChartCategory) && (
+                    <>
+                      <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                      {activeChartMonth && (
+                        <Badge variant="indigo" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
+                          <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
+                          <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                        </Badge>
+                      )}
+                      {activeChartCategory && (
+                        <Badge variant="emerald" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
+                          <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
+                          <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                        </Badge>
+                      )}
+                    </>
                   )}
                 </AdvancedFilter>
               </div>
@@ -904,7 +909,7 @@
                     }
                     data={processedChartData.trendData} 
                     color="indigo" 
-                    height={320} 
+                    height={260} 
                     language={language} 
                     onClick={(item) => lineChartMode === 'monthly' ? setActiveChartMonth(item.label) : null} 
                     activeLabel={lineChartMode === 'monthly' ? activeChartMonth : null}
@@ -921,7 +926,7 @@
                   }
                   data={processedChartData.barData} 
                   color="emerald" 
-                  height={280} 
+                  height={220} 
                   language={language} 
                   activeLabel={activeChartMonth} 
                   onClick={(item) => setActiveChartMonth(item.label === activeChartMonth ? null : item.label)} 
@@ -936,7 +941,7 @@
                     </div>
                   }
                   data={processedChartData.pieData} 
-                  height={280} 
+                  height={220} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -955,7 +960,7 @@
                     />
                   }
                   data={processedChartData.donutData} 
-                  height={280} 
+                  height={220} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -969,7 +974,7 @@
                   label={barChartMode === 'amount' ? t('مجموع (ریال)', 'Total (IRR)') : t('مجموع (تعداد)', 'Total Count')} 
                   color="purple" 
                   language={language} 
-                  height={220} 
+                  height={180} 
                 />
               </div>
             </div>
@@ -1092,6 +1097,8 @@
             onClose={() => setToastState(prev => ({ ...prev, isVisible: false }))} 
           />
         )}
+        
+        {Alert && <div className="hidden"><Alert /></div>}
       </>
     );
   };

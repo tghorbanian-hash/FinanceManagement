@@ -30,14 +30,14 @@
     const renderHeader = (isMaxMode = false) => {
       if (!title && !action) return null;
       return (
-        <div className={`flex items-center justify-between border-b border-slate-200 px-3 shrink-0 ${isMaxMode ? 'h-10 bg-slate-50 rounded-t-xl' : 'h-10 bg-white rounded-t-xl'}`}>
+        <div className={`flex items-center justify-between border-b border-slate-200 px-3 shrink-0 ${isMaxMode ? 'h-9 bg-slate-50 rounded-t-xl' : 'h-9 bg-white rounded-t-xl'}`}>
            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setIsMaximized(!isMaxMode)} 
-                className={`p-1.5 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
+                className={`p-1 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
                 title={isMaxMode ? t('بستن', 'Close') : t('بزرگنمایی', 'Maximize')}
               >
-                {isMaxMode ? <Minimize2 size={15} strokeWidth={2.5} /> : <Maximize2 size={15} strokeWidth={2.5} />}
+                {isMaxMode ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
               </button>
               <h3 className="text-[12px] font-black text-slate-800">{title}</h3>
            </div>
@@ -50,14 +50,14 @@
       return (
         <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
           {renderHeader(false)}
-          <div className="flex-1 min-h-0 relative w-full p-4" style={{ height }}>
+          <div className="flex-1 min-h-0 relative w-full p-3" style={{ height }}>
             {children}
           </div>
           
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
           <div className="fixed inset-4 sm:inset-10 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
             {renderHeader(true)}
-            <div className="flex-1 p-4 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
+            <div className="flex-1 p-3 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
                {children}
             </div>
           </div>
@@ -68,7 +68,7 @@
     return (
       <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
          {renderHeader(false)}
-         <div className="flex-1 min-h-0 flex flex-col relative w-full p-4" style={{ height }}>
+         <div className="flex-1 min-h-0 flex flex-col relative w-full p-3" style={{ height }}>
             {children}
          </div>
       </div>

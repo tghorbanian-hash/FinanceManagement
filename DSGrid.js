@@ -50,15 +50,9 @@
     return (
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-3 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className={`h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition-colors select-none ${isOpen ? 'rounded-t-lg' : 'rounded-lg'}`} onClick={() => setIsOpen(!isOpen)}>
-          <div className="flex items-center gap-4 flex-1 overflow-hidden pr-2">
-            <div className="flex items-center gap-2 text-indigo-600 shrink-0">
-               <Filter size={14} strokeWidth={2.5} />
-               <span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span>
-            </div>
-            {/* Inline Filter Tags Container */}
-            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar" onClick={e => e.stopPropagation()}>
-               {children}
-            </div>
+          <div className="flex items-center gap-2 text-indigo-600 shrink-0">
+             <Filter size={14} strokeWidth={2.5} />
+             <span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span>
           </div>
           <div className="text-slate-400 shrink-0">{isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
         </div>
@@ -74,9 +68,14 @@
                 return <TextField key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'} />;
               })}
             </div>
-            <div className="flex items-center justify-end gap-2 mt-3">
-              <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
-              <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
+            <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                {children}
+              </div>
+              <div className="flex items-center gap-2 shrink-0 mr-auto">
+                <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
+                <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
+              </div>
             </div>
           </div>
         )}
