@@ -9,7 +9,7 @@
 
   const CurrencySettings = ({ language = 'fa' }) => {
     const { 
-      DataGrid, Button, TextField, SelectField, ToggleField, Card, Badge, PageHeader, 
+      DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, Tabs, CurrencyField, DatePicker, Toast 
     } = window.DesignSystem || {};
 
@@ -22,10 +22,8 @@
     
     // States: Currencies
     const [currencies, setCurrencies] = useState([]);
-    const [selectedRows, setSelectedRows] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
-    const [tempTarget, setTempTarget] = useState('');
 
     // States: Rates & History Modal
     const [rates, setRates] = useState([]);
@@ -120,9 +118,9 @@
           const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
         } else if (deleteConfirm.type === 'bulk') {
-          const { error } = await supabase.from('fm_currencies').delete().in('id', selectedRows);
+          // در حالت حذف گروهی، شناسه رکوردها در deleteConfirm.data قرار دارد
+          const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
           if (error) throw error;
-          setSelectedRows([]);
         }
         showToast(t('عملیات حذف با موفقیت انجام شد', 'Deletion successful'));
         setDeleteConfirm({ isOpen: false, type: null, data: null });
@@ -134,8 +132,8 @@
       }
     };
 
-    const handleBulkAction = async (actionType) => {
-      if (!selectedRows.length) return;
+    const handleBulkAction = async (actionType, selectedIds) => {
+      if (!selectedIds || !selectedIds.length) return;
       try {
         let updatePayload = {};
         if (actionType === 'activate') updatePayload = { is_active: true };
@@ -143,11 +141,10 @@
         if (actionType === 'setAuto') updatePayload = { fetch_type: 'auto' };
         if (actionType === 'setManual') updatePayload = { fetch_type: 'manual' };
 
-        const { error } = await supabase.from('fm_currencies').update(updatePayload).in('id', selectedRows);
+        const { error } = await supabase.from('fm_currencies').update(updatePayload).in('id', selectedIds);
         if (error) throw error;
         
         showToast(t('عملیات گروهی با موفقیت انجام شد', 'Bulk action successful'));
-        setSelectedRows([]);
         fetchCurrencies();
       } catch (err) {
         console.error("Bulk action error:", err);
@@ -206,11 +203,11 @@
     ];
 
     const gridBulkActions = [
-      { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: () => handleBulkAction('activate'), variant: 'outline', className: 'text-emerald-600' },
-      { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: () => handleBulkAction('deactivate'), variant: 'outline', className: 'text-slate-600' },
-      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: () => handleBulkAction('setAuto'), variant: 'outline', className: 'text-blue-600' },
-      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: () => handleBulkAction('setManual'), variant: 'outline', className: 'text-amber-600' },
-      { label: t('حذف گروهی', 'Delete'), icon: Trash2, onClick: () => setDeleteConfirm({ isOpen: true, type: 'bulk', data: null }), variant: 'outline', className: 'text-red-600 border-red-100 bg-red-50/30' },
+      { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600' },
+      { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600' },
+      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600' },
+      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600' },
+      { label: t('حذف گروهی', 'Delete'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'outline', className: 'text-red-600 border-red-100 bg-red-50/30' },
     ];
 
     const historyColumns = [
@@ -254,9 +251,8 @@
                   language={language}
                   actions={currencyRowActions}
                   selectable={true}
-                  onSelectionChange={setSelectedRows}
                   onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
-                  bulkActions={selectedRows.length > 0 ? gridBulkActions : undefined}
+                  bulkActions={gridBulkActions}
                   onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
                 />
               </div>
@@ -276,9 +272,12 @@
         {/* Modal: Add/Edit Currency - Compact Refined Layout */}
         <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
           <div className="p-4 flex flex-col gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <TextField label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" />
-              <TextField label={t('عنوان ارز', 'Title')} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required size="sm" className="sm:col-span-2" />
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <TextField label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-1" />
+              <TextField label={t('عنوان ارز', 'Title')} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-2" />
+              <div className="sm:col-span-1 flex items-center pt-5 pl-2">
+                 <ToggleField label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -290,31 +289,26 @@
               <TextField label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
             </div>
             
-            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">
-               <span className="text-[12px] text-slate-600 font-bold">{t('وضعیت فعال بودن ارز در کل سیستم:', 'Currency activation status:')}</span>
-               <ToggleField label="" checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
-            </div>
-            
-            {/* Target Currencies: Refined UX */}
-            <div className="mt-1">
+            {/* Target Currencies: Auto-add Refined UX */}
+            <div className="mt-1 pt-3 border-t border-slate-100">
                <label className="text-[11px] font-black text-slate-500 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
                <div className="flex flex-col gap-2">
-                 <div className="flex items-end gap-2">
-                   <div className="flex-1">
-                      <SelectField 
-                        value={tempTarget} onChange={(e) => setTempTarget(e.target.value)} isRtl={isRtl} size="sm"
-                        options={[
-                          { value: '', label: t('انتخاب ارز جهت افزودن...', 'Select currency to add...') },
-                          ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
-                        ]} 
-                      />
-                   </div>
-                   <Button variant="outline" size="sm" icon={Plus} onClick={() => { if(tempTarget) { setSelectedCurrency({...selectedCurrency, targets: [...(selectedCurrency.targets || []), tempTarget]}); setTempTarget(''); } }} disabled={!tempTarget} className="h-[32px] px-3">
-                     {t('افزودن', 'Add')}
-                   </Button>
-                 </div>
+                 <SelectField 
+                   value="" 
+                   onChange={(e) => {
+                     const val = e.target.value;
+                     if (val && !(selectedCurrency?.targets || []).includes(val)) {
+                       setSelectedCurrency({...selectedCurrency, targets: [...(selectedCurrency?.targets || []), val]});
+                     }
+                   }} 
+                   isRtl={isRtl} size="sm" wrapperClassName="w-full sm:w-1/2"
+                   options={[
+                     { value: '', label: t('انتخاب ارز جهت افزودن...', 'Select currency to add...') },
+                     ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
+                   ]} 
+                 />
                  
-                 <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white rounded-lg border border-slate-200 shadow-inner">
+                 <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white rounded-lg border border-slate-200 shadow-inner mt-1">
                     {(selectedCurrency?.targets || []).map(tcode => (
                       <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
                         <span className="font-bold text-[10px]">{tcode}</span>
@@ -375,7 +369,7 @@
             </div>
             <p className="text-slate-600 text-sm leading-relaxed">
               {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${selectedRows.length} ارز انتخاب شده اطمینان دارید؟`, `Delete ${selectedRows.length} selected currencies?`)
+                ? t(`آیا از حذف ${deleteConfirm.data?.length} ارز انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected currencies?`)
                 : t(`آیا از حذف ارز ${deleteConfirm.data?.code} و تمام سوابق آن اطمینان دارید؟`, `Delete currency ${deleteConfirm.data?.code} and its history?`)
               }
             </p>
