@@ -38,7 +38,7 @@
     const [convFrom, setConvFrom] = useState('');
     const [convTo, setConvTo] = useState('');
 
-    // States: Delete Confirmation Modal (Avoiding browser alerts)
+    // States: Delete Confirmation Modal
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
 
     const supabase = window.supabase;
@@ -79,7 +79,6 @@
       fetchRates();
     }, []);
 
-    // Logic: Save Currency
     const handleSaveCurrency = async () => {
       try {
         if (!selectedCurrency.code || !selectedCurrency.title) {
@@ -115,7 +114,6 @@
       }
     };
 
-    // Logic: Delete Currency
     const executeDelete = async () => {
       try {
         if (deleteConfirm.type === 'single') {
@@ -136,7 +134,6 @@
       }
     };
 
-    // Logic: Bulk Actions
     const handleBulkAction = async (actionType) => {
       if (!selectedRows.length) return;
       try {
@@ -158,14 +155,13 @@
       }
     };
 
-    // Logic: Cross-Rate
     const getRateValue = (baseCode, targetCode) => {
       if (baseCode === targetCode) return 1;
       let direct = rates.find(r => r.base_currency === baseCode && r.target_currency === targetCode);
       if (direct) return direct.rate;
       let inverse = rates.find(r => r.base_currency === targetCode && r.target_currency === baseCode);
       if (inverse) return 1 / inverse.rate;
-      return null; // Note: For real two-layer cross rate, we iterate intermediate targets recursively. Simplified for scope.
+      return null;
     };
 
     const convResult = useMemo(() => {
@@ -183,37 +179,38 @@
     ];
 
     const currencyColumns = [
-      { field: 'code', header_fa: 'کد ارز', header_en: 'Code', width: '100px', render: (v) => <span className="font-bold">{v}</span> },
+      { field: 'code', header_fa: 'کد ارز', header_en: 'Code', width: '90px', render: (v) => <span className="font-black text-slate-800">{v}</span> },
       { field: 'title', header_fa: 'عنوان', header_en: 'Title', width: '180px' },
-      { field: 'symbol', header_fa: 'نماد', header_en: 'Symbol', width: '80px' },
+      { field: 'symbol', header_fa: 'نماد', header_en: 'Symbol', width: '70px' },
       { 
-        field: 'targets', header_fa: 'ارزهای مبنا', header_en: 'Targets', width: '250px',
+        field: 'targets', header_fa: 'ارزهای مبنا', header_en: 'Targets', width: '220px',
         render: (val) => (
           <div className="flex gap-1 flex-wrap">
-            {Array.isArray(val) && val.map(c => <Badge key={c} variant="indigo" size="sm">{c}</Badge>)}
+            {Array.isArray(val) && val.map(c => <Badge key={c} variant="indigo" size="sm" className="px-1.5 py-0 text-[10px]">{c}</Badge>)}
             {(!val || val.length === 0) && <span className="text-slate-300 text-[10px]">{t('بدون وابستگی', 'No targets')}</span>}
           </div>
         )
       },
       { 
-        field: 'fetch_type', header_fa: 'نوع دریافت', header_en: 'Fetch Type', width: '120px',
-        render: (v) => <Badge variant={v === 'auto' ? 'emerald' : 'slate'}>{v === 'auto' ? t('اتوماتیک', 'Auto') : t('دستی', 'Manual')}</Badge>
+        field: 'fetch_type', header_fa: 'نوع دریافت', header_en: 'Fetch Type', width: '110px',
+        render: (v) => <Badge variant={v === 'auto' ? 'emerald' : 'slate'} className="text-[10px]">{v === 'auto' ? t('اتوماتیک', 'Auto') : t('دستی', 'Manual')}</Badge>
       },
-      { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '80px' },
-      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '100px' },
+      { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '70px', render: (v) => <span className="text-slate-500 font-mono">{v}</span> },
+      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '90px' },
     ];
 
     const currencyRowActions = [
-      { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-600 hover:text-indigo-600' },
-      { icon: History, tooltip: t('تاریخچه نرخ', 'Rate History'), onClick: (row) => { setHistoryCurrencyCode(row.code); setIsHistoryModalOpen(true); }, className: 'text-slate-600 hover:text-blue-600' },
-      { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-600 hover:text-red-600' }
+      { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 hover:text-indigo-600' },
+      { icon: History, tooltip: t('تاریخچه نرخ', 'Rate History'), onClick: (row) => { setHistoryCurrencyCode(row.code); setIsHistoryModalOpen(true); }, className: 'text-slate-400 hover:text-blue-600' },
+      { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
     ];
 
     const gridBulkActions = [
       { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: () => handleBulkAction('activate'), variant: 'outline', className: 'text-emerald-600' },
       { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: () => handleBulkAction('deactivate'), variant: 'outline', className: 'text-slate-600' },
-      { label: t('تنظیم دریافت اتوماتیک', 'Set Auto Fetch'), icon: RefreshCw, onClick: () => handleBulkAction('setAuto'), variant: 'outline', className: 'text-blue-600' },
-      { label: t('حذف دسته‌جمعی', 'Delete Selected'), icon: Trash2, onClick: () => setDeleteConfirm({ isOpen: true, type: 'bulk', data: null }), variant: 'outline', className: 'text-red-600 hover:bg-red-50 border-red-200' },
+      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: () => handleBulkAction('setAuto'), variant: 'outline', className: 'text-blue-600' },
+      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: () => handleBulkAction('setManual'), variant: 'outline', className: 'text-amber-600' },
+      { label: t('حذف گروهی', 'Delete'), icon: Trash2, onClick: () => setDeleteConfirm({ isOpen: true, type: 'bulk', data: null }), variant: 'outline', className: 'text-red-600 border-red-100 bg-red-50/30' },
     ];
 
     const historyColumns = [
@@ -221,7 +218,7 @@
       { field: 'base_currency', header_fa: 'ارز پایه', header_en: 'Base', width: '100px' },
       { field: 'target_currency', header_fa: 'ارز هدف', header_en: 'Target', width: '100px' },
       { field: 'rate', header_fa: 'نرخ', header_en: 'Rate', width: '150px', render: (v) => v.toLocaleString() },
-      { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px' }
+      { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px', render: (v) => <Badge variant="blue" size="sm">{v}</Badge> }
     ];
 
     const historyDataFiltered = useMemo(() => {
@@ -237,7 +234,7 @@
           icon={DollarSign} language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('ارزها', 'Currencies') }]}
           actions={
-             <Button variant="primary" icon={Calculator} onClick={() => { setConvFrom(currencies[0]?.code); setConvTo(currencies[1]?.code); setIsConverterOpen(true); }} className="bg-indigo-600">
+             <Button variant="primary" icon={Calculator} onClick={() => { setConvFrom(currencies[0]?.code); setConvTo(currencies[1]?.code); setIsConverterOpen(true); }} className="bg-indigo-600 shadow-lg shadow-indigo-200">
                {t('تبدیل‌گر نرخ', 'Rate Converter')}
              </Button>
           }
@@ -247,7 +244,6 @@
 
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500">
           
-          {/* TAB 1: Currency List */}
           {activeTab === 'list' && (
             <>
               <AdvancedFilter fields={[{ name: 'code', label: t('کد ارز', 'Code'), type: 'text' }]} language={language} />
@@ -259,6 +255,7 @@
                   actions={currencyRowActions}
                   selectable={true}
                   onSelectionChange={setSelectedRows}
+                  onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
                   bulkActions={selectedRows.length > 0 ? gridBulkActions : undefined}
                   onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
                 />
@@ -266,110 +263,125 @@
             </>
           )}
 
-          {/* TAB 2: Daily Rates (Placeholder layout as requested for next phase) */}
           {activeTab === 'rates' && (
             <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-dashed border-slate-300">
-               <p className="text-slate-400 font-bold">{t('تب نرخ‌های روزانه - فاز بعدی توسعه', 'Daily Rates Tab - Next Development Phase')}</p>
+               <div className="text-center">
+                 <RefreshCw size={40} className="mx-auto text-slate-200 mb-4 animate-spin-slow" />
+                 <p className="text-slate-400 font-bold">{t('تب نرخ‌های روزانه - در حال پیاده‌سازی منطق دیتابیس', 'Daily Rates Tab - Implementing Database Logic')}</p>
+               </div>
             </div>
           )}
         </div>
 
-        {/* Modal: Add/Edit Currency */}
-        <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش ارز', 'Edit Currency') : t('تعریف ارز جدید', 'New Currency')} language={language} width="max-w-2xl">
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <TextField label={t('کد ارز', 'Currency Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required />
-            <TextField label={t('عنوان', 'Title')} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required />
-            <TextField label={t('نماد', 'Symbol')} value={selectedCurrency?.symbol || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, symbol: e.target.value})} isRtl={isRtl} />
+        {/* Modal: Add/Edit Currency - Compact Refined Layout */}
+        <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
+          <div className="p-4 flex flex-col gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <TextField label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" />
+              <TextField label={t('عنوان ارز', 'Title')} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required size="sm" className="sm:col-span-2" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <TextField label={t('نماد', 'Symbol')} value={selectedCurrency?.symbol || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, symbol: e.target.value})} isRtl={isRtl} size="sm" />
+              <SelectField 
+                label={t('نوع دریافت نرخ', 'Fetch Method')} value={selectedCurrency?.fetch_type || 'manual'} onChange={(e) => setSelectedCurrency({...selectedCurrency, fetch_type: e.target.value})} isRtl={isRtl} size="sm"
+                options={[{value: 'manual', label: t('دستی', 'Manual')}, {value: 'auto', label: t('اتوماتیک (API)', 'Automatic')}]} 
+              />
+              <TextField label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
+            </div>
             
-            <SelectField 
-              label={t('نوع دریافت نرخ', 'Rate Fetch Type')} value={selectedCurrency?.fetch_type || 'manual'} onChange={(e) => setSelectedCurrency({...selectedCurrency, fetch_type: e.target.value})} isRtl={isRtl} 
-              options={[{value: 'manual', label: t('دستی', 'Manual')}, {value: 'auto', label: t('اتوماتیک (API)', 'Automatic')}]} 
-            />
-            <TextField label={t('تعداد اعشار', 'Decimal Places')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} />
-            <ToggleField label={t('وضعیت فعالیت', 'Active Status')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} wrapperClassName="flex items-center pt-6" />
+            <div className="flex items-center justify-between p-2 bg-slate-50 rounded-lg border border-slate-100">
+               <span className="text-[12px] text-slate-600 font-bold">{t('وضعیت فعال بودن ارز در کل سیستم:', 'Currency activation status:')}</span>
+               <ToggleField label="" checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
+            </div>
             
-            <div className="col-span-full border-t border-slate-100 pt-4 mt-2">
-               <label className="text-[12px] font-bold text-slate-700 mb-2 block">{t('ارزهای هدف (مبنای تعیین نرخ):', 'Target Currencies:')}</label>
-               <div className="flex flex-col gap-3">
-                 <div className="flex items-end gap-2 max-w-sm">
-                   <SelectField 
-                      value={tempTarget} onChange={(e) => setTempTarget(e.target.value)} isRtl={isRtl} wrapperClassName="flex-1"
-                      options={[
-                        { value: '', label: t('انتخاب کنید...', 'Select...') },
-                        ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
-                      ]} 
-                   />
-                   <Button variant="outline" icon={Plus} onClick={() => { if(tempTarget) { setSelectedCurrency({...selectedCurrency, targets: [...(selectedCurrency.targets || []), tempTarget]}); setTempTarget(''); } }} disabled={!tempTarget}>
+            {/* Target Currencies: Refined UX */}
+            <div className="mt-1">
+               <label className="text-[11px] font-black text-slate-500 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
+               <div className="flex flex-col gap-2">
+                 <div className="flex items-end gap-2">
+                   <div className="flex-1">
+                      <SelectField 
+                        value={tempTarget} onChange={(e) => setTempTarget(e.target.value)} isRtl={isRtl} size="sm"
+                        options={[
+                          { value: '', label: t('انتخاب ارز جهت افزودن...', 'Select currency to add...') },
+                          ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
+                        ]} 
+                      />
+                   </div>
+                   <Button variant="outline" size="sm" icon={Plus} onClick={() => { if(tempTarget) { setSelectedCurrency({...selectedCurrency, targets: [...(selectedCurrency.targets || []), tempTarget]}); setTempTarget(''); } }} disabled={!tempTarget} className="h-[32px] px-3">
                      {t('افزودن', 'Add')}
                    </Button>
                  </div>
-                 <div className="flex flex-wrap gap-2 p-3 min-h-[50px] bg-slate-50 rounded-lg border border-slate-200">
+                 
+                 <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white rounded-lg border border-slate-200 shadow-inner">
                     {(selectedCurrency?.targets || []).map(tcode => (
-                      <Badge key={tcode} variant="indigo" className="flex items-center gap-1 pl-1">
-                        {tcode}
-                        <X size={14} className="cursor-pointer text-indigo-400 hover:text-red-500 transition-colors" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})} />
+                      <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
+                        <span className="font-bold text-[10px]">{tcode}</span>
+                        <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}>
+                           <X size={10} />
+                        </div>
                       </Badge>
                     ))}
-                    {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-400 text-sm">{t('ارز هدفی انتخاب نشده است.', 'No target selected.')}</span>}
+                    {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-300 text-[10px] italic py-1">{t('هیچ ارزی انتخاب نشده است.', 'No targets selected.')}</span>}
                  </div>
                </div>
             </div>
 
-            <div className="col-span-full flex justify-end gap-2 mt-6 pt-4 border-t border-slate-100">
-              <Button variant="outline" onClick={() => setIsCurrencyModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" icon={Save} onClick={handleSaveCurrency}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+              <Button variant="outline" size="sm" onClick={() => setIsCurrencyModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+              <Button variant="primary" size="sm" icon={Save} onClick={handleSaveCurrency} className="px-6">{t('ذخیره تغییرات', 'Save Changes')}</Button>
             </div>
           </div>
         </Modal>
 
-        {/* Modal: Rate History */}
-        <Modal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} title={t(`تاریخچه نرخ‌های ${historyCurrencyCode}`, `Rate History for ${historyCurrencyCode}`)} language={language} width="max-w-4xl">
-           <div className="p-4 h-[400px] flex flex-col">
-              <DataGrid data={historyDataFiltered} columns={historyColumns} language={language} />
+        {/* Modal: History */}
+        <Modal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} title={t(`تاریخچه نرخ‌های ${historyCurrencyCode}`, `Rate History for ${historyCurrencyCode}`)} language={language} width="max-w-3xl">
+           <div className="p-3 h-[350px]">
+              <DataGrid data={historyDataFiltered} columns={historyColumns} language={language} density="compact" />
            </div>
         </Modal>
 
         {/* Modal: Converter */}
-        <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('تبدیل‌گر نرخ ارز', 'Currency Converter')} language={language} width="max-w-xl">
-           <div className="p-6 flex flex-col items-center">
-              <div className="flex flex-col md:flex-row items-end gap-4 w-full">
-                 <CurrencyField label={t('مبلغ', 'Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} wrapperClassName="flex-1" />
-                 <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} wrapperClassName="w-32" options={currencies.map(c => ({value: c.code, label: c.code}))} />
+        <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('تبدیل‌گر نرخ ارز', 'Currency Converter')} language={language} width="max-w-lg">
+           <div className="p-5 flex flex-col items-center">
+              <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
+                 <CurrencyField label={t('مبلغ', 'Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
+                 <SelectField label={t('از', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
                  
-                 <Button variant="outline" className="px-3 text-slate-500 border-slate-300" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
-                    <ArrowRightLeft size={18} className={isRtl ? '' : 'rotate-180'} />
-                 </Button>
+                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
+                    <ArrowRightLeft size={16} className={isRtl ? '' : 'rotate-180'} />
+                 </div>
                  
-                 <SelectField label={t('به ارز', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} wrapperClassName="w-32" options={currencies.map(c => ({value: c.code, label: c.code}))} />
+                 <SelectField label={t('به', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
               </div>
-              <div className="mt-8 w-full p-6 bg-slate-50 border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-2">
-                 <span className="text-[12px] font-bold text-slate-500">{t('نتیجه تبدیل', 'Converted Amount')}</span>
-                 <div className="text-3xl font-black text-indigo-700 tracking-tight" dir="ltr">
-                    {convResult} <span className="text-lg text-slate-400 ml-1">{convTo}</span>
+              <div className="mt-6 w-full p-5 bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
+                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{t('حاصل تبدیل با آخرین نرخ موجود', 'Conversion Result')}</span>
+                 <div className="text-2xl font-black text-indigo-700 font-mono tracking-tight" dir="ltr">
+                    {convResult} <span className="text-sm text-slate-400 font-sans ml-1">{convTo}</span>
                  </div>
               </div>
            </div>
         </Modal>
 
-        {/* Modal: Delete Confirmation (Compliance: No standard confirm() allowed) */}
-        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-4 items-center text-center">
-            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 mb-2">
-               <AlertTriangle size={24} />
+        {/* Delete Confirmation Modal */}
+        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
+          <div className="p-4 flex flex-col gap-3 items-center text-center">
+            <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-1">
+               <AlertTriangle size={22} />
             </div>
-            {/* Compliance: Status/Warning messages at the top of the form */}
-            <div className="bg-amber-50 text-amber-800 p-2 rounded w-full text-sm font-bold mb-2">
-               {t('هشدار: این عملیات غیرقابل بازگشت است.', 'Warning: This action cannot be undone.')}
+            <div className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
+               <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
             </div>
-            <p className="text-slate-600">
+            <p className="text-slate-600 text-sm leading-relaxed">
               {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${selectedRows.length} رکورد انتخاب شده اطمینان دارید؟`, `Are you sure you want to delete ${selectedRows.length} selected records?`)
-                : t(`آیا از حذف ارز ${deleteConfirm.data?.code} اطمینان دارید؟`, `Are you sure you want to delete currency ${deleteConfirm.data?.code}?`)
+                ? t(`آیا از حذف ${selectedRows.length} ارز انتخاب شده اطمینان دارید؟`, `Delete ${selectedRows.length} selected currencies?`)
+                : t(`آیا از حذف ارز ${deleteConfirm.data?.code} و تمام سوابق آن اطمینان دارید؟`, `Delete currency ${deleteConfirm.data?.code} and its history?`)
               }
             </p>
-            <div className="flex gap-2 mt-4 w-full justify-center">
-              <Button variant="outline" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" onClick={executeDelete} className="bg-red-600 hover:bg-red-700">{t('بله، حذف شود', 'Yes, Delete')}</Button>
+            <div className="flex gap-2 mt-4 w-full">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+              <Button variant="primary" size="sm" onClick={executeDelete} className="flex-1 bg-red-600 hover:bg-red-700 border-red-600 shadow-lg shadow-red-100">{t('تایید حذف', 'Delete Now')}</Button>
             </div>
           </div>
         </Modal>
