@@ -918,7 +918,7 @@
                     }
                     data={processedChartData.trendData} 
                     color="indigo" 
-                    height={650} 
+                    height={350} 
                     language={language} 
                     onClick={(item) => lineChartMode === 'monthly' ? setActiveChartMonth(item.label) : null} 
                     activeLabel={lineChartMode === 'monthly' ? activeChartMonth : null}
