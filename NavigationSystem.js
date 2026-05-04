@@ -6,7 +6,8 @@
   const { 
     Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
     ListTree, FileText, Bell, Monitor, Clock,
-    Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning
+    Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning,
+    Maximize2, Minimize2
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -173,6 +174,24 @@
 
     const toggleNode = (id) => setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
     const toggleModuleCollapse = (id) => setCollapsedModules(prev => ({ ...prev, [id]: !prev[id] }));
+
+    const handleExpandAll = () => {
+      const allNodes = {};
+      const traverse = (nodes) => {
+        nodes.forEach(node => {
+          if (node.children && node.children.length > 0) {
+            allNodes[node.id] = true;
+            traverse(node.children);
+          }
+        });
+      };
+      traverse(activeTree);
+      setExpandedNodes(allNodes);
+    };
+
+    const handleCollapseAll = () => {
+      setExpandedNodes({});
+    };
 
     const DynamicIcon = ({ name, size = 18 }) => {
       const Icon = LucideIcons[name] || FileText;
@@ -389,6 +408,16 @@
               <h2 className="font-black text-slate-800 tracking-tight text-[13px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
               <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
             </div>
+            
+            <div className={`flex items-center gap-1 p-1.5 border-b border-slate-200 bg-slate-50 shrink-0 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 delay-100`}>
+              <button onClick={handleExpandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                <Maximize2 size={14}/>
+              </button>
+              <button onClick={handleCollapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                <Minimize2 size={14}/>
+              </button>
+            </div>
+
             <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans"><div className="space-y-[2px]">{activeTree.map(node => renderSidebarNode(node))}</div></div>
           </aside>
         )}
