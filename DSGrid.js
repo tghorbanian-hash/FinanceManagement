@@ -83,7 +83,7 @@
     );
   };
 
-  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false }) => {
+  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
 
@@ -98,14 +98,19 @@
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
     const [showColMenu, setShowColMenu] = useState(false);
+    const [activeHeaderMenu, setActiveHeaderMenu] = useState(null);
     const [selectedRows, setSelectedRows] = useState([]);
     
     const colMenuRef = useRef(null);
+    const headerMenuRef = useRef(null);
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
 
     useEffect(() => {
-      const handleClickOutside = (e) => { if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false); };
+      const handleClickOutside = (e) => { 
+        if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false); 
+        if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setActiveHeaderMenu(null);
+      };
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
@@ -260,8 +265,8 @@
     const renderCellContent = (col, row, rowIndex) => {
       if (col.render) return col.render(row[col.field], row, rowIndex);
       const val = row[col.field];
-      if (col.type === 'toggle') return <ToggleField checked={!!val} disabled isRtl={isRtl} />;
-      if (col.type === 'checkbox') return <CheckboxField checked={!!val} disabled isRtl={isRtl} />;
+      if (col.type === 'toggle') return <ToggleField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
+      if (col.type === 'checkbox') return <CheckboxField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'badge') return <Badge variant={col.badgeColor ? col.badgeColor(val) : 'gray'}>{val}</Badge>;
       return val;
     };
@@ -282,7 +287,7 @@
               <span className="text-[11px] font-black text-indigo-800">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
               <div className="w-px h-4 bg-indigo-200 mx-1"></div>
               {bulkActions.map((act, i) => (
-                <Button key={i} size="sm" variant={act.variant || 'outline'} icon={act.icon} onClick={() => {act.onClick(selectedRows); setSelectedRows([]);}} className="!h-7 text-[10px]">
+                <Button key={i} size="sm" variant={act.variant || 'outline'} icon={act.icon} onClick={() => {act.onClick(selectedRows); setSelectedRows([]);}} className={`!h-7 text-[10px] ${act.className || ''}`}>
                   {act.label}
                 </Button>
               ))}
@@ -314,6 +319,34 @@
           )}
 
           <div className="flex items-center gap-1 shrink-0">
+            {headerMenus && headerMenus.length > 0 && (
+              <div className="flex items-center gap-1.5" ref={headerMenuRef}>
+                {headerMenus.map((menu, idx) => (
+                  <div key={idx} className="relative h-full">
+                    <Button size="sm" variant={menu.variant || 'outline'} icon={menu.icon} onClick={() => setActiveHeaderMenu(activeHeaderMenu === idx ? null : idx)} className={`h-full ${menu.className || ''}`}>
+                      {menu.label}
+                      <ChevronDown size={14} className="ml-1 opacity-70" />
+                    </Button>
+                    {activeHeaderMenu === idx && (
+                      <div className="absolute top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-1.5 z-50 min-w-[180px] right-0 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5">
+                        <div className="text-[11px] font-black text-slate-400 mb-1 px-2 pt-1 uppercase">{menu.label}</div>
+                        {menu.items.map((item, i) => {
+                          if (item.divider) return <div key={i} className="h-px bg-slate-100 my-1"></div>;
+                          return (
+                            <button key={i} onClick={() => { item.onClick(); setActiveHeaderMenu(null); }} className={`flex items-center gap-2 w-full text-start px-2.5 py-2 text-[11.5px] font-bold rounded-md hover:bg-slate-50 transition-colors ${item.className || 'text-slate-700 hover:text-indigo-600'}`}>
+                              {item.icon && <item.icon size={14} className={item.iconClassName || ''} />}
+                              {item.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+              </div>
+            )}
+            
             <div className="relative flex items-center h-full" ref={colMenuRef}>
               <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
               {showColMenu && (

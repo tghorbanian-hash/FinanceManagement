@@ -20,12 +20,12 @@
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [isLoading, setIsLoading] = useState(false);
     
-    // States: Currencies (Tab 1)
+    // States: Currencies
     const [currencies, setCurrencies] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
-    // States: Rates (Tab 2)
+    // States: Rates
     const [rates, setRates] = useState([]);
     const [rateFilters, setRateFilters] = useState({});
     
@@ -83,8 +83,6 @@
       fetchRates();
     }, []);
 
-    // ---------------- LOGIC: TAB 1 (Currencies) ----------------
-
     const handleSaveCurrency = async () => {
       try {
         if (!selectedCurrency.code || !selectedCurrency.title) {
@@ -100,6 +98,7 @@
           decimal_places: parseInt(selectedCurrency.decimal_places) || 0,
           targets: selectedCurrency.targets || []
         };
+
         if (selectedCurrency.id) {
           const { error } = await supabase.from('fm_currencies').update(payload).eq('id', selectedCurrency.id);
           if (error) throw error;
@@ -137,8 +136,6 @@
       }
     };
 
-    // ---------------- LOGIC: TAB 2 (Rates) ----------------
-
     const handleXeFetch = async () => {
       try {
         const autoCurrencies = currencies.filter(c => c.fetch_type === 'auto');
@@ -157,7 +154,7 @@
               newRates.push({
                  base_currency: c.code,
                  target_currency: tCode,
-                 rate: parseFloat((Math.random() * 50000 + 10000).toFixed(2)), // Mock API fetch logic
+                 rate: parseFloat((Math.random() * 50000 + 10000).toFixed(2)),
                  rate_date: dateStr,
                  created_at: isoString,
                  source: 'XE'
@@ -231,8 +228,6 @@
       }
     };
 
-    // ---------------- LOGIC: DELETE ----------------
-
     const executeDelete = async () => {
       try {
         if (deleteConfirm.source === 'currency') {
@@ -262,8 +257,6 @@
         setDeleteConfirm({ isOpen: false, type: null, data: null, source: null });
       }
     };
-
-    // ---------------- LOGIC: CONVERTER ----------------
 
     const getRateValue = (baseCode, targetCode, targetDate) => {
       if (baseCode === targetCode) return 1;
@@ -309,8 +302,6 @@
        setConvTo(currencies[1]?.code || '');
        setIsConverterOpen(true);
     };
-
-    // ---------------- UI: COLUMNS & TABS ----------------
 
     const tabs = [
       { id: 'list', label: t('فهرست ارزها', 'Currency List'), icon: Globe },
@@ -393,7 +384,6 @@
 
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500">
           
-          {/* TAB 1: Currency List */}
           {activeTab === 'list' && (
             <>
               <AdvancedFilter fields={[{ name: 'code', label: t('کد ارز', 'Code'), type: 'text' }]} language={language} />
@@ -415,7 +405,6 @@
             </>
           )}
 
-          {/* TAB 2: Rate History */}
           {activeTab === 'rates' && (
             <>
               <AdvancedFilter 
@@ -428,20 +417,7 @@
                 onFilter={setRateFilters}
                 onClear={() => setRateFilters({})}
                 language={language}
-              >
-                <div className="flex gap-2 w-full flex-wrap">
-                   <Button variant="outline" size="sm" icon={RefreshCw} onClick={handleXeFetch} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50">
-                     {t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE')}
-                   </Button>
-                   <Button variant="outline" size="sm" icon={Edit} onClick={openManualUpdateModal} className="text-blue-600 border-blue-200 hover:bg-blue-50">
-                     {t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update')}
-                   </Button>
-                   <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block mt-1"></div>
-                   <Button variant="primary" size="sm" icon={Calculator} onClick={openConverter} className="bg-indigo-600 shadow-sm shadow-indigo-200">
-                     {t('تبدیل‌گر (ماشین حساب)', 'Currency Converter')}
-                   </Button>
-                </div>
-              </AdvancedFilter>
+              />
               
               <div className="flex-1 min-h-0">
                  <DataGrid 
@@ -452,6 +428,19 @@
                    bulkActions={historyBulkActions}
                    actions={[
                      { icon: Trash2, tooltip: t('حذف سابقه', 'Delete Record'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), className: 'text-slate-400 hover:text-red-600' }
+                   ]}
+                   headerMenus={[
+                     {
+                       label: t('عملیات نرخ‌گذاری', 'Rate Operations'),
+                       icon: Settings,
+                       className: 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200',
+                       items: [
+                         { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 hover:text-emerald-800' },
+                         { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 hover:text-blue-800' },
+                         { divider: true },
+                         { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 hover:text-indigo-600' }
+                       ]
+                     }
                    ]}
                  />
               </div>
