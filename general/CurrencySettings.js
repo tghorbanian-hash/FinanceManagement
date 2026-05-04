@@ -118,7 +118,6 @@
           const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
         } else if (deleteConfirm.type === 'bulk') {
-          // در حالت حذف گروهی، شناسه رکوردها در deleteConfirm.data قرار دارد
           const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
           if (error) throw error;
         }
@@ -207,7 +206,7 @@
       { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600' },
       { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600' },
       { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600' },
-      { label: t('حذف گروهی', 'Delete'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'outline', className: 'text-red-600 border-red-100 bg-red-50/30' },
+      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'danger-outline' },
     ];
 
     const historyColumns = [
@@ -269,7 +268,7 @@
           )}
         </div>
 
-        {/* Modal: Add/Edit Currency - Compact Refined Layout */}
+        {/* Modal: Add/Edit Currency */}
         <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
           <div className="p-4 flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
