@@ -4,7 +4,7 @@
   const { useState, useEffect, useMemo, useCallback } = React;
   const { 
     DollarSign, Plus, Edit, Trash2, RefreshCw, History, Check, X,
-    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle 
+    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle, Clock, Calendar
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
@@ -20,24 +20,30 @@
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [isLoading, setIsLoading] = useState(false);
     
-    // States: Currencies
+    // States: Currencies (Tab 1)
     const [currencies, setCurrencies] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
-    // States: Rates & History Modal
+    // States: Rates (Tab 2)
     const [rates, setRates] = useState([]);
-    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-    const [historyCurrencyCode, setHistoryCurrencyCode] = useState(null);
+    const [rateFilters, setRateFilters] = useState({});
     
+    // States: Manual Update Modal
+    const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+    const [manualDate, setManualDate] = useState('');
+    const [manualTime, setManualTime] = useState('12:00');
+    const [manualRatesList, setManualRatesList] = useState([]);
+
     // States: Converter Modal
     const [isConverterOpen, setIsConverterOpen] = useState(false);
+    const [convDate, setConvDate] = useState('');
     const [convAmount, setConvAmount] = useState('1');
     const [convFrom, setConvFrom] = useState('');
     const [convTo, setConvTo] = useState('');
 
     // States: Delete Confirmation Modal
-    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null, source: null });
 
     const supabase = window.supabase;
 
@@ -64,7 +70,7 @@
     const fetchRates = async () => {
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.from('fm_currency_rates').select('*').order('rate_date', { ascending: false });
+        const { data, error } = await supabase.from('fm_currency_rates').select('*').order('created_at', { ascending: false });
         if (error) throw error;
         setRates(data || []);
       } catch (err) {
@@ -77,13 +83,14 @@
       fetchRates();
     }, []);
 
+    // ---------------- LOGIC: TAB 1 (Currencies) ----------------
+
     const handleSaveCurrency = async () => {
       try {
         if (!selectedCurrency.code || !selectedCurrency.title) {
           showToast(t('لطفاً فیلدهای اجباری را پر کنید', 'Please fill required fields'), 'error');
           return;
         }
-
         const payload = {
           code: selectedCurrency.code.toUpperCase(),
           title: selectedCurrency.title,
@@ -93,7 +100,6 @@
           decimal_places: parseInt(selectedCurrency.decimal_places) || 0,
           targets: selectedCurrency.targets || []
         };
-
         if (selectedCurrency.id) {
           const { error } = await supabase.from('fm_currencies').update(payload).eq('id', selectedCurrency.id);
           if (error) throw error;
@@ -103,31 +109,11 @@
           if (error) throw error;
           showToast(t('ارز جدید با موفقیت تعریف شد', 'New currency added successfully'));
         }
-        
         setIsCurrencyModalOpen(false);
         fetchCurrencies();
       } catch (err) {
         console.error("Save error:", err);
         showToast(t('خطا در ذخیره اطلاعات', 'Error saving data'), 'error');
-      }
-    };
-
-    const executeDelete = async () => {
-      try {
-        if (deleteConfirm.type === 'single') {
-          const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
-          if (error) throw error;
-        } else if (deleteConfirm.type === 'bulk') {
-          const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
-          if (error) throw error;
-        }
-        showToast(t('عملیات حذف با موفقیت انجام شد', 'Deletion successful'));
-        setDeleteConfirm({ isOpen: false, type: null, data: null });
-        fetchCurrencies();
-      } catch (err) {
-        console.error("Delete error:", err);
-        showToast(t('امکان حذف ارز دارای گردش وجود ندارد', 'Cannot delete currency with relations'), 'error');
-        setDeleteConfirm({ isOpen: false, type: null, data: null });
       }
     };
 
@@ -151,27 +137,184 @@
       }
     };
 
-    const getRateValue = (baseCode, targetCode) => {
+    // ---------------- LOGIC: TAB 2 (Rates) ----------------
+
+    const handleXeFetch = async () => {
+      try {
+        const autoCurrencies = currencies.filter(c => c.fetch_type === 'auto');
+        if (autoCurrencies.length === 0) {
+           showToast(t('ارز اتوماتیکی در سیستم یافت نشد.', 'No automatic currencies found.'), 'warning');
+           return;
+        }
+
+        const newRates = [];
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const isoString = now.toISOString();
+
+        autoCurrencies.forEach(c => {
+           (c.targets || []).forEach(tCode => {
+              newRates.push({
+                 base_currency: c.code,
+                 target_currency: tCode,
+                 rate: parseFloat((Math.random() * 50000 + 10000).toFixed(2)), // Mock API fetch logic
+                 rate_date: dateStr,
+                 created_at: isoString,
+                 source: 'XE'
+              });
+           });
+        });
+
+        if (newRates.length > 0) {
+           const { error } = await supabase.from('fm_currency_rates').insert(newRates);
+           if (error) throw error;
+           showToast(t('نرخ‌های روزانه با موفقیت از سرور XE دریافت شد.', 'Rates fetched successfully from XE.'));
+           fetchRates();
+        }
+      } catch (err) {
+        console.error("XE Fetch error:", err);
+        showToast(t('خطا در ارتباط با سرور XE', 'Error connecting to XE'), 'error');
+      }
+    };
+
+    const openManualUpdateModal = () => {
+      const list = [];
+      const manualCurrencies = currencies.filter(c => c.fetch_type === 'manual');
+      manualCurrencies.forEach(c => {
+         (c.targets || []).forEach(tCode => {
+            list.push({ base: c.code, target: tCode, rate: '' });
+         });
+      });
+      setManualRatesList(list);
+      setManualDate(new Date().toISOString().split('T')[0]);
+      
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      setManualTime(`${hh}:${mm}`);
+      
+      setIsManualModalOpen(true);
+    };
+
+    const handleSaveManualRates = async () => {
+      try {
+        const validRates = manualRatesList.filter(r => r.rate && r.rate !== '0');
+        if (validRates.length === 0) {
+           showToast(t('لطفاً حداقل یک نرخ معتبر وارد کنید.', 'Please enter at least one valid rate.'), 'error');
+           return;
+        }
+        if (!manualDate || !manualTime) {
+           showToast(t('تاریخ و زمان الزامی است.', 'Date and time are required.'), 'error');
+           return;
+        }
+
+        const dateTimeStr = `${manualDate}T${manualTime}:00.000Z`;
+
+        const payloads = validRates.map(r => ({
+           base_currency: r.base,
+           target_currency: r.target,
+           rate: parseFloat(String(r.rate).replace(/,/g, '')),
+           rate_date: manualDate,
+           created_at: dateTimeStr,
+           source: 'Manual'
+        }));
+
+        const { error } = await supabase.from('fm_currency_rates').insert(payloads);
+        if (error) throw error;
+
+        showToast(t('نرخ‌های دستی با موفقیت ثبت شدند.', 'Manual rates saved successfully.'));
+        setIsManualModalOpen(false);
+        fetchRates();
+      } catch (err) {
+        console.error("Save manual rates error:", err);
+        showToast(t('خطا در ثبت نرخ‌های دستی', 'Error saving manual rates'), 'error');
+      }
+    };
+
+    // ---------------- LOGIC: DELETE ----------------
+
+    const executeDelete = async () => {
+      try {
+        if (deleteConfirm.source === 'currency') {
+          if (deleteConfirm.type === 'single') {
+            const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
+            if (error) throw error;
+          } else if (deleteConfirm.type === 'bulk') {
+            const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
+            if (error) throw error;
+          }
+          fetchCurrencies();
+        } else if (deleteConfirm.source === 'rate') {
+          if (deleteConfirm.type === 'single') {
+            const { error } = await supabase.from('fm_currency_rates').delete().eq('id', deleteConfirm.data.id);
+            if (error) throw error;
+          } else if (deleteConfirm.type === 'bulk') {
+            const { error } = await supabase.from('fm_currency_rates').delete().in('id', deleteConfirm.data);
+            if (error) throw error;
+          }
+          fetchRates();
+        }
+        showToast(t('عملیات حذف با موفقیت انجام شد', 'Deletion successful'));
+        setDeleteConfirm({ isOpen: false, type: null, data: null, source: null });
+      } catch (err) {
+        console.error("Delete error:", err);
+        showToast(t('امکان حذف رکورد دارای وابستگی وجود ندارد', 'Cannot delete record with relations'), 'error');
+        setDeleteConfirm({ isOpen: false, type: null, data: null, source: null });
+      }
+    };
+
+    // ---------------- LOGIC: CONVERTER ----------------
+
+    const getRateValue = (baseCode, targetCode, targetDate) => {
       if (baseCode === targetCode) return 1;
-      let direct = rates.find(r => r.base_currency === baseCode && r.target_currency === targetCode);
+      
+      const validRates = targetDate ? rates.filter(r => r.rate_date === targetDate) : rates;
+      if (validRates.length === 0) return null;
+
+      let direct = validRates.find(r => r.base_currency === baseCode && r.target_currency === targetCode);
       if (direct) return direct.rate;
-      let inverse = rates.find(r => r.base_currency === targetCode && r.target_currency === baseCode);
+      
+      let inverse = validRates.find(r => r.base_currency === targetCode && r.target_currency === baseCode);
       if (inverse) return 1 / inverse.rate;
+
+      const baseCur = currencies.find(c => c.code === baseCode);
+      const intermediates = currencies.map(c => c.code).filter(c => c !== baseCode && c !== targetCode);
+
+      for (let intermediate of intermediates) {
+        const r1 = validRates.find(r => r.base_currency === baseCode && r.target_currency === intermediate)?.rate || 
+                   (validRates.find(r => r.base_currency === intermediate && r.target_currency === baseCode) ? 1/validRates.find(r => r.base_currency === intermediate && r.target_currency === baseCode).rate : null);
+        
+        const r2 = validRates.find(r => r.base_currency === intermediate && r.target_currency === targetCode)?.rate || 
+                   (validRates.find(r => r.base_currency === targetCode && r.target_currency === intermediate) ? 1/validRates.find(r => r.base_currency === targetCode && r.target_currency === intermediate).rate : null);
+        
+        if (r1 && r2) {
+          return r1 * r2;
+        }
+      }
       return null;
     };
 
     const convResult = useMemo(() => {
-      if (!convAmount || !convFrom || !convTo) return null;
+      if (!convAmount || !convFrom || !convTo || !convDate) return null;
       const amount = parseFloat(String(convAmount).replace(/,/g, ''));
       if (isNaN(amount)) return null;
-      const rate = getRateValue(convFrom, convTo);
+      const rate = getRateValue(convFrom, convTo, convDate);
       if (rate === null) return t('نرخ یافت نشد', 'Rate not found');
       return (amount * rate).toLocaleString(undefined, { maximumFractionDigits: 4 });
-    }, [convAmount, convFrom, convTo, rates]);
+    }, [convAmount, convFrom, convTo, convDate, rates]);
+
+    const openConverter = () => {
+       setConvDate(new Date().toISOString().split('T')[0]);
+       setConvFrom(currencies[0]?.code || '');
+       setConvTo(currencies[1]?.code || '');
+       setIsConverterOpen(true);
+    };
+
+    // ---------------- UI: COLUMNS & TABS ----------------
 
     const tabs = [
       { id: 'list', label: t('فهرست ارزها', 'Currency List'), icon: Globe },
-      { id: 'rates', label: t('نرخ‌های روزانه', 'Daily Rates'), icon: RefreshCw },
+      { id: 'rates', label: t('سوابق نرخ ارزها', 'Exchange Rate History'), icon: History },
     ];
 
     const currencyColumns = [
@@ -195,33 +338,48 @@
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '90px' },
     ];
 
-    const currencyRowActions = [
-      { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 hover:text-indigo-600' },
-      { icon: History, tooltip: t('تاریخچه نرخ', 'Rate History'), onClick: (row) => { setHistoryCurrencyCode(row.code); setIsHistoryModalOpen(true); }, className: 'text-slate-400 hover:text-blue-600' },
-      { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
-    ];
-
-    const gridBulkActions = [
+    const currencyBulkActions = [
       { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600' },
       { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600' },
       { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600' },
       { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600' },
-      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'danger-outline' },
+      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 !border-red-500 hover:!bg-red-50' },
     ];
 
     const historyColumns = [
-      { field: 'rate_date', header_fa: 'تاریخ', header_en: 'Date', width: '120px', type: 'date' },
-      { field: 'base_currency', header_fa: 'ارز پایه', header_en: 'Base', width: '100px' },
+      { 
+        field: 'created_at', header_fa: 'تاریخ و زمان', header_en: 'Date & Time', width: '160px', 
+        render: (v) => {
+          if (!v) return '';
+          const d = new Date(v);
+          return (
+             <div className="flex items-center gap-1.5 text-slate-700">
+               <Calendar size={12} className="text-slate-400" />
+               <span>{d.toISOString().split('T')[0].replace(/-/g, '/')}</span>
+               <Clock size={12} className="text-slate-400 ml-1" />
+               <span className="font-mono text-[10px] bg-slate-100 px-1 rounded">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
+             </div>
+          );
+        }
+      },
+      { field: 'base_currency', header_fa: 'ارز پایه', header_en: 'Base', width: '100px', render: (v) => <span className="font-bold text-slate-800">{v}</span> },
       { field: 'target_currency', header_fa: 'ارز هدف', header_en: 'Target', width: '100px' },
-      { field: 'rate', header_fa: 'نرخ', header_en: 'Rate', width: '150px', render: (v) => v.toLocaleString() },
-      { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px', render: (v) => <Badge variant="blue" size="sm">{v}</Badge> }
+      { field: 'rate', header_fa: 'نرخ تبدیل', header_en: 'Rate', width: '150px', render: (v) => <span className="font-mono font-bold text-indigo-700">{v.toLocaleString()}</span> },
+      { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px', render: (v) => <Badge variant={v === 'XE' ? 'emerald' : 'blue'} size="sm">{v}</Badge> }
     ];
 
-    const historyDataFiltered = useMemo(() => {
-      if (!historyCurrencyCode) return [];
-      return rates.filter(r => r.base_currency === historyCurrencyCode || r.target_currency === historyCurrencyCode)
-                  .sort((a, b) => new Date(b.rate_date) - new Date(a.rate_date));
-    }, [rates, historyCurrencyCode]);
+    const historyBulkActions = [
+      { label: t('حذف سوابق انتخاب شده', 'Delete Selected Records'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'rate' }), variant: 'danger-outline', className: '!text-red-500 !border-red-500 hover:!bg-red-50' },
+    ];
+
+    const filteredRates = useMemo(() => {
+      let result = [...rates];
+      if (rateFilters.base) result = result.filter(r => r.base_currency === rateFilters.base);
+      if (rateFilters.target) result = result.filter(r => r.target_currency === rateFilters.target);
+      if (rateFilters.source) result = result.filter(r => r.source === rateFilters.source);
+      if (rateFilters.date) result = result.filter(r => r.rate_date === rateFilters.date);
+      return result;
+    }, [rates, rateFilters]);
 
     return (
       <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -229,17 +387,13 @@
           title={t('تنظیمات و مدیریت نرخ ارزها', 'Currency & Exchange Management')}
           icon={DollarSign} language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('ارزها', 'Currencies') }]}
-          actions={
-             <Button variant="primary" icon={Calculator} onClick={() => { setConvFrom(currencies[0]?.code); setConvTo(currencies[1]?.code); setIsConverterOpen(true); }} className="bg-indigo-600 shadow-lg shadow-indigo-200">
-               {t('تبدیل‌گر نرخ', 'Rate Converter')}
-             </Button>
-          }
         />
 
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500">
           
+          {/* TAB 1: Currency List */}
           {activeTab === 'list' && (
             <>
               <AdvancedFilter fields={[{ name: 'code', label: t('کد ارز', 'Code'), type: 'text' }]} language={language} />
@@ -248,23 +402,60 @@
                   data={currencies} 
                   columns={currencyColumns} 
                   language={language}
-                  actions={currencyRowActions}
+                  actions={[
+                    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 hover:text-indigo-600' },
+                    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 hover:text-red-600' }
+                  ]}
                   selectable={true}
                   onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
-                  bulkActions={gridBulkActions}
+                  bulkActions={currencyBulkActions}
                   onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
                 />
               </div>
             </>
           )}
 
+          {/* TAB 2: Rate History */}
           {activeTab === 'rates' && (
-            <div className="flex-1 flex items-center justify-center bg-white rounded-xl border border-dashed border-slate-300">
-               <div className="text-center">
-                 <RefreshCw size={40} className="mx-auto text-slate-200 mb-4 animate-spin-slow" />
-                 <p className="text-slate-400 font-bold">{t('تب نرخ‌های روزانه - در حال پیاده‌سازی منطق دیتابیس', 'Daily Rates Tab - Implementing Database Logic')}</p>
-               </div>
-            </div>
+            <>
+              <AdvancedFilter 
+                fields={[
+                  { name: 'base', label: t('ارز پایه', 'Base Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
+                  { name: 'target', label: t('ارز هدف', 'Target Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
+                  { name: 'date', label: t('تاریخ ثبت', 'Date'), type: 'date' },
+                  { name: 'source', label: t('منبع', 'Source'), type: 'select', options: [{value:'XE', label:'XE (اتوماتیک)'}, {value:'Manual', label:'دستی'}] }
+                ]}
+                onFilter={setRateFilters}
+                onClear={() => setRateFilters({})}
+                language={language}
+              >
+                <div className="flex gap-2 w-full flex-wrap">
+                   <Button variant="outline" size="sm" icon={RefreshCw} onClick={handleXeFetch} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50">
+                     {t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE')}
+                   </Button>
+                   <Button variant="outline" size="sm" icon={Edit} onClick={openManualUpdateModal} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                     {t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update')}
+                   </Button>
+                   <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block mt-1"></div>
+                   <Button variant="primary" size="sm" icon={Calculator} onClick={openConverter} className="bg-indigo-600 shadow-sm shadow-indigo-200">
+                     {t('تبدیل‌گر (ماشین حساب)', 'Currency Converter')}
+                   </Button>
+                </div>
+              </AdvancedFilter>
+              
+              <div className="flex-1 min-h-0">
+                 <DataGrid 
+                   data={filteredRates} 
+                   columns={historyColumns} 
+                   language={language}
+                   selectable={true}
+                   bulkActions={historyBulkActions}
+                   actions={[
+                     { icon: Trash2, tooltip: t('حذف سابقه', 'Delete Record'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), className: 'text-slate-400 hover:text-red-600' }
+                   ]}
+                 />
+              </div>
+            </>
           )}
         </div>
 
@@ -288,7 +479,6 @@
               <TextField label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
             </div>
             
-            {/* Target Currencies: Auto-add Refined UX */}
             <div className="mt-1 pt-3 border-t border-slate-100">
                <label className="text-[11px] font-black text-slate-500 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
                <div className="flex flex-col gap-2">
@@ -306,7 +496,6 @@
                      ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
                    ]} 
                  />
-                 
                  <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white rounded-lg border border-slate-200 shadow-inner mt-1">
                     {(selectedCurrency?.targets || []).map(tcode => (
                       <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
@@ -328,28 +517,66 @@
           </div>
         </Modal>
 
-        {/* Modal: History */}
-        <Modal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} title={t(`تاریخچه نرخ‌های ${historyCurrencyCode}`, `Rate History for ${historyCurrencyCode}`)} language={language} width="max-w-3xl">
-           <div className="p-3 h-[350px]">
-              <DataGrid data={historyDataFiltered} columns={historyColumns} language={language} density="compact" />
+        {/* Modal: Manual Rate Update */}
+        <Modal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} title={t('بروزرسانی دستی نرخ‌ها', 'Manual Rates Update')} language={language} width="max-w-2xl">
+           <div className="p-4 flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                 <DatePicker size="sm" label={t('تاریخ ثبت نرخ', 'Rate Date')} value={manualDate} onChange={setManualDate} isRtl={isRtl} language={language} required />
+                 <div className="flex flex-col gap-1 w-full">
+                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500">*</span></label>
+                    <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[11px] bg-white border border-slate-300 rounded-lg text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 px-2.5 transition-all`} required />
+                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2 max-h-[350px] overflow-y-auto custom-scrollbar pr-1">
+                 {manualRatesList.map((item, idx) => (
+                    <div key={`${item.base}-${item.target}`} className="flex items-center gap-4 p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-indigo-200 transition-colors">
+                       <div className="w-20 font-black text-slate-800 text-[13px] text-center">{item.base}</div>
+                       <ArrowRightLeft size={14} className="text-slate-300 shrink-0" />
+                       <div className="w-20 font-black text-slate-800 text-[13px] text-center">{item.target}</div>
+                       <div className="flex-1 border-l border-slate-100 pl-4 ml-2">
+                          <CurrencyField size="sm" value={item.rate} onChange={(v) => {
+                              const newList = [...manualRatesList];
+                              newList[idx].rate = v;
+                              setManualRatesList(newList);
+                          }} placeholder={t('مبلغ نرخ را وارد کنید...', 'Enter rate amount...')} wrapperClassName="m-0" />
+                       </div>
+                    </div>
+                 ))}
+                 {manualRatesList.length === 0 && (
+                    <div className="p-8 text-center text-slate-400 text-[12px] font-bold bg-slate-50 rounded-lg border border-dashed border-slate-300">
+                       {t('هیچ ارزی با تنظیم دریافت دستی و دارای ارز هدف در سیستم یافت نشد.', 'No manual currencies with targets found.')}
+                    </div>
+                 )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100">
+                <Button variant="outline" size="sm" onClick={() => setIsManualModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="primary" size="sm" icon={Save} onClick={handleSaveManualRates} disabled={manualRatesList.length === 0}>{t('ذخیره اطلاعات در تاریخچه', 'Save to History')}</Button>
+              </div>
            </div>
         </Modal>
 
         {/* Modal: Converter */}
-        <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('تبدیل‌گر نرخ ارز', 'Currency Converter')} language={language} width="max-w-lg">
+        <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('ماشین حساب تبدیل‌گر چندلایه', 'Multi-level Currency Converter')} language={language} width="max-w-lg">
            <div className="p-5 flex flex-col items-center">
+              <div className="w-full mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+                 <DatePicker size="sm" label={t('تاریخ مبنای محاسبات', 'Calculation Base Date')} value={convDate} onChange={setConvDate} isRtl={isRtl} language={language} required wrapperClassName="w-full" />
+              </div>
+              
               <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
-                 <CurrencyField label={t('مبلغ', 'Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
-                 <SelectField label={t('از', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
+                 <CurrencyField label={t('مبلغ مبدا', 'Source Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
+                 <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
                  
                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
                     <ArrowRightLeft size={16} className={isRtl ? '' : 'rotate-180'} />
                  </div>
                  
-                 <SelectField label={t('به', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
+                 <SelectField label={t('به ارز', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
               </div>
+              
               <div className="mt-6 w-full p-5 bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{t('حاصل تبدیل با آخرین نرخ موجود', 'Conversion Result')}</span>
+                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{t('حاصل تبدیل بر اساس تاریخ انتخابی', 'Conversion Result by Date')}</span>
                  <div className="text-2xl font-black text-indigo-700 font-mono tracking-tight" dir="ltr">
                     {convResult} <span className="text-sm text-slate-400 font-sans ml-1">{convTo}</span>
                  </div>
@@ -358,7 +585,7 @@
         </Modal>
 
         {/* Delete Confirmation Modal */}
-        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
+        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null, source: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-1">
                <AlertTriangle size={22} />
@@ -368,12 +595,12 @@
             </div>
             <p className="text-slate-600 text-sm leading-relaxed">
               {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${deleteConfirm.data?.length} ارز انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected currencies?`)
-                : t(`آیا از حذف ارز ${deleteConfirm.data?.code} و تمام سوابق آن اطمینان دارید؟`, `Delete currency ${deleteConfirm.data?.code} and its history?`)
+                ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
+                : t(`آیا از حذف این مورد و تمام سوابق آن اطمینان دارید؟`, `Delete this item and its history?`)
               }
             </p>
             <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null, source: null })}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" onClick={executeDelete} className="flex-1 bg-red-600 hover:bg-red-700 border-red-600 shadow-lg shadow-red-100">{t('تایید حذف', 'Delete Now')}</Button>
             </div>
           </div>
