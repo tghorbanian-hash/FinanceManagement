@@ -26,11 +26,12 @@
     );
   };
 
+  // کانتینر چارت اصلاح شد تا استایل height مستقیماً به باکسی که در صفحه است اعمال شود
   const ChartContainer = ({ title, action, isMaximized, setIsMaximized, children, height, isRtl, t }) => {
     const renderHeader = (isMaxMode = false) => {
       if (!title && !action) return null;
       return (
-        <div className={`flex items-center justify-between border-b border-slate-200 px-3 shrink-0 ${isMaxMode ? 'h-9 bg-slate-50 rounded-t-xl' : 'h-9 bg-white rounded-t-xl'}`}>
+        <div className={`flex items-center justify-between border-b border-slate-200 px-3 shrink-0 ${isMaxMode ? 'h-10 bg-slate-50 rounded-t-xl' : 'h-10 bg-white rounded-t-xl'}`}>
            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setIsMaximized(!isMaxMode)} 
@@ -48,16 +49,16 @@
 
     if (isMaximized) {
       return (
-        <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
           {renderHeader(false)}
-          <div className="flex-1 min-h-0 relative w-full p-3" style={{ height }}>
+          <div className="flex-1 min-h-0 relative w-full p-4">
             {children}
           </div>
           
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
-          <div className="fixed inset-4 sm:inset-10 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="fixed inset-4 sm:inset-8 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
             {renderHeader(true)}
-            <div className="flex-1 p-3 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
+            <div className="flex-1 p-4 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
                {children}
             </div>
           </div>
@@ -66,9 +67,9 @@
     }
     
     return (
-      <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
          {renderHeader(false)}
-         <div className="flex-1 min-h-0 flex flex-col relative w-full p-3" style={{ height }}>
+         <div className="flex-1 min-h-0 flex flex-col relative w-full p-4">
             {children}
          </div>
       </div>
@@ -259,7 +260,7 @@
     return (
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
-          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-[160px]'}`}>
+          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-full max-w-full'}`}>
             {data.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 border-4 border-slate-100 rounded-full">
                 {t('بدون داده', 'No data')}
@@ -340,7 +341,7 @@
     return (
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
-          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-[160px]'}`}>
+          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-full max-w-full'}`}>
             {data.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 bg-slate-50 rounded-full">
                 {t('بدون داده', 'No data')}
@@ -410,11 +411,11 @@
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="w-full h-full flex flex-col items-center justify-center font-sans relative">
           <div 
-            className={`relative w-full ${isMaximized ? 'max-w-[400px]' : 'max-w-[200px]'}`} 
+            className={`relative w-full ${isMaximized ? 'max-w-[400px]' : 'h-full flex items-end justify-center'}`} 
             onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${label}: ${safeValue.toLocaleString()}` })}
             onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '' })}
           >
-            <svg viewBox="0 0 100 55" className="w-full h-full overflow-visible">
+            <svg viewBox="0 0 100 55" className={`w-full ${!isMaximized ? 'max-h-full' : ''} overflow-visible`}>
               <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" strokeWidth="12" strokeLinecap="round" />
               <path 
                 d="M 10 50 A 40 40 0 0 1 90 50" 
