@@ -1,6 +1,10 @@
 /* Filename: NotificationSidebar.js */
 (() => {
-    const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
+  const React = window.React;
+  const { useState, useEffect, useMemo } = React;
+  const { X, Trash2, Bell, CheckCircle2, AlertCircle, Info, Loader2, Check } = window.LucideIcons || {};
+
+  const NotificationSidebar = ({ isOpen, onClose, language = 'fa', onUpdateUnread }) => {
     const { Button, Badge, EmptyState, Dialog, Toast } = window.DesignSystem || {};
     const supabase = window.supabase;
     
@@ -293,5 +297,5 @@
     );
   };
 
-window.NotificationSidebar = NotificationSidebar
+  window.NotificationSidebar = NotificationSidebar;
 })();
