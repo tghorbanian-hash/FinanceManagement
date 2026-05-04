@@ -14,7 +14,7 @@
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
-      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Dialog, Toast,
+      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
       Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
     } = window.DesignSystem || {};
     
@@ -678,10 +678,10 @@
                         <div className="flex flex-col h-full">
                           <div className="flex-1 space-y-4">
                             {isCreatingNode && newTargetParentId && (
-                              <Alert 
-                                type="info" 
-                                message={<span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>} 
-                              />
+                              <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-800 text-[12px]">
+                                <Info size={16} className="text-indigo-500" />
+                                <span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>
+                              </div>
                             )}
                             <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
                             <TextField size="sm" label={t('عنوان حساب', 'Account Title')} value={treeFormData.title || ''} onChange={(e) => setTreeFormData({...treeFormData, title: e.target.value})} isRtl={isRtl} required />
@@ -861,19 +861,20 @@
                   onFilter={(vals) => setDashFilterYear(vals.year || '1402')}
                   onClear={() => setDashFilterYear('1402')}
                   language={language}
+                  defaultOpen={true}
                 >
                   {(activeChartMonth || activeChartCategory) && (
                     <div className="flex items-center gap-3 w-full animate-in fade-in duration-300">
                       <span className="text-[11px] font-bold text-slate-500">{t('فیلترهای فعال از روی نمودارها:', 'Active Chart Filters:')}</span>
                       <div className="flex flex-wrap items-center gap-2">
                         {activeChartMonth && (
-                          <Badge variant="indigo" className="flex items-center gap-1.5 shadow-sm">
+                          <Badge variant="indigo" className="flex items-center gap-1.5 shadow-sm px-2">
                             <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
                             <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
                           </Badge>
                         )}
                         {activeChartCategory && (
-                          <Badge variant="emerald" className="flex items-center gap-1.5 shadow-sm">
+                          <Badge variant="emerald" className="flex items-center gap-1.5 shadow-sm px-2">
                             <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
                             <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
                           </Badge>
@@ -900,6 +901,7 @@
                     height={220} 
                     language={language} 
                     onClick={(item) => lineChartMode === 'monthly' ? setActiveChartMonth(item.label) : null} 
+                    activeLabel={lineChartMode === 'monthly' ? activeChartMonth : null}
                   />
                 </div>
 
@@ -937,7 +939,7 @@
                 <DonutChart 
                   title={t('نمایش دایره ای (Donut)', 'Donut View')}
                   data={processedChartData.pieData} 
-                  height={180} 
+                  height={200} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -951,7 +953,7 @@
                   label={barChartMode === 'amount' ? t('مجموع (ریال)', 'Total (IRR)') : t('مجموع (تعداد)', 'Total Count')} 
                   color="purple" 
                   language={language} 
-                  height={160} 
+                  height={180} 
                 />
               </div>
             </div>
@@ -1074,8 +1076,6 @@
             onClose={() => setToastState(prev => ({ ...prev, isVisible: false }))} 
           />
         )}
-        
-        {Alert && <div className="hidden"><Alert /></div>}
       </>
     );
   };

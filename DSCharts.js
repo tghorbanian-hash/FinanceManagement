@@ -37,7 +37,7 @@
                 className={`p-1 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
                 title={isMaxMode ? t('بستن', 'Close') : t('بزرگنمایی', 'Maximize')}
               >
-                {isMaxMode ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
+                {isMaxMode ? <Minimize2 size={15} strokeWidth={2.5} /> : <Maximize2 size={15} strokeWidth={2.5} />}
               </button>
               <h3 className="text-[12px] font-black text-slate-800">{title}</h3>
            </div>
@@ -55,7 +55,7 @@
           </div>
           
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
-          <div className="fixed inset-4 sm:inset-8 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="fixed inset-4 sm:inset-10 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
             {renderHeader(true)}
             <div className="flex-1 p-4 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
                {children}
