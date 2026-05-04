@@ -7,7 +7,7 @@
     Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
     ListTree, FileText, Bell, Monitor, Clock,
     Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning,
-    Maximize2, Minimize2
+    Maximize2, Minimize2, FileSpreadsheet
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -48,6 +48,7 @@
     
     const [viewMode, setViewMode] = useState('tile');
     const [searchTerm, setSearchTerm] = useState('');
+    const [treeSearchTerm, setTreeSearchTerm] = useState('');
     const [expandedNodes, setExpandedNodes] = useState({});
     const [collapsedModules, setCollapsedModules] = useState({});
     const [loading, setLoading] = useState(true);
@@ -74,6 +75,7 @@
     useEffect(() => {
       setExpandedNodes({});
       setCollapsedModules({});
+      setTreeSearchTerm('');
     }, [activeDomainId]);
 
     const fetchMenuData = async () => {
@@ -165,6 +167,28 @@
       return buildTree(menuData, activeDomainId);
     }, [menuData, activeDomainId]);
 
+    const filteredActiveTree = useMemo(() => {
+      if (!treeSearchTerm) return activeTree;
+      const lowerTerm = treeSearchTerm.toLowerCase();
+      
+      const filterNodes = (nodes) => {
+        return nodes.reduce((acc, node) => {
+          const matchFa = (node.label_fa || '').toLowerCase().includes(lowerTerm);
+          const matchEn = (node.label_en || '').toLowerCase().includes(lowerTerm);
+          const matchCode = (node.unique_code || '').toLowerCase().includes(lowerTerm);
+          
+          const filteredChildren = node.children ? filterNodes(node.children) : [];
+          
+          if (matchFa || matchEn || matchCode || filteredChildren.length > 0) {
+            acc.push({ ...node, children: filteredChildren });
+          }
+          return acc;
+        }, []);
+      };
+      
+      return filterNodes(activeTree);
+    }, [activeTree, treeSearchTerm]);
+
     const getAllForms = (node) => {
       let forms = [];
       if (node.menu_type === 'form') forms.push(node);
@@ -191,6 +215,42 @@
 
     const handleCollapseAll = () => {
       setExpandedNodes({});
+    };
+
+    const handleExportMenu = () => {
+      const rows = [];
+      const traverse = (nodes, path = '') => {
+        nodes.forEach(node => {
+          const currentPath = path ? `${path} > ${getLabel(node)}` : getLabel(node);
+          rows.push({
+            ID: node.id,
+            Code: node.unique_code || '',
+            Label_FA: node.label_fa,
+            Label_EN: node.label_en || '',
+            Type: node.menu_type,
+            Path: currentPath
+          });
+          if (node.children) traverse(node.children, currentPath);
+        });
+      };
+      traverse(activeTree);
+      
+      if (rows.length === 0) return;
+
+      const headers = Object.keys(rows[0]).join(",");
+      const csvData = rows.map(row => 
+        Object.values(row).map(value => `"${String(value).replace(/"/g, '""')}"`).join(",")
+      ).join("\n");
+      
+      const csvContent = "\uFEFF" + headers + "\n" + csvData;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Menu_Export_${activeDomainId}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     };
 
     const DynamicIcon = ({ name, size = 18 }) => {
@@ -409,16 +469,41 @@
               <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
             </div>
             
-            <div className={`flex items-center gap-1 p-1.5 border-b border-slate-200 bg-slate-50 shrink-0 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 delay-100`}>
-              <button onClick={handleExpandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
-                <Maximize2 size={14}/>
-              </button>
-              <button onClick={handleCollapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
-                <Minimize2 size={14}/>
-              </button>
+            <div className="flex items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={handleExpandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                  <Maximize2 size={14}/>
+                </button>
+                <button onClick={handleCollapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                  <Minimize2 size={14}/>
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-1 shrink-0 flex-1">
+                <div className="relative flex-1">
+                  <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400`} />
+                  <input 
+                    type="text" value={treeSearchTerm} onChange={(e) => setTreeSearchTerm(e.target.value)}
+                    placeholder={t('جستجو در درخت...', 'Search tree...')}
+                    className={`w-full h-8 text-[11px] font-bold bg-white border border-slate-200 rounded-md outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                  />
+                </div>
+                <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+                <button onClick={handleExportMenu} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                  <FileSpreadsheet size={14} />
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans"><div className="space-y-[2px]">{activeTree.map(node => renderSidebarNode(node))}</div></div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans">
+              <div className="space-y-[2px]">
+                {filteredActiveTree.length > 0 ? filteredActiveTree.map(node => renderSidebarNode(node)) : (
+                  <div className="py-8 text-center text-slate-400 text-[11px] font-sans">
+                    {t('نتیجه‌ای یافت نشد.', 'No results found.')}
+                  </div>
+                )}
+              </div>
+            </div>
           </aside>
         )}
 
