@@ -75,7 +75,7 @@
     );
   };
 
-  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample }) => {
+  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
 
@@ -164,6 +164,26 @@
       return processedData.slice(start, start + pageSize);
     }, [processedData, page, pageSize]);
 
+    const summaryData = useMemo(() => {
+      if (!showSummaryRow) return null;
+      const flatData = processedData.filter(r => !r.isGroupHeader);
+      const sums = {};
+      let hasSummary = false;
+      columns.forEach(col => {
+        if (col.summarizable) {
+          hasSummary = true;
+          const total = flatData.reduce((acc, row) => {
+             let raw = row[col.field];
+             if(raw === null || raw === undefined) return acc;
+             const val = parseFloat(String(raw).replace(/,/g, ''));
+             return acc + (isNaN(val) ? 0 : val);
+          }, 0);
+          sums[col.field] = total;
+        }
+      });
+      return hasSummary ? sums : null;
+    }, [processedData, columns, showSummaryRow]);
+
     const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
     const handleFilterChange = (field, value) => { setFilters(prev => ({ ...prev, [field]: value })); setPage(1); };
     const togglePin = (field) => { const newPinned = new Set(pinnedCols); if (newPinned.has(field)) newPinned.delete(field); else newPinned.add(field); setPinnedCols(newPinned); };
@@ -213,20 +233,20 @@
       const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `export_${new Date().getTime()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
     };
 
-    const getStickyStyles = (field, isAction = false, isHeader = false) => {
-      const bg = isHeader ? '#f1f5f9' : '#ffffff'; 
-      if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader ? 50 : 20, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
-      if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : 15, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
-      if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : 15, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
+    const getStickyStyles = (field, isAction = false, isHeader = false, isFooter = false) => {
+      const bg = (isHeader || isFooter) ? '#f1f5f9' : '#ffffff'; 
+      if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader || isFooter ? 50 : 20, backgroundColor: bg };
+      if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader || isFooter ? 45 : 15, backgroundColor: bg };
+      if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader || isFooter ? 45 : 15, backgroundColor: bg };
 
-      if (!pinnedCols.has(field)) return { zIndex: isHeader ? 30 : 1 };
+      if (!pinnedCols.has(field)) return { zIndex: isHeader || isFooter ? 30 : 1 };
       
       let offset = (rowReorderable ? 30 : 0) + (selectable ? 40 : 0); 
       for (let col of visibleColumns) {
         if (col.field === field) break;
         offset += parseInt(col.width || 100);
       }
-      return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader ? 40 : 10, backgroundColor: isHeader ? '#f1f5f9' : 'inherit' };
+      return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader || isFooter ? 40 : 10, backgroundColor: bg };
     };
 
     const renderCellContent = (col, row, rowIndex) => {
@@ -449,6 +469,27 @@
                 </tr>
               )}
             </tbody>
+            
+            {showSummaryRow && summaryData && (
+              <tfoot className="sticky bottom-0 z-40 bg-slate-100 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t-2 border-slate-200">
+                <tr>
+                  {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, false, true)} className={`p-2 border-t border-slate-200 bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+                  {selectable && <td style={getStickyStyles('SELECT_COL', false, false, true)} className={`p-2 border-t border-slate-200 bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+                  {visibleColumns.map((col, idx) => {
+                    const isFirstVisible = idx === 0;
+                    const cellValue = col.summarizable && summaryData[col.field] !== undefined 
+                      ? (col.formatSummary ? col.formatSummary(summaryData[col.field]) : summaryData[col.field].toLocaleString()) 
+                      : (isFirstVisible && !col.summarizable ? t('جمع کل:', 'Total:') : '');
+                    return (
+                      <td key={`summary-${col.field}`} style={getStickyStyles(col.field, false, false, true)} className={`p-2 font-black text-[12px] text-slate-800 bg-slate-100 border-t border-slate-200 ${isRtl ? 'border-l' : 'border-r'} ${col.summarizable ? 'text-indigo-700' : ''}`}>
+                        {cellValue}
+                      </td>
+                    );
+                  })}
+                  {actions.length > 0 && <td style={getStickyStyles('ACTIONS', true, false, true)} className="p-2 border-t border-slate-200 bg-slate-100 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]"></td>}
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
 
@@ -474,5 +515,5 @@
     );
   };
 
-  window.DSGrid = { LOVField, AdvancedFilter, DataGrid }
+  window.DSGrid = { LOVField, AdvancedFilter, DataGrid };
 })();

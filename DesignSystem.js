@@ -13,6 +13,10 @@
 
   const { Modal, Tooltip, Alert, Toast, Banner, Dialog } = window.DSFeedback || {};
 
+  const { Drawer, ContextMenu, Popover } = window.DSOverlays || {};
+
+  const { BarChart, LineChart, DonutChart } = window.DSCharts || {};
+
   const DesignSystem = { 
     Button, 
     TextField, 
@@ -49,8 +53,14 @@
     Toast, 
     Banner, 
     Dialog, 
-    Spinner
+    Spinner,
+    Drawer,
+    ContextMenu,
+    Popover,
+    BarChart,
+    LineChart,
+    DonutChart
   };
 
-  window.DesignSystem = DesignSystem
+  window.DesignSystem = DesignSystem;
 })();

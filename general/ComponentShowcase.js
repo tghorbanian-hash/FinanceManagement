@@ -14,7 +14,8 @@
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
-      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast
+      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
+      Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart
     } = window.DesignSystem || {};
     
     const isRtl = language === 'fa';
@@ -39,6 +40,8 @@
     const [dateVal, setDateVal] = useState('');
     const [progressVal, setProgressVal] = useState(45);
     const [tags, setTags] = useState(['حسابداری', 'خزانه']);
+    
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     const [treeMode, setTreeMode] = useState('standard');
     const [treeData, setTreeData] = useState([
@@ -64,6 +67,21 @@
     const [dialogState, setDialogState] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
     const [toastState, setToastState] = useState({ isVisible: false, message: '', type: 'success' });
 
+    const chartData = [
+      { label: 'فروردین', value: 1200 },
+      { label: 'اردیبهشت', value: 1900 },
+      { label: 'خرداد', value: 1500 },
+      { label: 'تیر', value: 2200 },
+      { label: 'مرداد', value: 1800 }
+    ];
+    
+    const pieData = [
+      { label: 'فروش', value: 45 },
+      { label: 'پشتیبانی', value: 25 },
+      { label: 'خدمات', value: 20 },
+      { label: 'سایر', value: 10 }
+    ];
+
     const showToast = (message, type = 'info') => {
       setToastState({ isVisible: true, message, type });
       setTimeout(() => setToastState(prev => ({ ...prev, isVisible: false })), 3000);
@@ -78,7 +96,8 @@
     const showcaseTabs = [
       { id: 'grid_form', label: t('امکانات گرید و فرم', 'Grid & Form Features'), icon: Table },
       { id: 'tree', label: t('درخت', 'Tree'), icon: ListTree },
-      { id: 'components', label: t('کامپوننت‌های کوچک', 'Small Components'), icon: BoxSelect }
+      { id: 'components', label: t('کامپوننت‌های کوچک', 'Small Components'), icon: BoxSelect },
+      { id: 'advanced_components', label: t('داشبورد و امکانات پیشرفته', 'Advanced Features'), icon: TrendingUp }
     ];
 
     const lovDepartments = [
@@ -144,7 +163,7 @@
       { field: 'docDate', header_fa: 'تاریخ ثبت', header_en: 'Date', type: 'date', width: '100px' },
       { field: 'department', header_fa: 'واحد سازمانی', header_en: 'Department', width: '130px', render: (val) => val?.title },
       { field: 'description', header_fa: 'شرح سند', header_en: 'Description', type: 'text', width: '250px' },
-      { field: 'amount', header_fa: 'مبلغ (ریال)', header_en: 'Amount (IRR)', type: 'text', width: '130px' },
+      { field: 'amount', header_fa: 'مبلغ (ریال)', header_en: 'Amount (IRR)', type: 'text', width: '130px', summarizable: true },
       { 
         field: 'status', header_fa: 'وضعیت', header_en: 'Status', type: 'badge', width: '110px',
         badgeColor: (val) => {
@@ -255,13 +274,13 @@
           : val 
       },
       { 
-        field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '130px', 
+        field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '130px', summarizable: true,
         render: (val, row) => editingLineItemId === row.id 
           ? <CurrencyField size="sm" value={editingLineData.debit} onChange={(v) => setEditingLineData({...editingLineData, debit: v})} isRtl={isRtl} wrapperClassName="m-0" />
           : val 
       },
       { 
-        field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '130px', 
+        field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '130px', summarizable: true,
         render: (val, row) => editingLineItemId === row.id 
           ? <CurrencyField size="sm" value={editingLineData.credit} onChange={(v) => setEditingLineData({...editingLineData, credit: v})} isRtl={isRtl} wrapperClassName="m-0" />
           : val 
@@ -461,6 +480,7 @@
                       onRowDoubleClick={handleOpenForm}
                       onDownloadSample={() => showToast(t('در حال دانلود نمونه فایل اکسل...', 'Downloading Excel Sample...'), 'info')}
                       selectable={true}
+                      showSummaryRow={true}
                       bulkActions={[
                         { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: handleBulkDelete },
                         { label: t('تایید اسناد', 'Approve Selected'), icon: Check, variant: 'outline', onClick: () => showToast(t('اسناد انتخاب شده تایید شدند.', 'Selected documents approved.'), 'success') }
@@ -523,6 +543,7 @@
                               language={language}
                               selectable={true}
                               rowReorderable={true}
+                              showSummaryRow={true}
                               onRowReorder={handleRowReorder}
                               onAdd={handleAddLineItem}
                               onDownloadSample={() => showToast(t('در حال دانلود نمونه فایل اکسل...', 'Downloading Excel Sample...'), 'info')}
@@ -743,6 +764,73 @@
             </div>
           )}
 
+          {activeShowcaseTab === 'advanced_components' && (
+            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                
+                {/* Overlays Section */}
+                <Card title={t('لایه های شناور (Overlays)', 'Overlays')} className="shadow-sm !overflow-visible">
+                  <div className="p-4 flex flex-col gap-6">
+                     <div>
+                        <h4 className="text-[12px] font-bold mb-3 text-slate-700">{t('سایدبار (Drawer)', 'Drawer')}</h4>
+                        <Button variant="outline" size="sm" onClick={() => setDrawerOpen(true)}>{t('باز کردن سایدبار متغیر', 'Open Drawer')}</Button>
+                     </div>
+                     
+                     <div className="border-t border-slate-100 pt-4">
+                        <h4 className="text-[12px] font-bold mb-3 text-slate-700">{t('منوی کلیک راست (Context Menu)', 'Context Menu')}</h4>
+                        <ContextMenu items={[
+                          { label: t('مشاهده جزئیات', 'View Details'), icon: Eye },
+                          { label: t('ویرایش سند', 'Edit Document'), icon: Edit },
+                          { divider: true },
+                          { label: t('حذف رکورد', 'Delete Record'), icon: Trash2, variant: 'danger' }
+                        ]} language={language}>
+                           <div className="bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-200 border-dashed rounded-xl p-8 flex items-center justify-center text-indigo-600 text-[12px] font-bold transition-colors cursor-context-menu select-none">
+                              {t('روی این باکس کلیک راست کنید', 'Right click on this box')}
+                           </div>
+                        </ContextMenu>
+                     </div>
+
+                     <div className="border-t border-slate-100 pt-4">
+                        <h4 className="text-[12px] font-bold mb-3 text-slate-700">{t('پاپ‌اور (Popover)', 'Popover')}</h4>
+                        <Popover 
+                          language={language}
+                          position="bottom"
+                          trigger={<Button variant="outline" size="sm">{t('کلیک کنید (Popover)', 'Click for Popover')}</Button>}
+                        >
+                          <div className="w-[200px] flex flex-col gap-2 text-[11px]">
+                             <div className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-1 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
+                             <ToggleField label={t('ارسال ایمیل', 'Send Email')} checked={true} isRtl={isRtl} onChange={()=>{}} />
+                             <ToggleField label={t('تایید خودکار', 'Auto Approve')} checked={false} isRtl={isRtl} onChange={()=>{}} />
+                          </div>
+                        </Popover>
+                     </div>
+                  </div>
+                </Card>
+
+                {/* Charts Section */}
+                <Card title={t('نمودارها (Charts)', 'Charts')} className="shadow-sm">
+                   <div className="p-4 flex flex-col gap-8">
+                      <div>
+                         <h4 className="text-[12px] font-bold mb-4 text-slate-700 text-center">{t('نمودار خطی (روند فروش)', 'Line Chart')}</h4>
+                         <LineChart data={chartData} color="indigo" height={160} language={language} />
+                      </div>
+                      <div className="border-t border-slate-100 pt-6 grid grid-cols-2 gap-4">
+                         <div>
+                           <h4 className="text-[12px] font-bold mb-4 text-slate-700 text-center">{t('نمودار میله ای', 'Bar Chart')}</h4>
+                           <BarChart data={chartData} color="emerald" height={140} language={language} />
+                         </div>
+                         <div>
+                           <h4 className="text-[12px] font-bold mb-4 text-slate-700 text-center">{t('نمودار دایره ای', 'Donut Chart')}</h4>
+                           <DonutChart data={pieData} height={140} language={language} />
+                         </div>
+                      </div>
+                   </div>
+                </Card>
+                
+              </div>
+            </div>
+          )}
+
           <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
             {selectedRow && (
               <div className="space-y-3 p-4">
@@ -783,11 +871,12 @@
                         { field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '180px', render: val => val?.title },
                         { field: 'costCenter', header_fa: 'مرکز هزینه', header_en: 'Cost Center', width: '140px' },
                         { field: 'docDate', header_fa: 'تاریخ ردیف', header_en: 'Date', width: '100px', type: 'date' },
-                        { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px' },
-                        { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px' },
+                        { field: 'debit', header_fa: 'بدهکار (ریال)', header_en: 'Debit', width: '120px', summarizable: true },
+                        { field: 'credit', header_fa: 'بستانکار (ریال)', header_en: 'Credit', width: '120px', summarizable: true },
                         { field: 'note', header_fa: 'شرح ردیف', header_en: 'Line Note', width: '250px' }
                       ]}
                       language={language}
+                      showSummaryRow={true}
                     />
                   </div>
                 </Card>
@@ -823,6 +912,20 @@
 
         </div>
         
+        {Drawer && (
+          <Drawer 
+            isOpen={drawerOpen} 
+            onClose={() => setDrawerOpen(false)} 
+            title={t('تنظیمات پیشرفته', 'Advanced Settings')}
+            position={isRtl ? 'right' : 'left'}
+            language={language}
+          >
+            <div className="text-[12px] text-slate-500 font-medium leading-relaxed">
+               {t('محتوای سایدبار متغیر (Drawer) در اینجا قرار می‌گیرد. این بخش برای فرم‌های طولانی، فیلترهای جانبی، یا تنظیمات ماژول بسیار مناسب و کاربردی است.', 'Drawer content goes here. It is very suitable for long forms, side filters, or module settings.')}
+            </div>
+          </Drawer>
+        )}
+
         {Dialog && (
           <Dialog 
             isOpen={dialogState.isOpen} 
@@ -849,5 +952,5 @@
     );
   };
 
-  window.ComponentShowcase = ComponentShowcase
+  window.ComponentShowcase = ComponentShowcase;
 })();
