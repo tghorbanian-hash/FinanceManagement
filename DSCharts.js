@@ -27,6 +27,7 @@
 
   const BarChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
     const theme = colorMap[color] || colorMap.indigo;
 
@@ -69,6 +70,7 @@
 
   const LineChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
 
@@ -141,6 +143,7 @@
 
   const DonutChart = ({ data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
     
     const colors = [colorMap.indigo.main, colorMap.emerald.main, colorMap.amber.main, colorMap.sky.main, colorMap.purple.main, colorMap.rose.main];
@@ -212,6 +215,7 @@
 
   const PieChart = ({ data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
     
     const colors = [colorMap.sky.main, colorMap.rose.main, colorMap.emerald.main, colorMap.amber.main, colorMap.indigo.main, colorMap.purple.main];
@@ -274,15 +278,15 @@
 
   const GaugeChart = ({ value = 0, min = 0, max = 100, label = '', height = 160, color = 'indigo', language = 'fa' }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
 
     const safeValue = Math.min(Math.max(value, min), max);
     const percent = ((safeValue - min) / (max - min)) * 100;
     
-    // Half circle properties
     const R = 40;
-    const C = Math.PI * R; // 125.6637
+    const C = Math.PI * R;
     const dashValue = (percent / 100) * C;
 
     return (
