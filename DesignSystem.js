@@ -15,7 +15,7 @@
 
   const { Drawer, ContextMenu, Popover } = window.DSOverlays || {};
 
-  const { BarChart, LineChart, DonutChart } = window.DSCharts || {};
+  const { BarChart, LineChart, DonutChart, PieChart, GaugeChart } = window.DSCharts || {};
 
   const DesignSystem = { 
     Button, 
@@ -59,7 +59,9 @@
     Popover,
     BarChart,
     LineChart,
-    DonutChart
+    DonutChart,
+    PieChart,
+    GaugeChart
   };
 
   window.DesignSystem = DesignSystem;

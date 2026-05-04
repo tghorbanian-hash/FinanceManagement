@@ -6,7 +6,7 @@
   const { 
     Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, Mail, User, LayoutGrid, 
     FileText, ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, 
-    FileDown, Layers, ListTree, Info, AlertTriangle, CheckCircle2, XCircle, TrendingUp, DollarSign, Users, Briefcase, MoreVertical, Calendar, UploadCloud, Download
+    FileDown, Layers, ListTree, Info, AlertTriangle, CheckCircle2, XCircle, TrendingUp, DollarSign, Users, Briefcase, MoreVertical, Calendar, UploadCloud, Download, Filter
   } = LucideIcons;
 
   const ComponentShowcase = ({ language = 'fa' }) => {
@@ -15,7 +15,7 @@
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
       DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
-      Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart
+      Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
     } = window.DesignSystem || {};
     
     const isRtl = language === 'fa';
@@ -43,6 +43,60 @@
     
     const [drawerOpen, setDrawerOpen] = useState(false);
 
+    // داشبورد و نمودارها - استیت‌ها
+    const [dashFilterYear, setDashFilterYear] = useState('1402');
+    const [activeChartMonth, setActiveChartMonth] = useState(null);
+    const [activeChartCategory, setActiveChartCategory] = useState(null);
+
+    // دیتای خام برای فیلتر متقاطع
+    const rawDashboardData = useMemo(() => [
+      { id:1, year: '1402', month: 'فروردین', category: 'فروش', value: 1200 },
+      { id:2, year: '1402', month: 'فروردین', category: 'خدمات', value: 800 },
+      { id:3, year: '1402', month: 'فروردین', category: 'پشتیبانی', value: 400 },
+      { id:4, year: '1402', month: 'اردیبهشت', category: 'فروش', value: 1500 },
+      { id:5, year: '1402', month: 'اردیبهشت', category: 'خدمات', value: 900 },
+      { id:6, year: '1402', month: 'اردیبهشت', category: 'پشتیبانی', value: 500 },
+      { id:7, year: '1402', month: 'خرداد', category: 'فروش', value: 1100 },
+      { id:8, year: '1402', month: 'خرداد', category: 'خدمات', value: 700 },
+      { id:9, year: '1402', month: 'خرداد', category: 'پشتیبانی', value: 300 },
+      { id:10, year: '1402', month: 'تیر', category: 'فروش', value: 1800 },
+      { id:11, year: '1402', month: 'تیر', category: 'خدمات', value: 1000 },
+      { id:12, year: '1402', month: 'تیر', category: 'پشتیبانی', value: 600 },
+      { id:13, year: '1403', month: 'فروردین', category: 'فروش', value: 2000 },
+      { id:14, year: '1403', month: 'فروردین', category: 'خدمات', value: 1100 },
+    ], []);
+
+    // دیتای پردازش شده برای نمودارها بر اساس فیلترها
+    const processedChartData = useMemo(() => {
+      let filtered = rawDashboardData.filter(d => d.year === dashFilterYear);
+      
+      // دیتای نمودار ماهانه (تحت تاثیر فیلتر دسته‌بندی)
+      const monthGroups = {};
+      filtered.forEach(d => {
+        if (!activeChartCategory || activeChartCategory === d.category) {
+          if (!monthGroups[d.month]) monthGroups[d.month] = 0;
+          monthGroups[d.month] += d.value;
+        }
+      });
+      const barData = Object.keys(monthGroups).map(m => ({ label: m, value: monthGroups[m] }));
+
+      // دیتای نمودار دسته‌بندی (تحت تاثیر فیلتر ماه)
+      const catGroups = {};
+      filtered.forEach(d => {
+        if (!activeChartMonth || activeChartMonth === d.month) {
+          if (!catGroups[d.category]) catGroups[d.category] = 0;
+          catGroups[d.category] += d.value;
+        }
+      });
+      const pieData = Object.keys(catGroups).map(c => ({ label: c, value: catGroups[c] }));
+
+      // دیتای خطی (روند کلی)
+      const trendData = barData; // برای سادگی همان دیتای تجمیعی ماهانه
+
+      return { barData, pieData, trendData };
+    }, [rawDashboardData, dashFilterYear, activeChartMonth, activeChartCategory]);
+
+
     const [treeMode, setTreeMode] = useState('standard');
     const [treeData, setTreeData] = useState([
       { id: 1, parentId: null, code: '1', title: 'دارایی‌ها', nature: 'بدهکار', isActive: true },
@@ -66,21 +120,6 @@
 
     const [dialogState, setDialogState] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
     const [toastState, setToastState] = useState({ isVisible: false, message: '', type: 'success' });
-
-    const chartData = [
-      { label: 'فروردین', value: 1200 },
-      { label: 'اردیبهشت', value: 1900 },
-      { label: 'خرداد', value: 1500 },
-      { label: 'تیر', value: 2200 },
-      { label: 'مرداد', value: 1800 }
-    ];
-    
-    const pieData = [
-      { label: 'فروش', value: 45 },
-      { label: 'پشتیبانی', value: 25 },
-      { label: 'خدمات', value: 20 },
-      { label: 'سایر', value: 10 }
-    ];
 
     const showToast = (message, type = 'info') => {
       setToastState({ isVisible: true, message, type });
@@ -766,67 +805,91 @@
 
           {activeShowcaseTab === 'advanced_components' && (
             <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-5">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                
-                {/* Overlays Section */}
-                <Card title={t('لایه های شناور (Overlays)', 'Overlays')} className="shadow-sm !overflow-visible">
-                  <div className="p-4 flex flex-col gap-6">
-                     <div>
-                        <h4 className="text-[12px] font-bold mb-3 text-slate-700">{t('سایدبار (Drawer)', 'Drawer')}</h4>
-                        <Button variant="outline" size="sm" onClick={() => setDrawerOpen(true)}>{t('باز کردن سایدبار متغیر', 'Open Drawer')}</Button>
-                     </div>
-                     
-                     <div className="border-t border-slate-100 pt-4">
-                        <h4 className="text-[12px] font-bold mb-3 text-slate-700">{t('منوی کلیک راست (Context Menu)', 'Context Menu')}</h4>
-                        <ContextMenu items={[
-                          { label: t('مشاهده جزئیات', 'View Details'), icon: Eye },
-                          { label: t('ویرایش سند', 'Edit Document'), icon: Edit },
-                          { divider: true },
-                          { label: t('حذف رکورد', 'Delete Record'), icon: Trash2, variant: 'danger' }
-                        ]} language={language}>
-                           <div className="bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-200 border-dashed rounded-xl p-8 flex items-center justify-center text-indigo-600 text-[12px] font-bold transition-colors cursor-context-menu select-none">
-                              {t('روی این باکس کلیک راست کنید', 'Right click on this box')}
-                           </div>
-                        </ContextMenu>
-                     </div>
+              
+              <div className="bg-white border border-slate-200 shadow-sm rounded-xl p-4 flex flex-col lg:flex-row items-center justify-between gap-4 sticky top-0 z-30">
+                <div className="flex items-center gap-2">
+                   <Filter size={18} className="text-indigo-600" />
+                   <span className="text-[13px] font-black text-slate-800">{t('داشبورد تعاملی فروش', 'Interactive Sales Dashboard')}</span>
+                </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                   {activeChartMonth && (
+                     <Badge variant="indigo" className="flex items-center gap-1 pr-1">
+                        {t('ماه:', 'Month:')} {activeChartMonth}
+                        <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500"><X size={10}/></button>
+                     </Badge>
+                   )}
+                   {activeChartCategory && (
+                     <Badge variant="emerald" className="flex items-center gap-1 pr-1">
+                        {t('دسته‌بندی:', 'Category:')} {activeChartCategory}
+                        <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500"><X size={10}/></button>
+                     </Badge>
+                   )}
+                   <SelectField size="sm" value={dashFilterYear} onChange={(e) => setDashFilterYear(e.target.value)} options={[{value:'1402', label:'سال 1402'}, {value:'1403', label:'سال 1403'}]} isRtl={isRtl} wrapperClassName="!w-32" />
+                </div>
+              </div>
 
-                     <div className="border-t border-slate-100 pt-4">
-                        <h4 className="text-[12px] font-bold mb-3 text-slate-700">{t('پاپ‌اور (Popover)', 'Popover')}</h4>
-                        <Popover 
-                          language={language}
-                          position="bottom"
-                          trigger={<Button variant="outline" size="sm">{t('کلیک کنید (Popover)', 'Click for Popover')}</Button>}
-                        >
-                          <div className="w-[200px] flex flex-col gap-2 text-[11px]">
-                             <div className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-1 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
-                             <ToggleField label={t('ارسال ایمیل', 'Send Email')} checked={true} isRtl={isRtl} onChange={()=>{}} />
-                             <ToggleField label={t('تایید خودکار', 'Auto Approve')} checked={false} isRtl={isRtl} onChange={()=>{}} />
-                          </div>
-                        </Popover>
-                     </div>
-                  </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card title={t('نمودار خطی (روند فروش)', 'Line Chart Trend')} className="shadow-sm lg:col-span-2">
+                   <div className="p-4">
+                      <LineChart data={processedChartData.trendData} color="indigo" height={200} language={language} onClick={(item) => setActiveChartMonth(item.label)} />
+                   </div>
                 </Card>
 
-                {/* Charts Section */}
-                <Card title={t('نمودارها (Charts)', 'Charts')} className="shadow-sm">
-                   <div className="p-4 flex flex-col gap-8">
-                      <div>
-                         <h4 className="text-[12px] font-bold mb-4 text-slate-700 text-center">{t('نمودار خطی (روند فروش)', 'Line Chart')}</h4>
-                         <LineChart data={chartData} color="indigo" height={160} language={language} />
-                      </div>
-                      <div className="border-t border-slate-100 pt-6 grid grid-cols-2 gap-4">
-                         <div>
-                           <h4 className="text-[12px] font-bold mb-4 text-slate-700 text-center">{t('نمودار میله ای', 'Bar Chart')}</h4>
-                           <BarChart data={chartData} color="emerald" height={140} language={language} />
-                         </div>
-                         <div>
-                           <h4 className="text-[12px] font-bold mb-4 text-slate-700 text-center">{t('نمودار دایره ای', 'Donut Chart')}</h4>
-                           <DonutChart data={pieData} height={140} language={language} />
-                         </div>
-                      </div>
+                <Card title={t('نمودار میله ای (توزیع ماهانه)', 'Bar Chart Monthly')} className="shadow-sm">
+                   <div className="p-4">
+                     <p className="text-[10px] text-slate-500 mb-2 font-bold">{t('برای فیلتر کردن روی ستون‌ها کلیک کنید', 'Click bars to filter')}</p>
+                     <BarChart data={processedChartData.barData} color="emerald" height={220} language={language} activeLabel={activeChartMonth} onClick={(item) => setActiveChartMonth(item.label === activeChartMonth ? null : item.label)} />
                    </div>
                 </Card>
                 
+                <Card title={t('نمودار دایره ای (سهم دسته‌بندی‌ها)', 'Donut Chart Category')} className="shadow-sm">
+                   <div className="p-4">
+                     <p className="text-[10px] text-slate-500 mb-2 font-bold">{t('برای فیلتر کردن روی بخش‌ها کلیک کنید', 'Click segments to filter')}</p>
+                     <DonutChart data={processedChartData.pieData} height={220} language={language} activeLabel={activeChartCategory} onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} />
+                   </div>
+                </Card>
+
+                <Card title={t('نمودار کیک (نمایش جایگزین)', 'Pie Chart View')} className="shadow-sm">
+                   <div className="p-4">
+                     <PieChart data={processedChartData.pieData} height={200} language={language} activeLabel={activeChartCategory} onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} />
+                   </div>
+                </Card>
+
+                <Card title={t('گیج (تحقق اهداف)', 'Target Gauge')} className="shadow-sm flex flex-col justify-center">
+                   <div className="p-4">
+                     <GaugeChart value={processedChartData.barData.reduce((a, b) => a + b.value, 0)} min={0} max={20000} label={t('مجموع فروش (ریال)', 'Total Sales (IRR)')} color="sky" language={language} height={180} />
+                   </div>
+                </Card>
+              </div>
+
+              <div className="border-t border-slate-200 pt-6 mt-6">
+                 <h3 className="text-[14px] font-black text-slate-800 mb-4">{t('سایر امکانات شناور', 'Other Overlay Features')}</h3>
+                 <div className="flex gap-4">
+                    <Button variant="outline" icon={Layers} onClick={() => setDrawerOpen(true)}>{t('باز کردن سایدبار متغیر', 'Open Drawer')}</Button>
+                    
+                    <ContextMenu items={[
+                      { label: t('مشاهده جزئیات', 'View Details'), icon: Eye },
+                      { label: t('ویرایش رکورد', 'Edit Record'), icon: Edit },
+                      { divider: true },
+                      { label: t('حذف رکورد', 'Delete Record'), icon: Trash2, variant: 'danger' }
+                    ]} language={language}>
+                       <div className="bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-200 border-dashed rounded-xl px-6 h-10 flex items-center justify-center text-indigo-600 text-[12px] font-bold transition-colors cursor-context-menu select-none shadow-sm">
+                          {t('کلیک راست کنید', 'Right click here')}
+                       </div>
+                    </ContextMenu>
+
+                    <Popover 
+                      language={language}
+                      position="bottom"
+                      trigger={<Button variant="secondary" icon={Settings}>{t('پاپ‌اور تنظیمات', 'Settings Popover')}</Button>}
+                    >
+                      <div className="w-[200px] flex flex-col gap-3 text-[11px]">
+                         <div className="font-bold text-slate-800 border-b border-slate-100 pb-2 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
+                         <ToggleField label={t('ارسال ایمیل', 'Send Email')} checked={true} isRtl={isRtl} onChange={()=>{}} />
+                         <ToggleField label={t('تایید خودکار', 'Auto Approve')} checked={false} isRtl={isRtl} onChange={()=>{}} />
+                      </div>
+                    </Popover>
+                 </div>
               </div>
             </div>
           )}
