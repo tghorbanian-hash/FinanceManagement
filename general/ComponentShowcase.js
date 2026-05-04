@@ -6,7 +6,7 @@
   const { 
     Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, LayoutGrid, 
     ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, 
-    Layers, ListTree, Info, TrendingUp, DollarSign, Users, Briefcase, MoreVertical, Filter
+    Layers, ListTree, Info, TrendingUp, DollarSign, Users, Briefcase, ChevronDown
   } = LucideIcons;
 
   const ComponentShowcase = ({ language = 'fa' }) => {
@@ -14,7 +14,7 @@
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, LOVField, Card, Badge, PageHeader, 
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
-      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
+      DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Dialog, Toast,
       Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
     } = window.DesignSystem || {};
     
@@ -51,6 +51,7 @@
     const [lineChartMode, setLineChartMode] = useState('monthly');
     const [barChartMode, setBarChartMode] = useState('amount');
     const [pieChartMode, setPieChartMode] = useState('amount');
+    const [donutChartMode, setDonutChartMode] = useState('amount');
 
     const rawDashboardData = useMemo(() => [
       { id:1, year: '1401', month: 'اسفند', category: 'فروش', amount: 900, count: 8 },
@@ -115,8 +116,17 @@
       });
       const pieData = Object.keys(pieGroups).map(c => ({ label: c, value: pieGroups[c] }));
 
-      return { barData, pieData, trendData };
-    }, [rawDashboardData, dashFilterYear, activeChartMonth, activeChartCategory, lineChartMode, barChartMode, pieChartMode]);
+      const donutGroups = {};
+      filtered.forEach(d => {
+        if (!activeChartMonth || activeChartMonth === d.month) {
+          if (!donutGroups[d.category]) donutGroups[d.category] = 0;
+          donutGroups[d.category] += (donutChartMode === 'amount' ? d.amount : d.count);
+        }
+      });
+      const donutData = Object.keys(donutGroups).map(c => ({ label: c, value: donutGroups[c] }));
+
+      return { barData, pieData, donutData, trendData };
+    }, [rawDashboardData, dashFilterYear, activeChartMonth, activeChartCategory, lineChartMode, barChartMode, pieChartMode, donutChartMode]);
 
     const [treeMode, setTreeMode] = useState('standard');
     const [treeData, setTreeData] = useState([
@@ -738,7 +748,7 @@
           )}
 
           {activeShowcaseTab === 'components' && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-5">
+            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard label={t('کل نقدینگی', 'Total Liquidity')} value="۱,۲۵۰,۰۰۰,۰۰۰" icon={DollarSign} trend="up" trendValue="۱۲%" color="emerald" language={language} />
                 <StatCard label={t('بدهی معوق', 'Overdue Debt')} value="۴۸۰,۰۰۰,۰۰۰" icon={TrendingUp} trend="down" trendValue="۵%" color="rose" language={language} />
@@ -746,8 +756,8 @@
                 <StatCard label={t('پروژه‌های باز', 'Open Projects')} value="۱۸" icon={Briefcase} color="amber" language={language} />
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-                <div className="xl:col-span-2 flex flex-col gap-5">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                <div className="xl:col-span-2 flex flex-col gap-4">
                   <Card title={t('فیلدهای تخصصی ورودی', 'Specialized Inputs')} className="shadow-sm !overflow-visible">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <CurrencyField size="sm" label={t('ورودی مبلغ (جداکننده هزارگان)', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
@@ -761,9 +771,9 @@
                   </Card>
 
                   <Card title={t('وضعیت پیشرفت و مراحل', 'Progress & Stepper')} className="shadow-sm">
-                    <div className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-4">
                       <Stepper steps={[{label:t('اطلاعات پایه','Base')}, {label:t('تایید فنی','Technical')}, {label:t('پرداخت نهایی','Payment')}]} currentStep={1} language={language} />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <ProgressBar label={t('پیشرفت پروژه','Project Progress')} value={progressVal} color="indigo" showValue />
                         <ProgressBar label={t('مصرف بودجه','Budget Usage')} value={85} color="amber" size="sm" showValue />
                       </div>
@@ -771,7 +781,7 @@
                   </Card>
                 </div>
 
-                <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-4">
                   <Card title={t('تاریخچه و وضعیت', 'Timeline & Feedback')} className="shadow-sm">
                     <Tabs tabs={[{id:'t1', label:t('تاریخچه','Timeline')}, {id:'t2', label:t('وضعیت','Feedback')}]} activeTab="t1" onChange={()=>{}} className="mb-2" />
                     <Timeline items={[
@@ -850,7 +860,7 @@
           )}
 
           {activeShowcaseTab === 'advanced_components' && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-5">
+            <div className="flex-1 overflow-y-auto custom-scrollbar animate-in fade-in duration-500 p-2 space-y-4">
               
               <div className="sticky top-0 z-30">
                 <AdvancedFilter 
@@ -859,34 +869,30 @@
                     { name: 'year', label: t('سال مالی', 'Fiscal Year'), type: 'select', options: [{value:'1401', label:t('سال 1401','Year 1401')}, {value:'1402', label:t('سال 1402','Year 1402')}, {value:'1403', label:t('سال 1403','Year 1403')}] }
                   ]}
                   onFilter={(vals) => setDashFilterYear(vals.year || '1402')}
-                  onClear={() => setDashFilterYear('1402')}
+                  onClear={() => {
+                    setDashFilterYear('1402');
+                    setActiveChartMonth(null);
+                    setActiveChartCategory(null);
+                  }}
                   language={language}
                   defaultOpen={true}
                 >
-                  {(activeChartMonth || activeChartCategory) && (
-                    <div className="flex items-center gap-3 w-full animate-in fade-in duration-300">
-                      <span className="text-[11px] font-bold text-slate-500">{t('فیلترهای فعال از روی نمودارها:', 'Active Chart Filters:')}</span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {activeChartMonth && (
-                          <Badge variant="indigo" className="flex items-center gap-1.5 shadow-sm px-2">
-                            <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
-                            <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
-                          </Badge>
-                        )}
-                        {activeChartCategory && (
-                          <Badge variant="emerald" className="flex items-center gap-1.5 shadow-sm px-2">
-                            <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
-                            <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
-                          </Badge>
-                        )}
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => {setActiveChartMonth(null); setActiveChartCategory(null);}} className="text-[10px] !h-6 !px-2 text-slate-400 hover:text-red-500 mr-auto">{t('پاک کردن همه', 'Clear All')}</Button>
-                    </div>
+                  {activeChartMonth && (
+                    <Badge variant="indigo" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
+                      <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
+                      <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                    </Badge>
+                  )}
+                  {activeChartCategory && (
+                    <Badge variant="emerald" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
+                      <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
+                      <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                    </Badge>
                   )}
                 </AdvancedFilter>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="lg:col-span-2">
                   <LineChart 
                     title={t('نمودار روند یکپارچه', 'Integrated Trend Chart')}
@@ -898,7 +904,7 @@
                     }
                     data={processedChartData.trendData} 
                     color="indigo" 
-                    height={220} 
+                    height={320} 
                     language={language} 
                     onClick={(item) => lineChartMode === 'monthly' ? setActiveChartMonth(item.label) : null} 
                     activeLabel={lineChartMode === 'monthly' ? activeChartMonth : null}
@@ -915,7 +921,7 @@
                   }
                   data={processedChartData.barData} 
                   color="emerald" 
-                  height={220} 
+                  height={280} 
                   language={language} 
                   activeLabel={activeChartMonth} 
                   onClick={(item) => setActiveChartMonth(item.label === activeChartMonth ? null : item.label)} 
@@ -930,7 +936,7 @@
                     </div>
                   }
                   data={processedChartData.pieData} 
-                  height={220} 
+                  height={280} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -938,8 +944,18 @@
 
                 <DonutChart 
                   title={t('نمایش دایره ای (Donut)', 'Donut View')}
-                  data={processedChartData.pieData} 
-                  height={200} 
+                  action={
+                    <DropdownMenu 
+                      trigger={<button className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded border border-slate-200 text-[10px] font-bold transition-colors">{t('نمایش:', 'View:')} {donutChartMode === 'amount' ? t('مبلغ', 'Amount') : t('تعداد', 'Count')} <ChevronDown size={12}/></button>}
+                      items={[
+                        { label: t('بر اساس مبلغ', 'By Amount'), onClick: () => setDonutChartMode('amount'), icon: DollarSign },
+                        { label: t('بر اساس تعداد', 'By Count'), onClick: () => setDonutChartMode('count'), icon: TrendingUp }
+                      ]}
+                      language={language}
+                    />
+                  }
+                  data={processedChartData.donutData} 
+                  height={280} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -953,7 +969,7 @@
                   label={barChartMode === 'amount' ? t('مجموع (ریال)', 'Total (IRR)') : t('مجموع (تعداد)', 'Total Count')} 
                   color="purple" 
                   language={language} 
-                  height={180} 
+                  height={220} 
                 />
               </div>
             </div>

@@ -49,9 +49,18 @@
 
     return (
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col shrink-0 mb-3 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 rounded-t-lg transition-colors select-none" onClick={() => setIsOpen(!isOpen)}>
-          <div className="flex items-center gap-2 text-indigo-600"><Filter size={14} strokeWidth={2.5} /><span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span></div>
-          <div className="text-slate-400">{isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
+        <div className={`h-9 px-4 flex items-center justify-between cursor-pointer bg-slate-50/50 hover:bg-slate-50 transition-colors select-none ${isOpen ? 'rounded-t-lg' : 'rounded-lg'}`} onClick={() => setIsOpen(!isOpen)}>
+          <div className="flex items-center gap-4 flex-1 overflow-hidden pr-2">
+            <div className="flex items-center gap-2 text-indigo-600 shrink-0">
+               <Filter size={14} strokeWidth={2.5} />
+               <span className="text-[12px] font-black">{title || t('فیلتر پیشرفته', 'Advanced Filter')}</span>
+            </div>
+            {/* Inline Filter Tags Container */}
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar" onClick={e => e.stopPropagation()}>
+               {children}
+            </div>
+          </div>
+          <div className="text-slate-400 shrink-0">{isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
         </div>
         {isOpen && (
           <div className="p-3 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -69,11 +78,6 @@
               <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
               <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
             </div>
-          </div>
-        )}
-        {children && (
-          <div className="px-3 py-2 border-t border-slate-100 bg-slate-50/50 rounded-b-lg">
-            {children}
           </div>
         )}
       </div>

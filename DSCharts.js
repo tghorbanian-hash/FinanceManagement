@@ -34,7 +34,7 @@
            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setIsMaximized(!isMaxMode)} 
-                className={`p-1 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
+                className={`p-1.5 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
                 title={isMaxMode ? t('بستن', 'Close') : t('بزرگنمایی', 'Maximize')}
               >
                 {isMaxMode ? <Minimize2 size={15} strokeWidth={2.5} /> : <Maximize2 size={15} strokeWidth={2.5} />}
@@ -146,9 +146,14 @@
     const range = maxVal - minVal;
     
     const getPoints = () => {
+      const padding = range === 0 ? 10 : range * 0.15;
+      const paddedMin = minVal >= 0 ? 0 : minVal - padding; 
+      const paddedMax = maxVal + padding;
+      const paddedRange = paddedMax - paddedMin;
+
       return data.map((d, i) => {
         const x = data.length <= 1 ? 50 : (i / (data.length - 1)) * 100;
-        const y = range === 0 ? (minVal === 0 ? 100 : 50) : 100 - (((d.value - minVal) / range) * 100);
+        const y = paddedRange === 0 ? 50 : 100 - (((d.value - paddedMin) / paddedRange) * 100);
         return { x, y, d };
       });
     };
@@ -183,7 +188,7 @@
             </div>
           ) : (
             <div className="absolute inset-0 w-full h-full">
-              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="-2 -2 104 104">
                 <defs>
                   <linearGradient id={`grad-${color}`} x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stopColor={theme.gradStart} />
@@ -199,7 +204,7 @@
                 return (
                   <div 
                     key={i} 
-                    className={`absolute w-2.5 h-2.5 -ml-[5px] -mt-[5px] rounded-full cursor-pointer z-10 transition-all duration-300 ${isActive ? 'opacity-100 hover:scale-150' : 'opacity-40'}`}
+                    className={`absolute w-3 h-3 -ml-[6px] -mt-[6px] rounded-full cursor-pointer z-10 transition-all duration-300 ${isActive ? 'opacity-100 hover:scale-150' : 'opacity-40'}`}
                     style={{
                       left: `${pt.x}%`,
                       top: `${pt.y}%`,
