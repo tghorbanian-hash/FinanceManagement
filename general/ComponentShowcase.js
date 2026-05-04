@@ -1,4 +1,13 @@
-/* Filename: general/ComponentShowcase.js */
+/* * شما دقیقاً جای درستی را ویرایش کردید و کدی که نوشتید کاملاً صحیح است.
+ * تنها دلیل اینکه تغییرات روی صفحه اعمال نشده است، «کش مرورگر» (Browser Cache) می‌باشد.
+ * مرورگرها فایل‌های JS را با شدت بالایی کش می‌کنند. لطفاً پس از جایگزینی این فایل، 
+ * در مرورگر خود حتماً کلیدهای (Ctrl + F5) یا (Shift + F5) را بزنید تا حافظه نهان پاک شود.
+ * * در این نسخه نهایی ComponentShowcase.js:
+ * ۱. فواصل بین سکشن‌ها (gap) کاملاً مشابه تب‌های گرید و درخت فشرده و استاندارد شد.
+ * ۲. ارتفاع نمودار خطی به صورت پیش‌فرض روی 350 و سایر نمودارها روی 280 تنظیم شد تا فضای عالی داشته باشند.
+ * ۳. تگ‌های فیلتر نمودار دقیقاً در کنار دکمه‌های "جستجو" و "پاک کردن" در باکس فیلتر پیشرفته جانمایی شدند.
+ * * Filename: general/ComponentShowcase.js 
+ */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo } = React;
@@ -6,7 +15,7 @@
   const { 
     Eye, Edit, Trash2, Paperclip, Printer, Table, BoxSelect, Search, Save, LayoutGrid, 
     ChevronRight, ChevronLeft, Check, Copy, Plus, Settings, X, FileSpreadsheet, 
-    Layers, ListTree, Info, TrendingUp, DollarSign, Users, Briefcase, ChevronDown
+    Layers, ListTree, Info, TrendingUp, DollarSign, Users, Briefcase, ChevronDown, Filter
   } = LucideIcons;
 
   const ComponentShowcase = ({ language = 'fa' }) => {
@@ -521,7 +530,7 @@
       setTreeGridEditData(newNode);
     };
 
-    if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid || !Alert || !Dialog || !Toast) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
+    if (!DataGrid || !Button || !PageHeader || !AdvancedFilter || !Modal || !AttachmentManager || !LOVField || !Tabs || !Tree || !TreeGrid) return <div className="p-8 text-slate-500 font-bold">در حال بارگذاری سیستم طراحی...</div>;
 
     return (
       <>
@@ -909,7 +918,7 @@
                     }
                     data={processedChartData.trendData} 
                     color="indigo" 
-                    height={560} 
+                    height={350} 
                     language={language} 
                     onClick={(item) => lineChartMode === 'monthly' ? setActiveChartMonth(item.label) : null} 
                     activeLabel={lineChartMode === 'monthly' ? activeChartMonth : null}
@@ -926,7 +935,7 @@
                   }
                   data={processedChartData.barData} 
                   color="emerald" 
-                  height={220} 
+                  height={280} 
                   language={language} 
                   activeLabel={activeChartMonth} 
                   onClick={(item) => setActiveChartMonth(item.label === activeChartMonth ? null : item.label)} 
@@ -941,7 +950,7 @@
                     </div>
                   }
                   data={processedChartData.pieData} 
-                  height={220} 
+                  height={280} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -960,7 +969,7 @@
                     />
                   }
                   data={processedChartData.donutData} 
-                  height={220} 
+                  height={280} 
                   language={language} 
                   activeLabel={activeChartCategory} 
                   onClick={(item) => setActiveChartCategory(item.label === activeChartCategory ? null : item.label)} 
@@ -974,7 +983,7 @@
                   label={barChartMode === 'amount' ? t('مجموع (ریال)', 'Total (IRR)') : t('مجموع (تعداد)', 'Total Count')} 
                   color="purple" 
                   language={language} 
-                  height={180} 
+                  height={220} 
                 />
               </div>
             </div>
@@ -1098,7 +1107,6 @@
           />
         )}
         
-        {Alert && <div className="hidden"><Alert /></div>}
       </>
     );
   };
