@@ -2,6 +2,7 @@
 (() => {
   const React = window.React;
   const { useMemo, useState } = React;
+  const { Maximize2, Minimize2, X } = window.LucideIcons || {};
 
   const colorMap = {
     indigo: { main: '#4f46e5', light: '#e0e7ff', gradStart: 'rgba(79, 70, 229, 0.2)', gradEnd: 'rgba(79, 70, 229, 0)' },
@@ -25,9 +26,48 @@
     );
   };
 
+  const ChartContainer = ({ isMaximized, setIsMaximized, children, height, isRtl, t }) => {
+    if (isMaximized) {
+      return (
+        <>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
+          <div className="fixed inset-6 sm:inset-12 md:inset-24 z-[9950] bg-white rounded-2xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl shrink-0">
+               <h3 className="font-black text-[15px] text-slate-800">{t('نمایش دقیق نمودار', 'Detailed Chart View')}</h3>
+               <button onClick={() => setIsMaximized(false)} className="p-2 text-slate-400 hover:bg-slate-200 hover:text-rose-600 rounded-xl transition-colors">
+                  <X size={20}/>
+               </button>
+            </div>
+            <div className="flex-1 p-6 md:p-10 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
+               {children}
+            </div>
+          </div>
+        </>
+      );
+    }
+    
+    return (
+      <div className="w-full relative group flex flex-col" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
+         <button 
+           onClick={() => setIsMaximized(true)} 
+           className="absolute top-0 p-1.5 text-slate-400 bg-white/90 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-all opacity-0 group-hover:opacity-100 z-[40] border border-slate-200 shadow-sm backdrop-blur-sm" 
+           style={{ [isRtl ? 'left' : 'right']: '0px', [isRtl ? 'right' : 'auto']: 'auto' }}
+           title={t('بزرگنمایی', 'Maximize')}
+         >
+            <Maximize2 size={16} />
+         </button>
+         <div className="flex-1 min-h-0 flex flex-col relative w-full h-full">
+            {children}
+         </div>
+      </div>
+    );
+  };
+
   const BarChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
+    const [isMaximized, setIsMaximized] = useState(false);
     const theme = colorMap[color] || colorMap.indigo;
 
     const maxVal = useMemo(() => {
@@ -36,11 +76,11 @@
     }, [data]);
 
     return (
-      <div className="w-full flex flex-col font-sans relative" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 relative pt-6 pb-2 border-b border-slate-100">
+      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 relative pt-6 pb-2 border-b border-slate-100 w-full h-full">
           {data.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400">
-              داده‌ای برای نمایش وجود ندارد
+              {t('داده‌ای برای نمایش وجود ندارد', 'No data to display')}
             </div>
           ) : data.map((item, idx) => {
             const pct = (item.value / maxVal) * 100;
@@ -55,29 +95,31 @@
                 onClick={() => onClick && onClick(item)}
               >
                 <div 
-                  className="w-full max-w-[40px] rounded-t-sm transition-all duration-500 ease-out hover:brightness-110"
+                  className="w-full max-w-[48px] rounded-t-sm transition-all duration-500 ease-out hover:brightness-110 mx-auto"
                   style={{ height: `${pct}%`, backgroundColor: theme.main }}
                 />
               </div>
             );
           })}
         </div>
-        <div className="flex justify-between gap-1 sm:gap-2 pt-2 h-6">
+        <div className="flex justify-between gap-1 sm:gap-2 pt-2 h-6 shrink-0">
           {data.map((item, idx) => (
-            <div key={idx} className={`flex-1 text-center truncate text-[9px] font-bold transition-colors ${activeLabel === item.label ? 'text-indigo-600' : 'text-slate-400'}`}>
+            <div key={idx} className={`flex-1 text-center truncate text-[10px] font-bold transition-colors ${activeLabel === item.label ? 'text-indigo-600' : 'text-slate-400'}`}>
               {item.label}
             </div>
           ))}
         </div>
         <ChartTooltip {...tooltip} />
-      </div>
+      </ChartContainer>
     );
   };
 
-  const LineChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick }) => {
+  const LineChart = ({ data = [], height = 200, color = 'indigo', language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
+    const [isMaximized, setIsMaximized] = useState(false);
 
     const maxVal = useMemo(() => {
       const max = Math.max(...data.map(d => d.value));
@@ -121,56 +163,67 @@
     };
 
     return (
-      <div className="w-full flex flex-col font-sans relative" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex-1 relative w-full h-full mb-4">
+      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className="flex-1 relative w-full h-full mb-6">
           {data.length === 0 ? (
             <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400">
-              داده‌ای برای نمایش وجود ندارد
+              {t('داده‌ای برای نمایش وجود ندارد', 'No data to display')}
             </div>
           ) : (
-            <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="-5 -10 110 120">
-              <defs>
-                <linearGradient id={`grad-${color}`} x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor={theme.gradStart} />
-                  <stop offset="100%" stopColor={theme.gradEnd} />
-                </linearGradient>
-              </defs>
-              <path d={renderArea()} fill={`url(#grad-${color})`} className="animate-in fade-in duration-1000" />
-              <path d={renderPath()} fill="none" stroke={theme.main} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" className="drop-shadow-md animate-in slide-in-from-left duration-1000" />
+            <div className="absolute inset-0 w-full h-full">
+              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                <defs>
+                  <linearGradient id={`grad-${color}`} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={theme.gradStart} />
+                    <stop offset="100%" stopColor={theme.gradEnd} />
+                  </linearGradient>
+                </defs>
+                <path d={renderArea()} fill={`url(#grad-${color})`} vectorEffect="non-scaling-stroke" className="animate-in fade-in duration-1000" />
+                <path d={renderPath()} fill="none" stroke={theme.main} strokeWidth="2.5" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" className="drop-shadow-sm animate-in slide-in-from-left duration-1000" />
+              </svg>
               
-              {getPoints().map((pt, i) => (
-                <g 
-                  key={i} 
-                  className="cursor-pointer group" 
-                  onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${pt.d.label}: ${pt.d.value.toLocaleString()}` })}
-                  onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '' })}
-                  onClick={() => onClick && onClick(pt.d)}
-                >
-                  <circle cx={pt.x} cy={pt.y} r="3" fill={theme.main} stroke="white" strokeWidth="1.5" className="transition-all duration-200 group-hover:r-[5px] group-hover:stroke-[2px]" />
-                  <circle cx={pt.x} cy={pt.y} r="12" fill="transparent" />
-                </g>
-              ))}
-            </svg>
+              {getPoints().map((pt, i) => {
+                const isActive = activeLabel === null || activeLabel === undefined || activeLabel === pt.d.label;
+                return (
+                  <div 
+                    key={i} 
+                    className={`absolute w-3 h-3 -ml-[6px] -mt-[6px] rounded-full cursor-pointer z-10 transition-all duration-300 ${isActive ? 'opacity-100 hover:scale-150' : 'opacity-40'}`}
+                    style={{
+                      left: `${pt.x}%`,
+                      top: `${pt.y}%`,
+                      backgroundColor: theme.main,
+                      border: '2px solid white',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.15)'
+                    }}
+                    onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${pt.d.label}: ${pt.d.value.toLocaleString()}`, label: pt.d.label })}
+                    onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
+                    onClick={() => onClick && onClick(pt.d)}
+                  />
+                );
+              })}
+            </div>
           )}
         </div>
         
-        <div className="flex justify-between w-full absolute bottom-0 left-0 right-0 h-4">
+        <div className="flex justify-between w-full absolute bottom-0 left-0 right-0 h-4 px-1 shrink-0 pointer-events-none">
           {data.map((item, idx) => {
             const isEdgeOrMiddle = idx === 0 || idx === data.length - 1 || idx === Math.floor(data.length / 2);
             if (isEdgeOrMiddle) {
-               return <span key={idx} className="text-[9px] font-bold text-slate-400">{item.label}</span>;
+               return <span key={idx} className="text-[10px] font-bold text-slate-400 truncate">{item.label}</span>;
             }
             return <span key={idx} className="w-4"></span>;
           })}
         </div>
         <ChartTooltip {...tooltip} />
-      </div>
+      </ChartContainer>
     );
   };
 
   const DonutChart = ({ data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
+    const [isMaximized, setIsMaximized] = useState(false);
     
     const colors = [colorMap.indigo.main, colorMap.emerald.main, colorMap.amber.main, colorMap.sky.main, colorMap.purple.main, colorMap.rose.main];
     const total = useMemo(() => data.reduce((acc, curr) => acc + curr.value, 0), [data]);
@@ -187,69 +240,73 @@
     const hoveredSeg = tooltip.visible ? segments.find(s => s.label === tooltip.label) : null;
 
     return (
-      <div className="w-full flex items-center justify-center font-sans gap-6 relative" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="relative h-full aspect-square max-h-[160px]">
-          {data.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 border-4 border-slate-100 rounded-full">
-              بدون داده
-            </div>
-          ) : (
-            <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90 transform">
-              <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4" />
-              {segments.map((seg, i) => {
-                const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
-                return (
-                  <circle 
-                    key={i} cx="18" cy="18" r="15.915" fill="transparent" 
-                    stroke={seg.color} strokeWidth={tooltip.label === seg.label ? "5" : "4"} 
-                    strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset} 
-                    className={`transition-all duration-300 cursor-pointer origin-center ${isActive ? 'opacity-100' : 'opacity-30 hover:opacity-70'}`}
-                    onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
-                    onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
-                    onClick={() => onClick && onClick(seg)}
-                  />
-                );
-              })}
-            </svg>
-          )}
-          {data.length > 0 && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-               <span className="text-[10px] text-slate-400 font-bold">{hoveredSeg ? hoveredSeg.label : 'مجموع'}</span>
-               <span className="text-[13px] font-black text-slate-800 tracking-tight">
-                 {hoveredSeg ? hoveredSeg.value.toLocaleString() : total.toLocaleString()}
-               </span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-2 h-full py-2 max-w-[120px]">
-          {segments.map((seg, i) => {
-            const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
-            return (
-              <div 
-                key={i} 
-                className={`flex items-center gap-2 cursor-pointer transition-all ${isActive ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
-                onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
-                onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
-                onClick={() => onClick && onClick(seg)}
-              >
-                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-bold text-slate-700 truncate">{seg.label}</span>
-                  <span className="text-[9px] text-slate-500">{seg.percent.toFixed(1)}%</span>
-                </div>
+      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col md:flex-row' : ''}`}>
+          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-h-[160px]'}`}>
+            {data.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 border-4 border-slate-100 rounded-full">
+                {t('بدون داده', 'No data')}
               </div>
-            );
-          })}
+            ) : (
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90 transform">
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4" />
+                {segments.map((seg, i) => {
+                  const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
+                  return (
+                    <circle 
+                      key={i} cx="18" cy="18" r="15.915" fill="transparent" 
+                      stroke={seg.color} strokeWidth={tooltip.label === seg.label ? "5" : "4"} 
+                      strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset} 
+                      className={`transition-all duration-300 cursor-pointer origin-center ${isActive ? 'opacity-100' : 'opacity-30 hover:opacity-70'}`}
+                      onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
+                      onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
+                      onClick={() => onClick && onClick(seg)}
+                    />
+                  );
+                })}
+              </svg>
+            )}
+            {data.length > 0 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                 <span className="text-[11px] text-slate-400 font-bold">{hoveredSeg ? hoveredSeg.label : t('مجموع', 'Total')}</span>
+                 <span className="text-[14px] font-black text-slate-800 tracking-tight mt-1">
+                   {hoveredSeg ? hoveredSeg.value.toLocaleString() : total.toLocaleString()}
+                 </span>
+              </div>
+            )}
+          </div>
+
+          <div className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 py-2 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-w-[120px]'}`}>
+            {segments.map((seg, i) => {
+              const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
+              return (
+                <div 
+                  key={i} 
+                  className={`flex items-center gap-2 cursor-pointer transition-all ${isActive ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
+                  onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
+                  onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
+                  onClick={() => onClick && onClick(seg)}
+                >
+                  <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[11px] font-bold text-slate-700 truncate">{seg.label}</span>
+                    <span className="text-[10px] text-slate-500">{seg.percent.toFixed(1)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <ChartTooltip {...tooltip} />
         </div>
-        <ChartTooltip {...tooltip} />
-      </div>
+      </ChartContainer>
     );
   };
 
   const PieChart = ({ data = [], height = 200, language = 'fa', onClick, activeLabel }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
+    const [isMaximized, setIsMaximized] = useState(false);
     
     const colors = [colorMap.sky.main, colorMap.rose.main, colorMap.emerald.main, colorMap.amber.main, colorMap.indigo.main, colorMap.purple.main];
     const total = useMemo(() => data.reduce((acc, curr) => acc + curr.value, 0), [data]);
@@ -264,61 +321,65 @@
     });
 
     return (
-      <div className="w-full flex items-center justify-center font-sans gap-6 relative" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="relative h-full aspect-square max-h-[160px]">
-          {data.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 bg-slate-50 rounded-full">
-              بدون داده
-            </div>
-          ) : (
-            <svg viewBox="0 0 31.83 31.83" className="w-full h-full -rotate-90 transform rounded-full">
-              {segments.map((seg, i) => {
-                const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
-                return (
-                  <circle 
-                    key={i} cx="15.915" cy="15.915" r="7.9575" fill="transparent" 
-                    stroke={seg.color} strokeWidth="15.915" 
-                    strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset} 
-                    className={`transition-all duration-300 cursor-pointer origin-center ${isActive ? 'opacity-100 hover:brightness-110' : 'opacity-30 hover:opacity-70'}`}
-                    onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
-                    onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
-                    onClick={() => onClick && onClick(seg)}
-                  />
-                );
-              })}
-            </svg>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-2 h-full py-2 max-w-[120px]">
-          {segments.map((seg, i) => {
-            const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
-            return (
-              <div 
-                key={i} 
-                className={`flex items-center gap-2 cursor-pointer transition-all ${isActive ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
-                onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
-                onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
-                onClick={() => onClick && onClick(seg)}
-              >
-                <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-bold text-slate-700 truncate">{seg.label}</span>
-                  <span className="text-[9px] text-slate-500">{seg.percent.toFixed(1)}%</span>
-                </div>
+      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col md:flex-row' : ''}`}>
+          <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-h-[160px]'}`}>
+            {data.length === 0 ? (
+              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 bg-slate-50 rounded-full">
+                {t('بدون داده', 'No data')}
               </div>
-            );
-          })}
+            ) : (
+              <svg viewBox="0 0 31.83 31.83" className="w-full h-full -rotate-90 transform rounded-full">
+                {segments.map((seg, i) => {
+                  const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
+                  return (
+                    <circle 
+                      key={i} cx="15.915" cy="15.915" r="7.9575" fill="transparent" 
+                      stroke={seg.color} strokeWidth="15.915" 
+                      strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset} 
+                      className={`transition-all duration-300 cursor-pointer origin-center ${isActive ? 'opacity-100 hover:brightness-110' : 'opacity-30 hover:opacity-70'}`}
+                      onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
+                      onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
+                      onClick={() => onClick && onClick(seg)}
+                    />
+                  );
+                })}
+              </svg>
+            )}
+          </div>
+
+          <div className={`flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2 py-2 ${isMaximized ? 'w-[300px] h-[300px]' : 'h-full max-w-[120px]'}`}>
+            {segments.map((seg, i) => {
+              const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
+              return (
+                <div 
+                  key={i} 
+                  className={`flex items-center gap-2 cursor-pointer transition-all ${isActive ? 'opacity-100' : 'opacity-40 hover:opacity-100'}`}
+                  onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${seg.label}: ${seg.value.toLocaleString()} (${seg.percent.toFixed(1)}%)`, label: seg.label })}
+                  onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '', label: null })}
+                  onClick={() => onClick && onClick(seg)}
+                >
+                  <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[11px] font-bold text-slate-700 truncate">{seg.label}</span>
+                    <span className="text-[10px] text-slate-500">{seg.percent.toFixed(1)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <ChartTooltip {...tooltip} />
         </div>
-        <ChartTooltip {...tooltip} />
-      </div>
+      </ChartContainer>
     );
   };
 
   const GaugeChart = ({ value = 0, min = 0, max = 100, label = '', height = 160, color = 'indigo', language = 'fa' }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
+    const [isMaximized, setIsMaximized] = useState(false);
 
     const safeValue = Math.min(Math.max(value, min), max);
     const range = max - min;
@@ -329,33 +390,37 @@
     const dashValue = (percent / 100) * C;
 
     return (
-      <div className="w-full flex flex-col items-center justify-center font-sans relative" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
-        <div 
-          className="relative w-full max-w-[200px]" 
-          onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${label}: ${safeValue.toLocaleString()}` })}
-          onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '' })}
-        >
-          <svg viewBox="0 0 100 55" className="w-full h-full overflow-visible">
-            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" strokeWidth="12" strokeLinecap="round" />
-            <path 
-              d="M 10 50 A 40 40 0 0 1 90 50" 
-              fill="none" 
-              stroke={theme.main} 
-              strokeWidth="12" 
-              strokeLinecap="round" 
-              strokeDasharray={`${dashValue} ${C}`} 
-              className="transition-all duration-1000 ease-out"
-            />
-          </svg>
-          <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-2 pointer-events-none">
-            <span className="text-[20px] font-black text-slate-800 tracking-tight">{safeValue.toLocaleString()}</span>
-            {label && <span className="text-[10px] font-bold text-slate-400 mt-1">{label}</span>}
+      <ChartContainer isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
+        <div className="w-full h-full flex flex-col items-center justify-center font-sans relative">
+          <div 
+            className={`relative w-full ${isMaximized ? 'max-w-[400px]' : 'max-w-[200px]'}`} 
+            onMouseMove={(e) => setTooltip({ visible: true, x: e.clientX, y: e.clientY, content: `${label}: ${safeValue.toLocaleString()}` })}
+            onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '' })}
+          >
+            <svg viewBox="0 0 100 55" className="w-full h-full overflow-visible">
+              <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" strokeWidth="12" strokeLinecap="round" />
+              <path 
+                d="M 10 50 A 40 40 0 0 1 90 50" 
+                fill="none" 
+                stroke={theme.main} 
+                strokeWidth="12" 
+                strokeLinecap="round" 
+                strokeDasharray={`${dashValue} ${C}`} 
+                className="transition-all duration-1000 ease-out"
+              />
+            </svg>
+            <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-2 pointer-events-none">
+              <span className={`${isMaximized ? 'text-[32px]' : 'text-[20px]'} font-black text-slate-800 tracking-tight transition-all`}>
+                {safeValue.toLocaleString()}
+              </span>
+              {label && <span className={`${isMaximized ? 'text-[13px]' : 'text-[10px]'} font-bold text-slate-400 mt-1 transition-all`}>{label}</span>}
+            </div>
+            <div className={`absolute bottom-1 left-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 pointer-events-none transition-all`}>{min}</div>
+            <div className={`absolute bottom-1 right-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 pointer-events-none transition-all`}>{max}</div>
           </div>
-          <div className="absolute bottom-1 left-2 text-[9px] font-bold text-slate-400 pointer-events-none">{min}</div>
-          <div className="absolute bottom-1 right-2 text-[9px] font-bold text-slate-400 pointer-events-none">{max}</div>
+          <ChartTooltip {...tooltip} />
         </div>
-        <ChartTooltip {...tooltip} />
-      </div>
+      </ChartContainer>
     );
   };
 

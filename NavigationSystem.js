@@ -387,7 +387,7 @@
           <aside className={`bg-white border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden opacity-0'} ${isRtl ? 'border-l' : 'border-r'}`}>
             <div className="h-12 flex items-center justify-between px-4 border-b border-slate-100 shrink-0 font-sans">
               <h2 className="font-black text-slate-800 tracking-tight text-[13px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
-              <button onClick={() => setSidebarOpen(false)} className="p-1 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
+              <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans"><div className="space-y-[2px]">{activeTree.map(node => renderSidebarNode(node))}</div></div>
           </aside>
@@ -398,12 +398,12 @@
             <div className="flex items-center gap-4 w-full max-w-3xl">
               {showSidebar && !sidebarOpen && <button onClick={() => setSidebarOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 transition-all active:scale-95 shrink-0">{isRtl ? <ChevronLeft size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}</button>}
               {activeDomainId !== 'HOME_FAV' && (
-                <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200 shrink-0">
-                  <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><ListTree size={14} /><span>{t('درختی', 'Tree')}</span></button>
-                  <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[11px] font-bold transition-all ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={14} /><span>{t('کاشی', 'Tile')}</span></button>
+                <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200 shrink-0 h-8">
+                  <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><ListTree size={14} /><span>{t('درختی', 'Tree')}</span></button>
+                  <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={14} /><span>{t('کاشی', 'Tile')}</span></button>
                 </div>
               )}
-              <div className="relative w-full">
+              <div className="relative w-full max-w-md">
                 <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400`} />
                 <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 border border-slate-200 rounded-md text-[11px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white focus:border-indigo-300 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 {searchTerm && (
