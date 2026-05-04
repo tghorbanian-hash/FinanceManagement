@@ -174,6 +174,24 @@
     const toggleNode = (id) => setExpandedNodes(prev => ({ ...prev, [id]: !prev[id] }));
     const toggleModuleCollapse = (id) => setCollapsedModules(prev => ({ ...prev, [id]: !prev[id] }));
 
+    const handleExpandAll = () => {
+      const allNodes = {};
+      const traverse = (nodes) => {
+        nodes.forEach(node => {
+          if (node.children && node.children.length > 0) {
+            allNodes[node.id] = true;
+            traverse(node.children);
+          }
+        });
+      };
+      traverse(activeTree);
+      setExpandedNodes(allNodes);
+    };
+
+    const handleCollapseAll = () => {
+      setExpandedNodes({});
+    };
+
     const DynamicIcon = ({ name, size = 18 }) => {
       const Icon = LucideIcons[name] || FileText;
       return <Icon size={size} />;
@@ -389,6 +407,19 @@
               <h2 className="font-black text-slate-800 tracking-tight text-[13px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
               <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
             </div>
+            
+            <div className={`flex items-center gap-3 px-4 py-2 border-b border-slate-50 shrink-0 bg-slate-50/50 ${sidebarOpen ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300 delay-100`}>
+              <button onClick={handleExpandAll} className="text-[11px] font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                 <FolderOpen size={13} strokeWidth={2.5} />
+                 {t('باز کردن همه', 'Expand All')}
+              </button>
+              <div className="w-px h-3 bg-slate-300"></div>
+              <button onClick={handleCollapseAll} className="text-[11px] font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5">
+                 <Folder size={13} strokeWidth={2.5} />
+                 {t('بستن همه', 'Collapse All')}
+              </button>
+            </div>
+
             <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans"><div className="space-y-[2px]">{activeTree.map(node => renderSidebarNode(node))}</div></div>
           </aside>
         )}
