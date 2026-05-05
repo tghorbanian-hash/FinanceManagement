@@ -55,14 +55,23 @@
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const [values, setValues] = useState(initialValues || {});
 
+    // Sync from parent flawlessly
     useEffect(() => {
-      if (initialValues) {
-        setValues(prev => JSON.stringify(prev) !== JSON.stringify(initialValues) ? initialValues : prev);
-      }
+      setValues(initialValues || {});
     }, [initialValues]);
 
-    const handleChange = (name, val) => setValues(prev => ({ ...prev, [name]: val }));
-    const handleClear = () => { setValues({}); if (onClear) onClear(); };
+    // Update local state and instantly notify parent so View Saves correctly catch everything
+    const handleChange = (name, val) => {
+      const newValues = { ...values, [name]: val };
+      setValues(newValues);
+      if (onFilter) onFilter(newValues);
+    };
+    
+    const handleClear = () => { 
+      setValues({}); 
+      if (onClear) onClear(); 
+      else if (onFilter) onFilter({});
+    };
 
     return (
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col shrink-0 mb-3 font-sans transition-all duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -128,35 +137,34 @@
     const headerMenuRef = useRef(null);
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
-    const isUpdatingFromProps = useRef(false);
 
+    // 1. Receive State from Parent (View Applied)
     useEffect(() => {
       if (gridState) {
-        isUpdatingFromProps.current = true;
-        if (gridState.columnOrder && gridState.columnOrder.length) setColumnOrder(gridState.columnOrder);
-        if (gridState.hiddenCols) setHiddenCols(gridState.hiddenCols);
-        if (gridState.pinnedCols) setPinnedCols(gridState.pinnedCols);
-        if (gridState.filters) setFilters(gridState.filters);
-        if (gridState.sortConfig) setSortConfig(gridState.sortConfig);
-        if (gridState.groupCols) setGroupCols(gridState.groupCols);
-        setTimeout(() => { isUpdatingFromProps.current = false; }, 0);
+        setColumnOrder(gridState.columnOrder || columns.map(c => c.field));
+        setHiddenCols(gridState.hiddenCols || []);
+        setPinnedCols(gridState.pinnedCols || []);
+        setFilters(gridState.filters || {});
+        setSortConfig(gridState.sortConfig || { field: null, direction: 'asc' });
+        setGroupCols(gridState.groupCols || []);
       } else if (gridState === null) {
-        isUpdatingFromProps.current = true;
         setColumnOrder(columns.map(c => c.field));
         setHiddenCols([]);
         setPinnedCols([]);
         setFilters({});
         setSortConfig({ field: null, direction: 'asc' });
         setGroupCols([]);
-        setTimeout(() => { isUpdatingFromProps.current = false; }, 0);
       }
     }, [gridState]);
 
+    // 2. Notify Parent of Local Changes flawlessly without loop
     useEffect(() => {
-      if (onGridStateChange && !isUpdatingFromProps.current) {
-        onGridStateChange({ columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols });
+      if (onGridStateChange) {
+        const currentState = { columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols };
+        if (gridState && JSON.stringify(currentState) === JSON.stringify(gridState)) return;
+        onGridStateChange(currentState);
       }
-    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, onGridStateChange]);
+    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, onGridStateChange, gridState]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { 
