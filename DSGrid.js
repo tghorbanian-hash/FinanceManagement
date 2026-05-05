@@ -49,17 +49,21 @@
     );
   };
 
-  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false, initialValues = {}, children }) => {
+  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false, initialValues, children }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const [values, setValues] = useState(initialValues || {});
 
+    const initialValuesStr = JSON.stringify(initialValues || {});
     useEffect(() => {
-      if (initialValues) {
-        setValues(initialValues);
+      const parsed = JSON.parse(initialValuesStr);
+      if (parsed && Object.keys(parsed).length > 0) {
+        setValues(parsed);
+      } else {
+        setValues({});
       }
-    }, [initialValues]);
+    }, [initialValuesStr]);
 
     const handleChange = (name, val) => setValues(prev => ({ ...prev, [name]: val }));
     const handleClear = () => { setValues({}); if (onClear) onClear(); };
@@ -80,7 +84,10 @@
                 if (f.type === 'select') return <SelectField key={idx} size="sm" label={f.label} isRtl={isRtl} options={f.options} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} />;
                 if (f.type === 'toggle') return <ToggleField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
                 if (f.type === 'checkbox') return <CheckboxField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
-                if (f.type === 'lov') return <LOVField key={idx} size="sm" label={f.label} isRtl={isRtl} data={f.lovData} columns={f.lovColumns} displayValue={values[f.name]?.title} onChange={(row) => handleChange(f.name, row)} />;
+                if (f.type === 'lov') {
+                  const displayStr = values[f.name] && typeof values[f.name] === 'object' ? (values[f.name].title || values[f.name].name || values[f.name].label || Object.values(values[f.name])[0]) : values[f.name];
+                  return <LOVField key={idx} size="sm" label={f.label} isRtl={isRtl} data={f.lovData} columns={f.lovColumns} displayValue={displayStr} onChange={(row) => handleChange(f.name, row)} />;
+                }
                 if (f.type === 'date') return <DatePicker key={idx} size="sm" label={f.label} isRtl={isRtl} language={language} value={values[f.name] || ''} onChange={(val) => handleChange(f.name, val)} />;
                 return <TextField key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'} />;
               })}
@@ -441,9 +448,9 @@
           <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
             <thead className="sticky top-0 z-40 bg-slate-100 dark:bg-slate-900 shadow-sm">
               <tr>
-                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}></th>}
+                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 bg-slate-100 dark:bg-slate-900`}></th>}
                 {selectable && (
-                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 border-b border-slate-200 dark:border-slate-700 text-center bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}>
+                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 text-center bg-slate-100 dark:bg-slate-900`}>
                     <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
                   </th>
                 )}
@@ -455,7 +462,7 @@
                       key={col.field} draggable
                       onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
                       style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
-                      className={`p-1.5 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-200 select-none bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}
+                      className={`p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 select-none bg-slate-100 dark:bg-slate-900`}
                     >
                       <div className="flex items-center justify-between gap-1 group">
                         <div className="flex items-center gap-1.5 cursor-pointer flex-1 overflow-hidden" onClick={() => handleSort(col.field)}>
@@ -471,18 +478,18 @@
                   )
                 })}
                 {actions.length > 0 && (
-                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
+                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
               </tr>
 
               <tr>
-                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
-                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50`}></td>}
+                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50`}></td>}
                 {visibleColumns.map((col) => {
                   return (
-                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 ${isRtl ? 'border-l' : 'border-r'}`}>
+                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50`}>
                       <div className="relative">
                         {col.type === 'date' ? (
                           <DatePicker 

@@ -134,7 +134,8 @@
     const restProps = Object.assign({}, props);
     ['label', 'error', 'hint', 'icon', 'disabled', 'required', 'className', 'wrapperClassName', 'id', 'type', 'size', 'isRtl'].forEach(k => delete restProps[k]);
     
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useMemo(() => `input-${Math.random().toString(36).substr(2, 9)}`, []);
+    const inputId = id || generatedId;
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
     
     return (
@@ -159,7 +160,9 @@
     const containerRef = useRef(null);
     const inputRef = useRef(null);
     const t = (fa, en) => isRtl ? fa : en;
-    const selectId = id || `select-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const generatedId = useMemo(() => `select-${Math.random().toString(36).substr(2, 9)}`, []);
+    const selectId = id || generatedId;
     
     const selectedOption = options.find(o => String(o.value) === String(value));
     const displayValue = selectedOption ? selectedOption.label : '';
@@ -318,6 +321,7 @@
     const [isDefaultView, setIsDefaultView] = useState(false);
     const [saveMode, setSaveMode] = useState('new');
     const dropdownRef = useRef(null);
+    const isInitialMount = useRef(true);
 
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -335,26 +339,32 @@
               const { data } = await window.supabase.from('fm_user_views').select('*').eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
               if (data) {
                 setViews(data);
-                const def = data.find(v => v.is_default);
-                if (def && !activeView) {
-                  setActiveView(def);
-                  if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
+                if (isInitialMount.current) {
+                  const def = data.find(v => v.is_default);
+                  if (def) {
+                    setActiveView(def);
+                    if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
+                  }
+                  isInitialMount.current = false;
                 }
               }
             } else throw new Error();
           } catch(e) {
             const local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
             setViews(local);
-            const def = local.find(v => v.is_default);
-            if (def && !activeView) {
-              setActiveView(def);
-              if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
+            if (isInitialMount.current) {
+              const def = local.find(v => v.is_default);
+              if (def) {
+                setActiveView(def);
+                if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
+              }
+              isInitialMount.current = false;
             }
           }
         };
         loadViews();
       }
-    }, [viewConfig]);
+    }, [viewConfig?.pageId]);
 
     const handleSaveView = async () => {
       if (!viewConfig) return;
@@ -445,7 +455,23 @@
       }
       setViews(prev => prev.filter(v => v.id !== id));
       if (activeView && activeView.id === id) {
-        setActiveView(null);
+        handleResetView();
+      }
+    };
+
+    const handleSetDefaultView = async (id) => {
+      try {
+        if (window.supabase) {
+          await window.supabase.from('fm_user_views').update({ is_default: false }).eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
+          await window.supabase.from('fm_user_views').update({ is_default: true }).eq('id', id);
+        } else {
+          let local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
+          local = local.map(v => ({ ...v, is_default: v.id === id }));
+          localStorage.setItem(`fm_views_${viewConfig.pageId}`, JSON.stringify(local));
+        }
+        setViews(prev => prev.map(v => ({ ...v, is_default: v.id === id })));
+      } catch(e) {
+        console.error("Error setting default view", e);
       }
     };
 
@@ -575,6 +601,9 @@
                           {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
                         </div>
                         <div className="flex items-center gap-1">
+                          <button onClick={() => handleSetDefaultView(v.id)} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`p-1.5 rounded-md transition-colors ${v.is_default ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                            <Check size={14} />
+                          </button>
                           <Button size="sm" variant="ghost" onClick={() => handleApplyView(v)} className="!h-7 !px-2 !text-[10px] text-indigo-600 dark:text-indigo-400">{t('اعمال', 'Apply')}</Button>
                           <button onClick={() => handleDeleteView(v.id)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
                         </div>
@@ -641,7 +670,8 @@
     const restProps = Object.assign({}, props);
     ['label', 'error', 'disabled', 'required', 'className', 'id', 'rows', 'size', 'isRtl'].forEach(k => delete restProps[k]);
 
-    const inputId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useMemo(() => `textarea-${Math.random().toString(36).substr(2, 9)}`, []);
+    const inputId = id || generatedId;
     return (
       <div className={`flex flex-col gap-1.5 w-full`}>
         {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
@@ -878,7 +908,8 @@
     const [currentYear, setCurrentYear] = useState(initToday.y);
     
     const containerRef = useRef(null);
-    const inputId = id || `datepicker-${Math.random().toString(36).substr(2, 9)}`;
+    const generatedId = useMemo(() => `datepicker-${Math.random().toString(36).substr(2, 9)}`, []);
+    const inputId = id || generatedId;
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
     const t = (fa, en) => isRtl ? fa : en;
 
