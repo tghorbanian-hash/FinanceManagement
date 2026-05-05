@@ -101,7 +101,11 @@
     return `${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`;
   };
 
-  const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
+  const Button = (props) => {
+    const { children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title } = props;
+    const restProps = Object.assign({}, props);
+    ['children', 'variant', 'size', 'isLoading', 'disabled', 'icon', 'iconPosition', 'className', 'onClick', 'type', 'title'].forEach(k => delete restProps[k]);
+    
     const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
     const variants = {
       primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-sm shadow-indigo-200 dark:shadow-none dark:bg-indigo-500 dark:hover:bg-indigo-600",
@@ -116,7 +120,7 @@
     const iconSizes = { sm: 14, md: 16, lg: 18 };
 
     return (
-      <button type={type} title={title} className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} disabled={disabled || isLoading} onClick={onClick} {...props}>
+      <button type={type} title={title} className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} disabled={disabled || isLoading} onClick={onClick} {...restProps}>
         {isLoading && <Loader2 size={iconSizes[size]} className="animate-spin shrink-0" />}
         {!isLoading && Icon && iconPosition === 'right' && <Icon size={iconSizes[size]} className="shrink-0" />}
         {hasText && <span className="truncate">{children}</span>}
@@ -125,7 +129,11 @@
     );
   };
 
-  const TextField = ({ label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true, ...props }) => {
+  const TextField = (props) => {
+    const { label, error, hint, icon: Icon, disabled = false, required = false, className = '', wrapperClassName = '', id, type = 'text', size = 'md', isRtl = true } = props;
+    const restProps = Object.assign({}, props);
+    ['label', 'error', 'hint', 'icon', 'disabled', 'required', 'className', 'wrapperClassName', 'id', 'type', 'size', 'isRtl'].forEach(k => delete restProps[k]);
+    
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
     
@@ -137,7 +145,7 @@
           <input
             id={inputId} type={type} disabled={disabled}
             className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 hover:border-slate-400 dark:hover:border-slate-500'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
-            dir={isRtl ? 'rtl' : 'ltr'} {...props}
+            dir={isRtl ? 'rtl' : 'ltr'} {...restProps}
           />
         </div>
         {error ? <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div> : hint ? <div className="text-slate-500 dark:text-slate-400 text-[10px] mt-0.5">{hint}</div> : null}
@@ -347,7 +355,11 @@
     );
   };
 
-  const CurrencyField = ({ value, onChange, label, error, size = 'md', isRtl = true, ...props }) => {
+  const CurrencyField = (props) => {
+    const { value, onChange, label, error, size = 'md', isRtl = true } = props;
+    const restProps = Object.assign({}, props);
+    ['value', 'onChange', 'label', 'error', 'size', 'isRtl'].forEach(k => delete restProps[k]);
+
     const format = (v) => {
       if (!v && v !== 0) return '';
       const clean = String(v).replace(/,/g, '');
@@ -363,13 +375,17 @@
 
     return (
       <TextField 
-        {...props} label={label} error={error} size={size} isRtl={isRtl} 
+        {...restProps} label={label} error={error} size={size} isRtl={isRtl} 
         value={format(value)} onChange={handleInputChange} dir="ltr"
       />
     );
   };
 
-  const TextAreaField = ({ label, error, disabled = false, required = false, className = '', id, rows = 3, size = 'md', isRtl = true, ...props }) => {
+  const TextAreaField = (props) => {
+    const { label, error, disabled = false, required = false, className = '', id, rows = 3, size = 'md', isRtl = true } = props;
+    const restProps = Object.assign({}, props);
+    ['label', 'error', 'disabled', 'required', 'className', 'id', 'rows', 'size', 'isRtl'].forEach(k => delete restProps[k]);
+
     const inputId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
     return (
       <div className={`flex flex-col gap-1.5 w-full`}>
@@ -377,7 +393,7 @@
         <textarea
           id={inputId} disabled={disabled} rows={rows}
           className={`w-full bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none p-2.5 text-[13px] placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 hover:border-slate-400 dark:hover:border-slate-500'} ${className}`}
-          dir={isRtl ? 'rtl' : 'ltr'} {...props}
+          dir={isRtl ? 'rtl' : 'ltr'} {...restProps}
         />
         {error && <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
       </div>

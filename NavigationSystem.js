@@ -273,11 +273,16 @@
       document.body.removeChild(link);
     };
 
-    const DynamicIcon = ({ name, size = 18, ...props }) => {
+    const DynamicIcon = (props) => {
+      const { name, size = 18 } = props;
+      const restProps = Object.assign({}, props);
+      delete restProps.name;
+      delete restProps.size;
+      
       let Icon = typeof name === 'string' ? LucideIcons[name] : name;
       if (!Icon) Icon = FileText;
-      if (!Icon) return <FallbackIcon size={size} {...props} />;
-      return <Icon size={size} {...props} />;
+      if (!Icon) return <FallbackIcon size={size} {...restProps} />;
+      return <Icon size={size} {...restProps} />;
     };
 
     const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';
