@@ -386,9 +386,9 @@
           <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
             <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
               <tr>
-                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className="p-1.5 border-b border-slate-200 bg-slate-100"></th>}
+                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className="p-1.5 bg-slate-100"></th>}
                 {selectable && (
-                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className="p-1.5 border-b border-slate-200 text-center bg-slate-100">
+                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className="p-1.5 text-center bg-slate-100">
                     <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                   </th>
                 )}
@@ -400,7 +400,7 @@
                       key={col.field} draggable
                       onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
                       style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
-                      className="p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 select-none bg-slate-100"
+                      className="p-1.5 text-[12px] font-black text-slate-700 select-none bg-slate-100"
                     >
                       <div className="flex items-center justify-between gap-1 group">
                         <div className="flex items-center gap-1.5 cursor-pointer flex-1 overflow-hidden" onClick={() => handleSort(col.field)}>
@@ -416,7 +416,7 @@
                   )
                 })}
                 {actions.length > 0 && (
-                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 w-[120px] bg-slate-100 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
+                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[12px] font-black text-slate-700 w-[120px] bg-slate-100 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
