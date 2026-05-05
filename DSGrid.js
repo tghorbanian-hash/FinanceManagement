@@ -125,23 +125,35 @@
     const headerMenuRef = useRef(null);
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
+    const isUpdatingFromProps = useRef(false);
 
     useEffect(() => {
       if (gridState) {
+        isUpdatingFromProps.current = true;
         if (gridState.columnOrder && gridState.columnOrder.length) setColumnOrder(gridState.columnOrder);
         if (gridState.hiddenCols) setHiddenCols(gridState.hiddenCols);
         if (gridState.pinnedCols) setPinnedCols(gridState.pinnedCols);
         if (gridState.filters) setFilters(gridState.filters);
         if (gridState.sortConfig) setSortConfig(gridState.sortConfig);
         if (gridState.groupCols) setGroupCols(gridState.groupCols);
+        setTimeout(() => { isUpdatingFromProps.current = false; }, 0);
+      } else if (gridState === null) {
+        isUpdatingFromProps.current = true;
+        setColumnOrder(columns.map(c => c.field));
+        setHiddenCols([]);
+        setPinnedCols([]);
+        setFilters({});
+        setSortConfig({ field: null, direction: 'asc' });
+        setGroupCols([]);
+        setTimeout(() => { isUpdatingFromProps.current = false; }, 0);
       }
     }, [gridState]);
 
     useEffect(() => {
-      if (onGridStateChange && !gridState) {
+      if (onGridStateChange && !isUpdatingFromProps.current) {
         onGridStateChange({ columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols });
       }
-    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, gridState]);
+    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, onGridStateChange]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { 

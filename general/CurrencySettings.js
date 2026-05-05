@@ -581,11 +581,21 @@
         {/* Modal: Add/Edit Currency */}
         <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
           <div className="p-4 flex flex-col gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <TextField label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-1" />
-              <TextField label={t('عنوان ارز', 'Title')} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-2" />
-              <div className="sm:col-span-1 flex items-center pt-5 pl-2">
-                 <ToggleField label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
+              
+              <div className="sm:col-span-2 flex flex-col gap-1 w-full">
+                  <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('عنوان ارز', 'Title')} <span className="text-red-500 dark:text-red-400">*</span></label>
+                      <ToggleField label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
+                  </div>
+                  <input
+                      type="text"
+                      value={selectedCurrency?.title || ''}
+                      onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})}
+                      className="w-full h-8 text-[11px] px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20"
+                      dir={isRtl ? 'rtl' : 'ltr'}
+                  />
               </div>
             </div>
 

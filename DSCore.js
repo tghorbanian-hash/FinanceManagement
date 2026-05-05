@@ -316,6 +316,7 @@
     const [isManageModalOpen, setIsManageModalOpen] = useState(false);
     const [newViewName, setNewViewName] = useState('');
     const [isDefaultView, setIsDefaultView] = useState(false);
+    const [saveMode, setSaveMode] = useState('new');
     const dropdownRef = useRef(null);
 
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
@@ -356,47 +357,79 @@
     }, [viewConfig]);
 
     const handleSaveView = async () => {
-      if (!newViewName || !viewConfig) return;
+      if (!viewConfig) return;
+      if (saveMode === 'new' && !newViewName) return;
+      
       const dataToSave = typeof viewConfig.currentState === 'function' ? viewConfig.currentState() : viewConfig.currentState;
-      const newView = {
-        user_id: MOCK_USER_ID,
-        page_id: viewConfig.pageId,
-        view_name: newViewName,
-        view_data: dataToSave,
-        is_default: isDefaultView
-      };
-
+      
       try {
         if (window.supabase) {
-           if (isDefaultView) await window.supabase.from('fm_user_views').update({ is_default: false }).eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
-           const { data, error } = await window.supabase.from('fm_user_views').insert([newView]).select();
-           if (error) throw error;
+           if (isDefaultView) {
+               await window.supabase.from('fm_user_views').update({ is_default: false }).eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
+           }
            
-           setViews(prev => {
-             let updated = [...prev];
-             if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
-             return [...updated, data[0]];
-           });
-           setActiveView(data[0]);
+           if (saveMode === 'update' && activeView) {
+               const { data, error } = await window.supabase.from('fm_user_views')
+                   .update({ view_data: dataToSave, is_default: isDefaultView })
+                   .eq('id', activeView.id)
+                   .select();
+               if (error) throw error;
+               
+               setViews(prev => prev.map(v => {
+                   if (isDefaultView && v.id !== activeView.id) return { ...v, is_default: false };
+                   if (v.id === activeView.id) return data[0];
+                   return v;
+               }));
+               setActiveView(data[0]);
+           } else {
+               const newView = {
+                 user_id: MOCK_USER_ID,
+                 page_id: viewConfig.pageId,
+                 view_name: newViewName,
+                 view_data: dataToSave,
+                 is_default: isDefaultView
+               };
+               const { data, error } = await window.supabase.from('fm_user_views').insert([newView]).select();
+               if (error) throw error;
+               
+               setViews(prev => {
+                 let updated = [...prev];
+                 if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
+                 return [...updated, data[0]];
+               });
+               setActiveView(data[0]);
+           }
            setIsSaveModalOpen(false);
-           setNewViewName('');
            return;
         } else throw new Error();
       } catch(e) {
-        newView.id = Date.now().toString();
         let local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
         if (isDefaultView) local = local.map(v => ({...v, is_default: false}));
-        local.push(newView);
+        
+        let updatedView;
+        if (saveMode === 'update' && activeView) {
+            const idx = local.findIndex(v => v.id === activeView.id);
+            if (idx > -1) {
+                local[idx] = { ...local[idx], view_data: dataToSave, is_default: isDefaultView };
+                updatedView = local[idx];
+            }
+        } else {
+            updatedView = {
+              id: Date.now().toString(),
+              user_id: MOCK_USER_ID,
+              page_id: viewConfig.pageId,
+              view_name: newViewName,
+              view_data: dataToSave,
+              is_default: isDefaultView
+            };
+            local.push(updatedView);
+        }
+        
         localStorage.setItem(`fm_views_${viewConfig.pageId}`, JSON.stringify(local));
         
-        setViews(prev => {
-          let updated = [...prev];
-          if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
-          return [...updated, newView];
-        });
-        setActiveView(newView);
+        setViews(local);
+        setActiveView(updatedView);
         setIsSaveModalOpen(false);
-        setNewViewName('');
       }
     };
 
@@ -458,16 +491,6 @@
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
-            {viewConfig && activeView && (
-               <div className="flex items-center gap-1.5 mr-2 bg-indigo-50/50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/50 rounded-lg px-2 h-8 animate-in fade-in">
-                  <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
-                    <span className="opacity-60">{t('نمای فعال:', 'Active View:')}</span> {activeView.view_name}
-                  </span>
-                  <button onClick={handleResetView} className="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors text-indigo-500 dark:text-indigo-400 ml-1" title={t('لغو نما', 'Clear View')}>
-                    <X size={12} strokeWidth={2.5} />
-                  </button>
-               </div>
-            )}
             {viewConfig && (
               <div className="relative" ref={dropdownRef}>
                 <button 
@@ -475,13 +498,19 @@
                   className={`flex items-center gap-2 px-3 h-8 rounded-lg border text-[11px] font-bold transition-all ${activeView ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
                   <LayoutTemplate size={14} className={activeView ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
-                  <span>{t('نما:', 'View:')} {activeView ? activeView.view_name : t('پیش‌فرض سیستم', 'System Default')}</span>
+                  <span>{t('نما:', 'View:')} <span className={activeView ? 'text-indigo-600 dark:text-indigo-400 font-black' : ''}>{activeView ? activeView.view_name : t('پیش‌فرض سیستم', 'System Default')}</span></span>
                   <ChevronDown size={14} className="opacity-70" />
                 </button>
 
                 {isDropdownOpen && (
                   <div className={`absolute top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl py-1.5 z-50 animate-in zoom-in-95 duration-100 ${isRtl ? 'left-0' : 'right-0'}`}>
-                    <button onClick={() => { setIsSaveModalOpen(true); setIsDropdownOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                    <button onClick={() => { 
+                        setIsSaveModalOpen(true); 
+                        setIsDropdownOpen(false); 
+                        setSaveMode(activeView ? 'update' : 'new');
+                        setNewViewName(activeView ? activeView.view_name : '');
+                        setIsDefaultView(activeView ? activeView.is_default : false);
+                    }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
                       <Save size={14} /> {t('ذخیره این نما', 'Save Current View')}
                     </button>
                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
@@ -511,11 +540,25 @@
           <>
             <window.DSFeedback.Modal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} title={t('ذخیره نمای جاری', 'Save Current View')} width="max-w-md" language={language}>
                <div className="p-5 flex flex-col gap-4">
-                  <TextField label={t('نام نما', 'View Name')} value={newViewName} onChange={(e) => setNewViewName(e.target.value)} isRtl={isRtl} required />
+                  {activeView && (
+                      <RadioGroup 
+                          options={[
+                              { label: t('بروزرسانی نمای فعلی', 'Update current view') + ` (${activeView.view_name})`, value: 'update' },
+                              { label: t('ذخیره به عنوان نمای جدید', 'Save as new view'), value: 'new' }
+                          ]}
+                          value={saveMode}
+                          onChange={setSaveMode}
+                          isRtl={isRtl}
+                          inline={false}
+                      />
+                  )}
+                  {(saveMode === 'new' || !activeView) && (
+                      <TextField label={t('نام نما', 'View Name')} value={newViewName} onChange={(e) => setNewViewName(e.target.value)} isRtl={isRtl} required />
+                  )}
                   <ToggleField label={t('تنظیم به عنوان پیش‌فرض این صفحه', 'Set as default for this page')} checked={isDefaultView} onChange={setIsDefaultView} isRtl={isRtl} />
                   <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
                     <Button variant="outline" size="sm" onClick={() => setIsSaveModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-                    <Button variant="primary" size="sm" onClick={handleSaveView} disabled={!newViewName}>{t('ذخیره نما', 'Save View')}</Button>
+                    <Button variant="primary" size="sm" onClick={handleSaveView} disabled={saveMode === 'new' && !newViewName}>{t('ذخیره نما', 'Save View')}</Button>
                   </div>
                </div>
             </window.DSFeedback.Modal>
