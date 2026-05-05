@@ -11,11 +11,13 @@
   const CurrencySettings = ({ language = 'fa' }) => {
     const { 
       DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
-      AdvancedFilter, Modal, Tabs, CurrencyField, DatePicker, Toast 
-    } = window.DesignSystem || {};
+      AdvancedFilter, Modal, Tabs, CurrencyField, DatePicker, Toast,
+      formatGlobalDate, useCalendarMode
+    } = window.DSCore || window.DesignSystem || {};
 
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+    const globalCalendarMode = useCalendarMode ? useCalendarMode() : 'jalali';
 
     const getTodayGregorian = () => {
       const d = new Date();
@@ -390,12 +392,13 @@
         render: (v) => {
           if (!v) return '';
           const d = new Date(v);
+          const formattedDate = formatGlobalDate ? formatGlobalDate(v, globalCalendarMode) : d.toISOString().split('T')[0].replace(/-/g, '/');
           return (
              <div className="flex items-center gap-1.5 text-slate-700">
                <Calendar size={12} className="text-slate-400" />
-               <span>{d.toISOString().split('T')[0].replace(/-/g, '/')}</span>
+               <span className="font-mono text-[11px] font-medium" dir="ltr">{formattedDate}</span>
                <Clock size={12} className="text-slate-400 ml-1" />
-               <span className="font-mono text-[10px] bg-slate-100 px-1 rounded">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
+               <span className="font-mono text-[10px] bg-slate-100 px-1 rounded" dir="ltr">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
              </div>
           );
         }
@@ -655,7 +658,9 @@
                  </div>
                  <div className="flex items-center justify-between text-[13px]">
                    <span className="text-slate-500 font-bold">{t('تاریخ:', 'Date:')}</span>
-                   <span className="font-black text-slate-800">{editingRate?.rate_date}</span>
+                   <span className="font-black text-slate-800 font-mono" dir="ltr">
+                     {formatGlobalDate ? formatGlobalDate(editingRate?.rate_date, globalCalendarMode) : editingRate?.rate_date}
+                   </span>
                  </div>
               </div>
               <CurrencyField 

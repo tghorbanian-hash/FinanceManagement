@@ -7,7 +7,7 @@
     Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
     ListTree, FileText, Bell, Monitor, Clock,
     Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning,
-    Maximize2, Minimize2, FileSpreadsheet
+    Maximize2, Minimize2, FileSpreadsheet, Calendar
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -61,6 +61,8 @@
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
+    const [calendarMode, setCalendarMode] = useState(() => window.localStorage.getItem('fm_calendar_mode') || 'jalali');
+
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
     useEffect(() => {
@@ -77,6 +79,12 @@
       setCollapsedModules({});
       setTreeSearchTerm('');
     }, [activeDomainId]);
+
+    useEffect(() => {
+      const handler = (e) => setCalendarMode(e.detail);
+      window.addEventListener('fm_calendar_mode_change', handler);
+      return () => window.removeEventListener('fm_calendar_mode_change', handler);
+    }, []);
 
     const fetchMenuData = async () => {
       setLoading(true);
@@ -128,6 +136,16 @@
       const newRecents = [item.id, ...recents.filter(id => id !== item.id)].slice(0, 10);
       setRecents(newRecents);
       localStorage.setItem('sys_recents', JSON.stringify(newRecents));
+    };
+
+    const toggleCalendar = () => {
+      const newMode = calendarMode === 'jalali' ? 'gregorian' : 'jalali';
+      if (window.DSCore?.setGlobalCalendarMode) {
+        window.DSCore.setGlobalCalendarMode(newMode);
+      } else {
+        window.localStorage.setItem('fm_calendar_mode', newMode);
+        window.dispatchEvent(new CustomEvent('fm_calendar_mode_change', { detail: newMode }));
+      }
     };
 
     const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
@@ -445,15 +463,15 @@
 
     return (
       <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
-        <nav className={`w-[60px] bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-[100] shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
+        <nav className={`w-[60px] bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
           <button onClick={() => { setActiveDomainId('HOME_FAV'); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
             <Star size={18} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
-            <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[110] shadow-lg font-sans`}>{t('میز کار و علاقه‌مندی‌ها', 'Workspace & Favorites')}</div>
+            <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{t('میز کار و علاقه‌مندی‌ها', 'Workspace & Favorites')}</div>
           </button>
           {domains.map(domain => (
             <button key={domain.id} onClick={() => { setActiveDomainId(domain.id); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
               <DynamicIcon name={domain.icon} size={18} />
-              <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-[110] shadow-lg font-sans`}>{getLabel(domain)}</div>
+              <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{getLabel(domain)}</div>
             </button>
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
@@ -533,9 +551,14 @@
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title="Change Language">
-                <Globe size={12} className="text-indigo-500" /><span>{isRtl ? 'EN' : 'فا'}</span>
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title={t('تغییر تقویم', 'Change Calendar')}>
+                  <Calendar size={12} className="text-indigo-500" /><span>{calendarMode === 'jalali' ? (isRtl ? 'شمسی' : 'Jalali') : (isRtl ? 'میلادی' : 'Gregorian')}</span>
+                </button>
+                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title={t('تغییر زبان', 'Change Language')}>
+                  <Globe size={12} className="text-indigo-500" /><span>{isRtl ? 'EN' : 'فا'}</span>
+                </button>
+              </div>
               <div className="w-px h-4 bg-slate-200"></div>
               <button onClick={() => setIsNotifOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 relative transition-all">
                 <Bell size={16} />

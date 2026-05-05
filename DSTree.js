@@ -8,8 +8,8 @@
     Check, X, Layers, Settings 
   } = window.LucideIcons || {};
 
-  // خواندن کامپوننت‌های پایه از متغیر گلوبال
-  const { Button, ToggleField, Badge } = window.DSCore || {};
+  // اضافه شدن DatePicker، formatGlobalDate و useCalendarMode
+  const { Button, ToggleField, Badge, DatePicker, formatGlobalDate, useCalendarMode } = window.DSCore || {};
 
   const HighlightText = ({ text, term }) => {
     if (!term || !text) return <span>{text}</span>;
@@ -209,6 +209,7 @@
   const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
+    const globalMode = useCalendarMode ? useCalendarMode() : 'jalali';
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -361,7 +362,19 @@
                 <input id="treegrid-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
-            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
+            {onExport && <button onClick={() => {
+                if(onExport) {
+                   const rows = flatData.map(row => visibleColumns.map(c => {
+                     let val = row[c.field];
+                     if (c.type === 'date' && formatGlobalDate) val = formatGlobalDate(val, globalMode);
+                     return `"${(val || '').toString().replace(/"/g, '""')}"`;
+                   }).join(',')).join('\n');
+                   const headers = visibleColumns.map(c => t(c.header_fa, c.header_en)).join(',');
+                   const csv = '\uFEFF' + headers + '\n' + rows;
+                   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                   const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `tree_export_${new Date().getTime()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                }
+            }} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
           </div>
         </div>
 
@@ -456,6 +469,12 @@
                               </select>
                             ) : col.type === 'toggle' ? (
                               <ToggleField checked={!!editData[col.field]} onChange={(val) => onEditFieldChange(col.field, val)} isRtl={isRtl} wrapperClassName="justify-start" />
+                            ) : col.type === 'date' ? (
+                              <DatePicker 
+                                value={editData[col.field] || ''} 
+                                onChange={(val) => onEditFieldChange(col.field, val)}
+                                isRtl={isRtl} language={language} size="sm" wrapperClassName="w-full"
+                              />
                             ) : (
                               <input 
                                 value={editData[col.field] || ''} 
@@ -464,7 +483,13 @@
                               />
                             )
                           ) : (
-                            col.render ? col.render(row[col.field], row) : <HighlightText text={row[col.field]} term={searchTerm} />
+                            col.render ? col.render(row[col.field], row) : (
+                               col.type === 'date' ? (
+                                   <span dir="ltr" className="font-mono text-[11px] font-medium text-slate-800">
+                                       {formatGlobalDate ? formatGlobalDate(row[col.field], globalMode) : row[col.field]}
+                                   </span>
+                               ) : <HighlightText text={row[col.field]} term={searchTerm} />
+                            )
                           )
                         )}
                       </td>

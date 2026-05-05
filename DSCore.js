@@ -8,6 +8,80 @@
     ArrowDownRight, Calendar, Check, X 
   } = window.LucideIcons || {};
 
+  const getGlobalCalendarMode = () => window.localStorage.getItem('fm_calendar_mode') || 'jalali';
+  
+  const setGlobalCalendarMode = (mode) => {
+    window.localStorage.setItem('fm_calendar_mode', mode);
+    window.dispatchEvent(new CustomEvent('fm_calendar_mode_change', { detail: mode }));
+  };
+
+  const useCalendarMode = () => {
+    const [mode, setMode] = useState(getGlobalCalendarMode());
+    useEffect(() => {
+      const handler = (e) => setMode(e.detail);
+      window.addEventListener('fm_calendar_mode_change', handler);
+      return () => window.removeEventListener('fm_calendar_mode_change', handler);
+    }, []);
+    return mode;
+  };
+
+  const j2g = (jy, jm, jd) => {
+    let gy = (jy <= 979) ? 621 : 1600;
+    jy -= (jy <= 979) ? 0 : 979;
+    let days = (365 * jy) + parseInt(jy / 33) * 8 + parseInt((jy % 33 + 3) / 4) + 78 + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+    gy += 400 * parseInt(days / 146097);
+    days %= 146097;
+    if (days > 36524) { gy += 100 * parseInt(--days / 36524); days %= 36524; if (days >= 365) days++; }
+    gy += 4 * parseInt(days / 1461);
+    days %= 1461;
+    gy += parseInt((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    let gd = days + 1;
+    let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm;
+    for (gm = 0; gm < 13; gm++) {
+      let v = sal_a[gm];
+      if (gd <= v) break;
+      gd -= v;
+    }
+    return [gy, gm, gd];
+  };
+
+  const g2j = (gy, gm, gd) => {
+    let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let jy = (gy <= 1600) ? 0 : 979;
+    gy -= (gy <= 1600) ? 621 : 1600;
+    let gy2 = (gm > 2) ? (gy + 1) : gy;
+    let days = (365 * gy) + parseInt((gy2 + 3) / 4) - parseInt((gy2 + 99) / 100) + parseInt((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
+    jy += 33 * parseInt(days / 12053);
+    days %= 12053;
+    jy += 4 * parseInt(days / 1461);
+    days %= 1461;
+    jy += parseInt((days - 1) / 365);
+    if (days > 365) days = (days - 1) % 365;
+    let jm = (days < 186) ? 1 + parseInt(days / 31) : 7 + parseInt((days - 186) / 30);
+    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
+    return [jy, jm, jd];
+  };
+
+  const formatGlobalDate = (gregorianDateStr, mode) => {
+    if (!gregorianDateStr) return '';
+    let str = String(gregorianDateStr).replace(/-/g, '/');
+    if (str.includes('T')) str = str.split('T')[0];
+    const parts = str.split('/');
+    if (parts.length < 3) return gregorianDateStr;
+    const gy = parseInt(parts[0], 10);
+    const gm = parseInt(parts[1], 10);
+    const gd = parseInt(parts[2], 10);
+    if (isNaN(gy) || isNaN(gm) || isNaN(gd)) return gregorianDateStr;
+
+    if (mode === 'jalali') {
+      const [jy, jm, jd] = g2j(gy, gm, gd);
+      return `${jy}/${jm < 10 ? '0'+jm : jm}/${jd < 10 ? '0'+jd : jd}`;
+    }
+    return `${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`;
+  };
+
   const Button = ({ children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, ...props }) => {
     const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
     const variants = {
@@ -488,45 +562,6 @@
     );
   };
 
-  const j2g = (jy, jm, jd) => {
-    let gy = (jy <= 979) ? 621 : 1600;
-    jy -= (jy <= 979) ? 0 : 979;
-    let days = (365 * jy) + parseInt(jy / 33) * 8 + parseInt((jy % 33 + 3) / 4) + 78 + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
-    gy += 400 * parseInt(days / 146097);
-    days %= 146097;
-    if (days > 36524) { gy += 100 * parseInt(--days / 36524); days %= 36524; if (days >= 365) days++; }
-    gy += 4 * parseInt(days / 1461);
-    days %= 1461;
-    gy += parseInt((days - 1) / 365);
-    if (days > 365) days = (days - 1) % 365;
-    let gd = days + 1;
-    let sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    let gm;
-    for (gm = 0; gm < 13; gm++) {
-      let v = sal_a[gm];
-      if (gd <= v) break;
-      gd -= v;
-    }
-    return [gy, gm, gd];
-  };
-
-  const g2j = (gy, gm, gd) => {
-    let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    let jy = (gy <= 1600) ? 0 : 979;
-    gy -= (gy <= 1600) ? 621 : 1600;
-    let gy2 = (gm > 2) ? (gy + 1) : gy;
-    let days = (365 * gy) + parseInt((gy2 + 3) / 4) - parseInt((gy2 + 99) / 100) + parseInt((gy2 + 399) / 400) - 80 + gd + g_d_m[gm - 1];
-    jy += 33 * parseInt(days / 12053);
-    days %= 12053;
-    jy += 4 * parseInt(days / 1461);
-    days %= 1461;
-    jy += parseInt((days - 1) / 365);
-    if (days > 365) days = (days - 1) % 365;
-    let jm = (days < 186) ? 1 + parseInt(days / 31) : 7 + parseInt((days - 186) / 30);
-    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
-    return [jy, jm, jd];
-  };
-
   const DatePicker = ({ label, value, onChange, isRtl = true, language = 'fa', required = false, size = 'md', disabled = false, id, wrapperClassName = '' }) => {
     const getTodayInfo = useCallback((mode) => {
       const today = new Date();
@@ -540,8 +575,13 @@
       return { y: gy, m: gm, d: gd };
     }, []);
 
-    const [calendarMode, setCalendarMode] = useState(language === 'fa' ? 'jalali' : 'gregorian');
+    const globalMode = useCalendarMode();
+    const [calendarMode, setCalendarMode] = useState(globalMode);
     const [isOpen, setIsOpen] = useState(false);
+    
+    useEffect(() => {
+      setCalendarMode(globalMode);
+    }, [globalMode]);
     
     const initToday = getTodayInfo(calendarMode);
     const [currentMonth, setCurrentMonth] = useState(initToday.m);
@@ -580,19 +620,7 @@
     }, [value, calendarMode]);
 
     const displayValue = useMemo(() => {
-      if (!value || value.length !== 10) return '';
-      const parts = value.split('/');
-      if (parts.length === 3) {
-        const gy = parseInt(parts[0], 10);
-        const gm = parseInt(parts[1], 10);
-        const gd = parseInt(parts[2], 10);
-        if (calendarMode === 'jalali') {
-          const [jy, jm, jd] = g2j(gy, gm, gd);
-          return `${jy}/${jm < 10 ? '0'+jm : jm}/${jd < 10 ? '0'+jd : jd}`;
-        }
-        return `${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`;
-      }
-      return value;
+      return formatGlobalDate(value, calendarMode);
     }, [value, calendarMode]);
 
     const handleDayClick = (day) => {
@@ -808,6 +836,7 @@
   };
 
   window.DSCore = {
+    getGlobalCalendarMode, setGlobalCalendarMode, useCalendarMode, formatGlobalDate,
     Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
     Tabs, CurrencyField, TextAreaField, RadioGroup, Skeleton, EmptyState, StatCard, 
     Timeline, Avatar, DropdownMenu, ProgressBar, AttachmentManager, DatePicker, Stepper, 

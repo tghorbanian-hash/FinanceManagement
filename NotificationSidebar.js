@@ -8,6 +8,9 @@
     const { Button, Badge, EmptyState, Dialog, Toast } = window.DesignSystem || {};
     const supabase = window.supabase;
     
+    // اتصال به سیستم سراسری تقویم
+    const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
+    
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
     
     const isRtl = language === 'fa';
@@ -153,10 +156,16 @@
       );
     };
 
+    // این تابع کاملاً هوشمند شده و به جای وابستگی به زبان، تقویم را از متغیر سراسری می‌گیرد
     const formatTime = (isoString) => {
       try {
-        return new Date(isoString).toLocaleString(isRtl ? 'fa-IR' : 'en-US', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        const date = new Date(isoString);
+        return date.toLocaleString(isRtl ? 'fa-IR' : 'en-US', {
+          month: 'short', 
+          day: 'numeric', 
+          hour: '2-digit', 
+          minute: '2-digit',
+          calendar: calendarMode === 'jalali' ? 'persian' : 'gregory'
         });
       } catch(e) { return isoString; }
     };
@@ -224,7 +233,7 @@
                     <div className="flex-1 min-w-0">
                       <h4 className={`text-[11px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600' : 'text-slate-800'}`}>{notif.title}</h4>
                       <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
-                      <span className="text-[8px] text-slate-400 font-medium">{formatTime(notif.created_at)}</span>
+                      <span className="text-[8px] text-slate-400 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</span>
                     </div>
                     
                     <div className="flex flex-col gap-0.5 transition-all self-start shrink-0">

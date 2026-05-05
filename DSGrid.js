@@ -11,6 +11,9 @@
   const { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } = window.DSCore || {};
   const { Modal } = window.DSFeedback || {};
 
+  const formatGlobalDate = window.DSCore?.formatGlobalDate || ((v) => v);
+  const useCalendarMode = window.DSCore?.useCalendarMode || (() => 'jalali');
+
   const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const t = (fa, en) => isRtl ? fa : en;
@@ -92,6 +95,7 @@
   const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+    const globalMode = useCalendarMode();
 
     const [gridData, setGridData] = useState(data);
     const [columnOrder, setColumnOrder] = useState(columns.map(c => c.field));
@@ -246,7 +250,11 @@
 
     const exportCSV = () => {
       const headers = visibleColumns.map(c => t(c.header_fa, c.header_en)).join(',');
-      const rows = gridData.map(row => visibleColumns.map(c => `"${(row[c.field] || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+      const rows = gridData.map(row => visibleColumns.map(c => {
+        let val = row[c.field];
+        if (c.type === 'date') val = formatGlobalDate(val, globalMode);
+        return `"${(val || '').toString().replace(/"/g, '""')}"`;
+      }).join(',')).join('\n');
       const csv = '\uFEFF' + headers + '\n' + rows;
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `export_${new Date().getTime()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -274,6 +282,7 @@
       if (col.type === 'toggle') return <ToggleField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'checkbox') return <CheckboxField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'badge') return <Badge variant={col.badgeColor ? col.badgeColor(val) : 'gray'}>{val}</Badge>;
+      if (col.type === 'date') return <span dir="ltr" className="font-mono text-[11px] font-medium">{formatGlobalDate(val, globalMode)}</span>;
       return val;
     };
 
@@ -386,9 +395,9 @@
           <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
             <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
               <tr>
-                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className="p-1.5 bg-slate-100"></th>}
+                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 border-b border-slate-200 bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}></th>}
                 {selectable && (
-                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className="p-1.5 text-center bg-slate-100">
+                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 border-b border-slate-200 text-center bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}>
                     <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                   </th>
                 )}
@@ -400,7 +409,7 @@
                       key={col.field} draggable
                       onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
                       style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
-                      className="p-1.5 text-[12px] font-black text-slate-700 select-none bg-slate-100"
+                      className={`p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 select-none bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}
                     >
                       <div className="flex items-center justify-between gap-1 group">
                         <div className="flex items-center gap-1.5 cursor-pointer flex-1 overflow-hidden" onClick={() => handleSort(col.field)}>
@@ -416,29 +425,37 @@
                   )
                 })}
                 {actions.length > 0 && (
-                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[12px] font-black text-slate-700 w-[120px] bg-slate-100 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
+                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 w-[120px] bg-slate-100 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)]">
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
               </tr>
 
               <tr>
-                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className="p-1 border-b border-slate-200 bg-slate-50"></td>}
-                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className="p-1 border-b border-slate-200 bg-slate-50"></td>}
+                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
                 {visibleColumns.map((col) => {
                   return (
-                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className="p-1 border-b border-slate-200 bg-slate-50">
+                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
                       <div className="relative">
-                        {(col.type === 'text' || col.type === 'number') && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
-                        {col.type !== 'toggle' && col.type !== 'checkbox' && (
-                          <input 
-                            type={col.type === 'number' ? 'number' : col.type === 'date' ? 'date' : 'text'}
-                            dir={col.type === 'date' || !isRtl ? 'ltr' : 'rtl'}
-                            value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
-                            placeholder={col.type === 'date' ? '' : t('جستجو...', 'Search...')}
-                            className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${col.type === 'date' ? 'px-1' : (isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1')}`}
+                        {col.type === 'date' ? (
+                          <DatePicker 
+                            value={filters[col.field] || ''} 
+                            onChange={(val) => handleFilterChange(col.field, val)}
+                            isRtl={isRtl} language={language} size="sm" wrapperClassName="!gap-0"
                           />
-                        )}
+                        ) : col.type !== 'toggle' && col.type !== 'checkbox' ? (
+                          <>
+                            <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />
+                            <input 
+                              type={col.type === 'number' ? 'number' : 'text'}
+                              dir={!isRtl ? 'ltr' : 'rtl'}
+                              value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
+                              placeholder={t('جستجو...', 'Search...')}
+                              className={`w-full h-6 text-[10px] font-sans font-bold bg-white border border-slate-200 rounded outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1'}`}
+                            />
+                          </>
+                        ) : null}
                       </div>
                     </td>
                   );
