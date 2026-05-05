@@ -55,15 +55,11 @@
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const [values, setValues] = useState(initialValues || {});
 
-    const initialValuesStr = JSON.stringify(initialValues || {});
     useEffect(() => {
-      const parsed = JSON.parse(initialValuesStr);
-      if (parsed && Object.keys(parsed).length > 0) {
-        setValues(parsed);
-      } else {
-        setValues({});
+      if (initialValues) {
+        setValues(prev => JSON.stringify(prev) !== JSON.stringify(initialValues) ? initialValues : prev);
       }
-    }, [initialValuesStr]);
+    }, [initialValues]);
 
     const handleChange = (name, val) => setValues(prev => ({ ...prev, [name]: val }));
     const handleClear = () => { setValues({}); if (onClear) onClear(); };
@@ -315,18 +311,18 @@
 
     const getStickyStyles = (field, isAction = false, isHeader = false, isFooter = false) => {
       const bg = (isHeader || isFooter) ? (theme === 'dark' ? '#0f172a' : '#f1f5f9') : (theme === 'dark' ? '#1e293b' : '#ffffff'); 
-      if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader || isFooter ? 50 : 20, backgroundColor: bg };
-      if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader || isFooter ? 45 : 15, backgroundColor: bg };
-      if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader || isFooter ? 45 : 15, backgroundColor: bg };
+      if (isAction) return { position: 'sticky', [isRtl ? 'left' : 'right']: 0, zIndex: isHeader ? 50 : (isFooter ? 30 : 20), backgroundColor: bg };
+      if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : (isFooter ? 25 : 15), backgroundColor: bg };
+      if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : (isFooter ? 25 : 15), backgroundColor: bg };
 
-      if (!pinnedCols.includes(field)) return { zIndex: isHeader || isFooter ? 30 : 1 };
+      if (!pinnedCols.includes(field)) return { zIndex: isHeader ? 30 : (isFooter ? 10 : 1) };
       
       let offset = (rowReorderable ? 30 : 0) + (selectable ? 40 : 0); 
       for (let col of visibleColumns) {
         if (col.field === field) break;
         offset += parseInt(col.width || 100);
       }
-      return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader || isFooter ? 40 : 10, backgroundColor: bg };
+      return { position: 'sticky', [isRtl ? 'right' : 'left']: offset, zIndex: isHeader ? 40 : (isFooter ? 20 : 10), backgroundColor: bg };
     };
 
     const renderCellContent = (col, row, rowIndex) => {
@@ -445,12 +441,12 @@
         </div>
 
         <div className="overflow-auto custom-scrollbar flex-1 relative bg-white dark:bg-slate-800">
-          <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
-            <thead className="sticky top-0 z-40 bg-slate-100 dark:bg-slate-900 shadow-sm">
+          <table className="w-full h-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
+            <thead className="sticky top-0 z-30 bg-slate-100 dark:bg-slate-900 shadow-sm">
               <tr>
-                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 bg-slate-100 dark:bg-slate-900`}></th>}
+                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 bg-slate-100 dark:bg-slate-900 border-0`}></th>}
                 {selectable && (
-                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 text-center bg-slate-100 dark:bg-slate-900`}>
+                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 text-center bg-slate-100 dark:bg-slate-900 border-0`}>
                     <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
                   </th>
                 )}
@@ -462,7 +458,7 @@
                       key={col.field} draggable
                       onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
                       style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
-                      className={`p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 select-none bg-slate-100 dark:bg-slate-900`}
+                      className={`p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 select-none bg-slate-100 dark:bg-slate-900 border-0`}
                     >
                       <div className="flex items-center justify-between gap-1 group">
                         <div className="flex items-center gap-1.5 cursor-pointer flex-1 overflow-hidden" onClick={() => handleSort(col.field)}>
@@ -478,18 +474,18 @@
                   )
                 })}
                 {actions.length > 0 && (
-                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
+                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-0">
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
               </tr>
 
               <tr>
-                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50`}></td>}
-                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50`}></td>}
+                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700`}></td>}
+                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700`}></td>}
                 {visibleColumns.map((col) => {
                   return (
-                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50`}>
+                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700`}>
                       <div className="relative">
                         {col.type === 'date' ? (
                           <DatePicker 
@@ -519,7 +515,7 @@
                     </td>
                   );
                 })}
-                {actions.length > 0 && <td style={getStickyStyles('ACTIONS', true, true)} className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
+                {actions.length > 0 && <td style={getStickyStyles('ACTIONS', true, true)} className="p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
               </tr>
             </thead>
 
@@ -589,15 +585,20 @@
                 );
               }) : (
                 <tr>
-                  <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-12 text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
+                  <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-12 h-full text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
                     <div className="flex flex-col items-center justify-center gap-3"><Search size={32} className="text-slate-300 dark:text-slate-600" /><span>{t('هیچ داده‌ای برای نمایش یافت نشد.', 'No data found to display.')}</span></div>
                   </td>
+                </tr>
+              )}
+              {paginatedData.length > 0 && (
+                <tr className="h-full">
+                  <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="border-0 bg-transparent p-0"></td>
                 </tr>
               )}
             </tbody>
             
             {showSummaryRow && summaryData && (
-              <tfoot className="sticky bottom-0 z-40 bg-slate-100 dark:bg-slate-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t-2 border-slate-200 dark:border-slate-700">
+              <tfoot className="sticky bottom-0 z-20 bg-slate-100 dark:bg-slate-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] border-t-2 border-slate-200 dark:border-slate-700">
                 <tr>
                   {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, false, true)} className={`p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
                   {selectable && <td style={getStickyStyles('SELECT_COL', false, false, true)} className={`p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}></td>}

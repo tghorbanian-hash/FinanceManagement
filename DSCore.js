@@ -134,7 +134,7 @@
     const restProps = Object.assign({}, props);
     ['label', 'error', 'hint', 'icon', 'disabled', 'required', 'className', 'wrapperClassName', 'id', 'type', 'size', 'isRtl'].forEach(k => delete restProps[k]);
     
-    const generatedId = useMemo(() => `input-${Math.random().toString(36).substr(2, 9)}`, []);
+    const [generatedId] = useState(() => `input-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
     
@@ -161,7 +161,7 @@
     const inputRef = useRef(null);
     const t = (fa, en) => isRtl ? fa : en;
     
-    const generatedId = useMemo(() => `select-${Math.random().toString(36).substr(2, 9)}`, []);
+    const [generatedId] = useState(() => `select-${Math.random().toString(36).substr(2, 9)}`);
     const selectId = id || generatedId;
     
     const selectedOption = options.find(o => String(o.value) === String(value));
@@ -320,8 +320,8 @@
     const [newViewName, setNewViewName] = useState('');
     const [isDefaultView, setIsDefaultView] = useState(false);
     const [saveMode, setSaveMode] = useState('new');
+    const [isInitialized, setIsInitialized] = useState(false);
     const dropdownRef = useRef(null);
-    const isInitialMount = useRef(true);
 
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -332,39 +332,35 @@
     }, []);
 
     useEffect(() => {
-      if (viewConfig && viewConfig.pageId) {
+      if (viewConfig && viewConfig.pageId && !isInitialized) {
         const loadViews = async () => {
           try {
             if (window.supabase) {
               const { data } = await window.supabase.from('fm_user_views').select('*').eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
               if (data) {
                 setViews(data);
-                if (isInitialMount.current) {
-                  const def = data.find(v => v.is_default);
-                  if (def) {
-                    setActiveView(def);
-                    if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
-                  }
-                  isInitialMount.current = false;
+                const def = data.find(v => v.is_default);
+                if (def) {
+                  setActiveView(def);
+                  if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
                 }
               }
             } else throw new Error();
           } catch(e) {
             const local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
             setViews(local);
-            if (isInitialMount.current) {
-              const def = local.find(v => v.is_default);
-              if (def) {
-                setActiveView(def);
-                if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
-              }
-              isInitialMount.current = false;
+            const def = local.find(v => v.is_default);
+            if (def) {
+              setActiveView(def);
+              if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
             }
+          } finally {
+            setIsInitialized(true);
           }
         };
         loadViews();
       }
-    }, [viewConfig?.pageId]);
+    }, [viewConfig?.pageId, isInitialized]);
 
     const handleSaveView = async () => {
       if (!viewConfig) return;
@@ -601,8 +597,8 @@
                           {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
                         </div>
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleSetDefaultView(v.id)} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`p-1.5 rounded-md transition-colors ${v.is_default ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                            <Check size={14} />
+                          <button onClick={() => handleSetDefaultView(v.id)} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${v.is_default ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                            {t('پیش‌فرض', 'Default')}
                           </button>
                           <Button size="sm" variant="ghost" onClick={() => handleApplyView(v)} className="!h-7 !px-2 !text-[10px] text-indigo-600 dark:text-indigo-400">{t('اعمال', 'Apply')}</Button>
                           <button onClick={() => handleDeleteView(v.id)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
@@ -670,7 +666,7 @@
     const restProps = Object.assign({}, props);
     ['label', 'error', 'disabled', 'required', 'className', 'id', 'rows', 'size', 'isRtl'].forEach(k => delete restProps[k]);
 
-    const generatedId = useMemo(() => `textarea-${Math.random().toString(36).substr(2, 9)}`, []);
+    const [generatedId] = useState(() => `textarea-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
     return (
       <div className={`flex flex-col gap-1.5 w-full`}>
@@ -908,7 +904,7 @@
     const [currentYear, setCurrentYear] = useState(initToday.y);
     
     const containerRef = useRef(null);
-    const generatedId = useMemo(() => `datepicker-${Math.random().toString(36).substr(2, 9)}`, []);
+    const [generatedId] = useState(() => `datepicker-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
     const t = (fa, en) => isRtl ? fa : en;
