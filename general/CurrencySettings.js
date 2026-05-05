@@ -298,14 +298,17 @@
       return null;
     };
 
+    const currentConvRate = useMemo(() => {
+      if (!convFrom || !convTo || !convDate) return null;
+      return getRateValue(convFrom, convTo, convDate);
+    }, [convFrom, convTo, convDate, rates, currencies]);
+
     const convResult = useMemo(() => {
-      if (!convAmount || !convFrom || !convTo || !convDate) return null;
+      if (!convAmount || currentConvRate === null) return null;
       const amount = parseFloat(String(convAmount).replace(/,/g, ''));
       if (isNaN(amount)) return null;
-      const rate = getRateValue(convFrom, convTo, convDate);
-      if (rate === null) return t('نرخ در تاریخ انتخابی یافت نشد', 'Rate not found for selected date');
-      return (amount * rate).toLocaleString(undefined, { maximumFractionDigits: 4 });
-    }, [convAmount, convFrom, convTo, convDate, rates]);
+      return (amount * currentConvRate).toLocaleString(undefined, { maximumFractionDigits: 10 });
+    }, [convAmount, currentConvRate]);
 
     const openConverter = () => {
        setConvDate(getTodayGregorian());
@@ -577,21 +580,30 @@
                  <DatePicker size="sm" label={t('تاریخ مبنای محاسبات', 'Calculation Base Date')} value={convDate} onChange={setConvDate} isRtl={isRtl} language={language} required wrapperClassName="w-full" />
               </div>
               
-              <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
+              <div className="flex flex-col sm:flex-row items-end gap-3 w-full relative">
                  <CurrencyField label={t('مبلغ مبدا', 'Source Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
                  <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
                  
-                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
+                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1 shrink-0" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
                     <ArrowRightLeft size={16} className={isRtl ? '' : 'rotate-180'} />
                  </div>
                  
                  <SelectField label={t('به ارز', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
               </div>
               
+              {currentConvRate !== null && (
+                 <div className="w-full mt-4 flex items-center justify-between p-3 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in">
+                    <span className="text-[12px] font-bold text-emerald-700">{t('نرخ برابری:', 'Exchange Rate:')}</span>
+                    <span className="text-[14px] font-black font-mono text-emerald-800" dir="ltr">
+                       1 {convFrom} = {currentConvRate.toLocaleString(undefined, { maximumFractionDigits: 10 })} {convTo}
+                    </span>
+                 </div>
+              )}
+              
               <div className="mt-6 w-full p-5 bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{t('حاصل تبدیل بر اساس تاریخ انتخابی', 'Conversion Result by Date')}</span>
                  <div className="text-2xl font-black text-indigo-700 font-mono tracking-tight" dir="ltr">
-                    {convResult} <span className="text-sm text-slate-400 font-sans ml-1">{convTo}</span>
+                    {convResult === null ? t('نامشخص', 'Unknown') : convResult} <span className="text-sm text-slate-400 font-sans ml-1">{convTo}</span>
                  </div>
               </div>
            </div>
