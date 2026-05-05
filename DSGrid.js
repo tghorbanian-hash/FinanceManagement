@@ -2,17 +2,22 @@
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useRef } = React;
+  
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
+  const LucideIcons = window.LucideIcons || {};
   const {
-    Search, Settings, Trash2, Pin, PinOff, GripVertical, ChevronDown, 
-    ChevronUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Layers, X, Maximize2, Minimize2, Plus, Filter, Upload, FileSpreadsheet, FileDown
-  } = window.LucideIcons || {};
+    Search = FallbackIcon, Settings = FallbackIcon, Trash2 = FallbackIcon, Pin = FallbackIcon, PinOff = FallbackIcon, GripVertical = FallbackIcon, ChevronDown = FallbackIcon, 
+    ChevronUp = FallbackIcon, ChevronLeft = FallbackIcon, ChevronRight = FallbackIcon, ChevronsLeft = FallbackIcon, ChevronsRight = FallbackIcon,
+    Layers = FallbackIcon, X = FallbackIcon, Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, Plus = FallbackIcon, Filter = FallbackIcon, Upload = FallbackIcon, FileSpreadsheet = FallbackIcon, FileDown = FallbackIcon
+  } = LucideIcons;
 
-  const { Button, TextField, SelectField, ToggleField, CheckboxField, DatePicker, Badge } = window.DSCore || {};
+  const FallbackComponent = () => null;
+  const Core = window.DSCore || {};
+  const { 
+    Button = FallbackComponent, TextField = FallbackComponent, SelectField = FallbackComponent, ToggleField = FallbackComponent, CheckboxField = FallbackComponent, DatePicker = FallbackComponent, Badge = FallbackComponent,
+    formatGlobalDate = (v) => v, useCalendarMode = () => 'jalali', useTheme = () => 'light'
+  } = Core;
   const { Modal } = window.DSFeedback || {};
-
-  const formatGlobalDate = window.DSCore?.formatGlobalDate || ((v) => v);
-  const useCalendarMode = window.DSCore?.useCalendarMode || (() => 'jalali');
 
   const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -45,10 +50,10 @@
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isOpen, setIsOpen] = useState(defaultOpen);
-    const [values, setValues] = useState(initialValues);
+    const [values, setValues] = useState(initialValues || {});
 
     useEffect(() => {
-      if (initialValues && Object.keys(initialValues).length > 0 && Object.keys(values).length === 0) {
+      if (initialValues) {
         setValues(initialValues);
       }
     }, [initialValues]);
@@ -92,20 +97,21 @@
     );
   };
 
-  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false }) => {
+  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowDoubleClick, selectable = false, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false, gridState, onGridStateChange }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const globalMode = useCalendarMode();
-    const theme = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
+    const theme = useTheme();
 
     const [gridData, setGridData] = useState(data);
     const [columnOrder, setColumnOrder] = useState(columns.map(c => c.field));
-    const [hiddenCols, setHiddenCols] = useState(new Set());
-    const [pinnedCols, setPinnedCols] = useState(new Set());
+    const [hiddenCols, setHiddenCols] = useState([]);
+    const [pinnedCols, setPinnedCols] = useState([]);
     const [filters, setFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
     const [groupCols, setGroupCols] = useState([]);
-    const [collapsedGroups, setCollapsedGroups] = useState(new Set());
+    const [collapsedGroups, setCollapsedGroups] = useState([]);
+    
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(20);
     const [showColMenu, setShowColMenu] = useState(false);
@@ -116,6 +122,23 @@
     const headerMenuRef = useRef(null);
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
+
+    useEffect(() => {
+      if (gridState) {
+        if (gridState.columnOrder && gridState.columnOrder.length) setColumnOrder(gridState.columnOrder);
+        if (gridState.hiddenCols) setHiddenCols(gridState.hiddenCols);
+        if (gridState.pinnedCols) setPinnedCols(gridState.pinnedCols);
+        if (gridState.filters) setFilters(gridState.filters);
+        if (gridState.sortConfig) setSortConfig(gridState.sortConfig);
+        if (gridState.groupCols) setGroupCols(gridState.groupCols);
+      }
+    }, [gridState]);
+
+    useEffect(() => {
+      if (onGridStateChange && !gridState) {
+        onGridStateChange({ columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols });
+      }
+    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, gridState]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { 
@@ -129,9 +152,9 @@
     useEffect(() => { setGridData(data); setSelectedRows([]); }, [data]);
 
     const visibleColumns = useMemo(() => {
-      const visibleFields = columnOrder.filter(f => !hiddenCols.has(f));
-      const pinned = visibleFields.filter(f => pinnedCols.has(f));
-      const unpinned = visibleFields.filter(f => !pinnedCols.has(f));
+      const visibleFields = columnOrder.filter(f => !hiddenCols.includes(f));
+      const pinned = visibleFields.filter(f => pinnedCols.includes(f));
+      const unpinned = visibleFields.filter(f => !pinnedCols.includes(f));
       return [...pinned, ...unpinned].map(f => columns.find(c => c.field === f)).filter(Boolean);
     }, [columnOrder, hiddenCols, pinnedCols, columns]);
 
@@ -173,7 +196,7 @@
         Object.keys(groups).forEach(val => {
           const groupKey = parentKey ? `${parentKey}|${val}` : val;
           groupedResult.push({ isGroupHeader: true, groupField: currentField, groupValue: val, groupKey, depth, count: groups[val].length });
-          if (!collapsedGroups.has(groupKey)) groupedResult = groupedResult.concat(buildGroupedData(groups[val], colsToGroup, depth + 1, groupKey));
+          if (!collapsedGroups.includes(groupKey)) groupedResult = groupedResult.concat(buildGroupedData(groups[val], colsToGroup, depth + 1, groupKey));
         });
         return groupedResult;
       };
@@ -209,9 +232,14 @@
     }, [processedData, columns, showSummaryRow]);
 
     const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
-    const handleFilterChange = (field, value) => { setFilters(prev => ({ ...prev, [field]: value })); setPage(1); };
-    const togglePin = (field) => { const newPinned = new Set(pinnedCols); if (newPinned.has(field)) newPinned.delete(field); else newPinned.add(field); setPinnedCols(newPinned); };
-    const toggleVisibility = (field) => { const newHidden = new Set(hiddenCols); if (newHidden.has(field)) newHidden.delete(field); else newHidden.add(field); setHiddenCols(newHidden); };
+    const handleFilterChange = (field, value) => { 
+      const newFilters = { ...filters, [field]: value };
+      if (!value) delete newFilters[field];
+      setFilters(newFilters); 
+      setPage(1); 
+    };
+    const togglePin = (field) => { setPinnedCols(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]); };
+    const toggleVisibility = (field) => { setHiddenCols(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]); };
 
     const handleColDragStart = (e, position, field) => { dragColItem.current = position; e.dataTransfer.setData('colField', field); };
     const handleColDragEnter = (e, position) => { dragOverColItem.current = position; };
@@ -233,10 +261,10 @@
     };
 
     const handleGroupDrop = (e) => { e.preventDefault(); const field = e.dataTransfer.getData('colField'); if (field && !groupCols.includes(field)) { setGroupCols([...groupCols, field]); setPage(1); } };
-    const removeGroupCol = (field) => { setGroupCols(groupCols.filter(f => f !== field)); setCollapsedGroups(new Set()); setPage(1); };
-    const toggleGroupCollapse = (groupKey) => { const newCollapsed = new Set(collapsedGroups); if (newCollapsed.has(groupKey)) newCollapsed.delete(groupKey); else newCollapsed.add(groupKey); setCollapsedGroups(newCollapsed); };
-    const expandAllGroups = () => setCollapsedGroups(new Set());
-    const collapseAllGroups = () => { const topLevelKeys = processedData.filter(r => r.isGroupHeader && r.depth === 0).map(r => r.groupKey); setCollapsedGroups(new Set(topLevelKeys)); };
+    const removeGroupCol = (field) => { setGroupCols(groupCols.filter(f => f !== field)); setCollapsedGroups([]); setPage(1); };
+    const toggleGroupCollapse = (groupKey) => { setCollapsedGroups(prev => prev.includes(groupKey) ? prev.filter(k => k !== groupKey) : [...prev, groupKey]); };
+    const expandAllGroups = () => setCollapsedGroups([]);
+    const collapseAllGroups = () => { const topLevelKeys = processedData.filter(r => r.isGroupHeader && r.depth === 0).map(r => r.groupKey); setCollapsedGroups(topLevelKeys); };
 
     const handleSelectAll = (e) => {
       if (e.target.checked) {
@@ -267,7 +295,7 @@
       if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader || isFooter ? 45 : 15, backgroundColor: bg };
       if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader || isFooter ? 45 : 15, backgroundColor: bg };
 
-      if (!pinnedCols.has(field)) return { zIndex: isHeader || isFooter ? 30 : 1 };
+      if (!pinnedCols.includes(field)) return { zIndex: isHeader || isFooter ? 30 : 1 };
       
       let offset = (rowReorderable ? 30 : 0) + (selectable ? 40 : 0); 
       for (let col of visibleColumns) {
@@ -374,7 +402,7 @@
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
                     {columns.map(c => (
                       <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[11px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
-                        <input type="checkbox" checked={!hiddenCols.has(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
+                        <input type="checkbox" checked={!hiddenCols.includes(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
                         {t(c.header_fa, c.header_en)}
                       </label>
                     ))}
@@ -399,12 +427,12 @@
                 {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}></th>}
                 {selectable && (
                   <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 border-b border-slate-200 dark:border-slate-700 text-center bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}>
-                    <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
+                    <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
                   </th>
                 )}
                 {visibleColumns.map((col, index) => {
                   const actualIndex = columnOrder.indexOf(col.field);
-                  const isPinned = pinnedCols.has(col.field);
+                  const isPinned = pinnedCols.includes(col.field);
                   return (
                     <th 
                       key={col.field} draggable
@@ -453,7 +481,7 @@
                               dir={!isRtl ? 'ltr' : 'rtl'}
                               value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
                               placeholder={t('جستجو...', 'Search...')}
-                              className={`w-full h-6 text-[10px] font-sans font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 transition-all ${isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1'}`}
+                              className={`w-full h-6 text-[10px] font-sans font-bold bg-white dark:bg-slate-700/40 border border-slate-200 dark:border-slate-500 rounded outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-400/20 transition-all ${isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1'}`}
                             />
                           </>
                         ) : null}
@@ -468,7 +496,7 @@
             <tbody className="z-10 relative">
               {paginatedData.length > 0 ? paginatedData.map((row, rowIndex) => {
                 if (row.isGroupHeader) {
-                  const isCollapsed = collapsedGroups.has(row.groupKey);
+                  const isCollapsed = collapsedGroups.includes(row.groupKey);
                   return (
                     <tr key={`group-${row.groupKey}`} className="bg-indigo-50/40 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800/50">
                       <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-0 sticky left-0 right-0">
@@ -503,7 +531,7 @@
                     )}
                     {selectable && (
                       <td style={{...getStickyStyles('SELECT_COL', false), backgroundColor: 'inherit'}} className={`p-1.5 text-center bg-inherit group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''} ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
-                        <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(row.id)} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
+                        <input type="checkbox" checked={isSelected} onChange={() => handleSelectRow(row.id)} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
                       </td>
                     )}
                     {visibleColumns.map((col) => (

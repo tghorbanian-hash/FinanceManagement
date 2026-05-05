@@ -5,7 +5,7 @@
   const { 
     Loader2, AlertCircle, Search, ChevronDown, ChevronLeft, ChevronRight, 
     Home, UploadCloud, FileText, Download, Trash2, ArrowUpRight, 
-    ArrowDownRight, Calendar, Check, X 
+    ArrowDownRight, Calendar, Check, X, LayoutTemplate, Save, Settings, Info
   } = window.LucideIcons || {};
 
   const getGlobalCalendarMode = () => window.localStorage.getItem('fm_calendar_mode') || 'jalali';
@@ -141,7 +141,7 @@
       <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
         {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative flex items-center">
-          {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-400 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
+          {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
           <input
             id={inputId} type={type} disabled={disabled}
             className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
@@ -305,31 +305,233 @@
     return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
   };
 
-  const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa', actions }) => {
+  const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa', actions, viewConfig }) => {
     const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
+    const [views, setViews] = useState([]);
+    const [activeView, setActiveView] = useState(null);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+    const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+    const [newViewName, setNewViewName] = useState('');
+    const [isDefaultView, setIsDefaultView] = useState(false);
+    const dropdownRef = useRef(null);
+
+    const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
+
+    useEffect(() => {
+      const clickOutside = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsDropdownOpen(false); };
+      document.addEventListener('mousedown', clickOutside);
+      return () => document.removeEventListener('mousedown', clickOutside);
+    }, []);
+
+    useEffect(() => {
+      if (viewConfig && viewConfig.pageId) {
+        const loadViews = async () => {
+          try {
+            if (window.supabase) {
+              const { data } = await window.supabase.from('fm_user_views').select('*').eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
+              if (data) {
+                setViews(data);
+                const def = data.find(v => v.is_default);
+                if (def && !activeView) {
+                  setActiveView(def);
+                  if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
+                }
+              }
+            } else throw new Error();
+          } catch(e) {
+            const local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
+            setViews(local);
+            const def = local.find(v => v.is_default);
+            if (def && !activeView) {
+              setActiveView(def);
+              if (viewConfig.onApplyState) viewConfig.onApplyState(def.view_data);
+            }
+          }
+        };
+        loadViews();
+      }
+    }, [viewConfig]);
+
+    const handleSaveView = async () => {
+      if (!newViewName || !viewConfig) return;
+      const dataToSave = typeof viewConfig.currentState === 'function' ? viewConfig.currentState() : viewConfig.currentState;
+      const newView = {
+        id: Date.now().toString(),
+        user_id: MOCK_USER_ID,
+        page_id: viewConfig.pageId,
+        view_name: newViewName,
+        view_data: dataToSave,
+        is_default: isDefaultView
+      };
+
+      try {
+        if (window.supabase) {
+           if (isDefaultView) await window.supabase.from('fm_user_views').update({ is_default: false }).eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
+           await window.supabase.from('fm_user_views').insert([newView]);
+        } else throw new Error();
+      } catch(e) {
+        let local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
+        if (isDefaultView) local = local.map(v => ({...v, is_default: false}));
+        local.push(newView);
+        localStorage.setItem(`fm_views_${viewConfig.pageId}`, JSON.stringify(local));
+      }
+
+      setViews(prev => {
+        let updated = [...prev];
+        if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
+        return [...updated, newView];
+      });
+      setActiveView(newView);
+      setIsSaveModalOpen(false);
+      setNewViewName('');
+    };
+
+    const handleDeleteView = async (id) => {
+      try {
+        if (window.supabase) {
+          await window.supabase.from('fm_user_views').delete().eq('id', id);
+        } else throw new Error();
+      } catch(e) {
+        const local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
+        const updated = local.filter(v => v.id !== id);
+        localStorage.setItem(`fm_views_${viewConfig.pageId}`, JSON.stringify(updated));
+      }
+      setViews(prev => prev.filter(v => v.id !== id));
+      if (activeView && activeView.id === id) {
+        setActiveView(null);
+      }
+    };
+
+    const handleApplyView = (view) => {
+      setActiveView(view);
+      setIsDropdownOpen(false);
+      setIsManageModalOpen(false);
+      if (viewConfig && viewConfig.onApplyState && view) {
+        viewConfig.onApplyState(view.view_data);
+      }
+    };
+
+    const handleResetView = () => {
+      setActiveView(null);
+      setIsDropdownOpen(false);
+      if (viewConfig && viewConfig.onApplyState) {
+        viewConfig.onApplyState(null); 
+      }
+    };
+
     return (
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex flex-col gap-1.5">
-          {breadcrumbs.length > 0 && (
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-bold overflow-hidden whitespace-nowrap">
-              <Home size={12} className="shrink-0" />
-              {breadcrumbs.map((bc, idx) => (
-                <React.Fragment key={idx}>
-                  <span className="opacity-40 shrink-0">{isRtl ? <ChevronLeft size={10} strokeWidth={3}/> : <ChevronRight size={10} strokeWidth={3}/>}</span>
-                  <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer transition-colors">
-                    {bc.icon && <bc.icon size={12} />}
-                    {bc.label}
-                  </span>
-                </React.Fragment>
-              ))}
+      <div className="flex flex-col mb-3 shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="flex flex-col gap-1.5">
+            {breadcrumbs.length > 0 && (
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 font-bold overflow-hidden whitespace-nowrap">
+                <Home size={12} className="shrink-0" />
+                {breadcrumbs.map((bc, idx) => (
+                  <React.Fragment key={idx}>
+                    <span className="opacity-40 shrink-0">{isRtl ? <ChevronLeft size={10} strokeWidth={3}/> : <ChevronRight size={10} strokeWidth={3}/>}</span>
+                    <span className="flex items-center gap-1 shrink-0 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer transition-colors">
+                      {bc.icon && <bc.icon size={12} />}
+                      {bc.label}
+                    </span>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+              {Icon && <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0"><Icon size={18} strokeWidth={2.5}/></div>}
+              <h1 className="text-[14px] font-black tracking-tight">{title}</h1>
             </div>
-          )}
-          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
-            {Icon && <div className="p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400 rounded-lg shrink-0"><Icon size={18} strokeWidth={2.5}/></div>}
-            <h1 className="text-[14px] font-black tracking-tight">{title}</h1>
+          </div>
+          
+          <div className="flex items-center gap-2 shrink-0">
+            {viewConfig && (
+              <div className="relative" ref={dropdownRef}>
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className={`flex items-center gap-2 px-3 h-8 rounded-lg border text-[11px] font-bold transition-all ${activeView ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                >
+                  <LayoutTemplate size={14} className={activeView ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
+                  <span>{t('نما:', 'View:')} {activeView ? activeView.view_name : t('پیش‌فرض سیستم', 'System Default')}</span>
+                  <ChevronDown size={14} className="opacity-70" />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className={`absolute top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl py-1.5 z-50 animate-in zoom-in-95 duration-100 ${isRtl ? 'left-0' : 'right-0'}`}>
+                    <button onClick={() => { setIsSaveModalOpen(true); setIsDropdownOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                      <Save size={14} /> {t('ذخیره این نما', 'Save Current View')}
+                    </button>
+                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
+                    <button onClick={handleResetView} className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold transition-colors ${!activeView ? 'text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-700/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                      <span>{t('پیش‌فرض سیستم', 'System Default')}</span>
+                      {!activeView && <Check size={14} className="text-emerald-500" />}
+                    </button>
+                    {views.map(v => (
+                      <button key={v.id} onClick={() => handleApplyView(v)} className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold transition-colors ${activeView?.id === v.id ? 'text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-700/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                        <span>{v.view_name}</span>
+                        {activeView?.id === v.id && <Check size={14} className="text-emerald-500" />}
+                      </button>
+                    ))}
+                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
+                    <button onClick={() => { setIsManageModalOpen(true); setIsDropdownOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                      <Settings size={14} /> {t('مدیریت نماها', 'Manage Views')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {actions}
           </div>
         </div>
-        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+
+        {viewConfig && activeView && (
+          <div className="mt-3 flex items-center justify-between p-2.5 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-lg animate-in slide-in-from-top-2 duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
+             <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 text-[11px] font-bold">
+                <Info size={14} className="text-indigo-500 dark:text-indigo-400" />
+                <span>{t('نمای اختصاصی', 'Custom View')} <span className="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-800/50 rounded text-indigo-700 dark:text-indigo-200 mx-1">{activeView.view_name}</span> {t('اعمال شده است. ممکن است برخی از اطلاعات فیلتر شده باشند.', 'is applied. Some data might be filtered.')}</span>
+             </div>
+             <button onClick={handleResetView} className="px-2 py-1 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded shadow-sm text-[10px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition-colors shrink-0">
+                {t('لغو نما', 'Clear View')}
+             </button>
+          </div>
+        )}
+
+        {viewConfig && window.DSFeedback && (
+          <>
+            <window.DSFeedback.Modal isOpen={isSaveModalOpen} onClose={() => setIsSaveModalOpen(false)} title={t('ذخیره نمای جاری', 'Save Current View')} width="max-w-md" language={language}>
+               <div className="p-5 flex flex-col gap-4">
+                  <TextField label={t('نام نما', 'View Name')} value={newViewName} onChange={(e) => setNewViewName(e.target.value)} isRtl={isRtl} required />
+                  <ToggleField label={t('تنظیم به عنوان پیش‌فرض این صفحه', 'Set as default for this page')} checked={isDefaultView} onChange={setIsDefaultView} isRtl={isRtl} />
+                  <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                    <Button variant="outline" size="sm" onClick={() => setIsSaveModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+                    <Button variant="primary" size="sm" onClick={handleSaveView} disabled={!newViewName}>{t('ذخیره نما', 'Save View')}</Button>
+                  </div>
+               </div>
+            </window.DSFeedback.Modal>
+
+            <window.DSFeedback.Modal isOpen={isManageModalOpen} onClose={() => setIsManageModalOpen(false)} title={t('مدیریت نماهای صفحه', 'Manage Page Views')} width="max-w-lg" language={language}>
+               <div className="p-4 flex flex-col max-h-[400px] overflow-y-auto custom-scrollbar gap-2">
+                  {views.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-[11px] font-bold bg-slate-50 dark:bg-slate-900/50 rounded-lg">{t('هیچ نمایی ذخیره نشده است.', 'No saved views.')}</div>
+                  ) : (
+                    views.map(v => (
+                      <div key={v.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{v.view_name}</span>
+                          {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => handleApplyView(v)} className="!h-7 !px-2 !text-[10px] text-indigo-600 dark:text-indigo-400">{t('اعمال', 'Apply')}</Button>
+                          <button onClick={() => handleDeleteView(v.id)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+               </div>
+            </window.DSFeedback.Modal>
+          </>
+        )}
       </div>
     );
   };

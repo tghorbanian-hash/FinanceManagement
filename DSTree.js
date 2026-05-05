@@ -116,7 +116,7 @@
           <div 
             onClick={() => onSelect && onSelect(node)}
             className={`flex items-center gap-2 py-1 px-2 my-0.5 cursor-pointer rounded-lg transition-all border border-transparent group
-              ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border-indigo-200 dark:border-indigo-800 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 hover:border-slate-200 dark:hover:border-slate-700'}`}
+              ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border-indigo-200 dark:border-indigo-800 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-200 dark:hover:border-slate-700'}`}
             style={{ 
               paddingInlineStart: `${depth * 20 + 8}px`,
               paddingInlineEnd: '8px'
@@ -193,14 +193,14 @@
               />
             </div>
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
+            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
             {onImport && (
               <>
-                <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
+                <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
                 <input id="tree-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
-            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
+            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
           </div>
         </div>
 
@@ -216,18 +216,34 @@
     );
   };
 
-  const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
+  const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit, gridState, onGridStateChange }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
-    const globalMode = useCalendarMode();
+    const globalMode = useCalendarMode ? useCalendarMode() : 'jalali';
+    const theme = useTheme ? useTheme() : 'light';
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
-    const [hiddenCols, setHiddenCols] = useState(new Set());
+    
+    // هماهنگی با State Manager نماها
+    const [hiddenCols, setHiddenCols] = useState([]);
     const [showColMenu, setShowColMenu] = useState(false);
     const [selectedRowId, setSelectedRowId] = useState(null);
     
     const colMenuRef = useRef(null);
+
+    // همگام‌سازی GridState
+    useEffect(() => {
+      if (gridState && gridState.hiddenCols) {
+        setHiddenCols(gridState.hiddenCols);
+      }
+    }, [gridState]);
+
+    useEffect(() => {
+      if (onGridStateChange && !gridState) {
+        onGridStateChange({ hiddenCols });
+      }
+    }, [hiddenCols, gridState, onGridStateChange]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false); };
@@ -290,8 +306,12 @@
     const flatData = useMemo(() => flattenTree(treeData), [treeData, expandedIds, idField]);
 
     const visibleColumns = useMemo(() => {
-      return columns.filter(c => !hiddenCols.has(c.field));
+      return columns.filter(c => !hiddenCols.includes(c.field));
     }, [columns, hiddenCols]);
+
+    const toggleVisibility = (field) => {
+      setHiddenCols(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]);
+    };
 
     const toggleExpand = (id, e) => {
       if (e) e.stopPropagation();
@@ -349,12 +369,7 @@
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
                     {columns.map(c => (
                       <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[11px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
-                        <input type="checkbox" checked={!hiddenCols.has(c.field)} onChange={() => {
-                            const newHidden = new Set(hiddenCols);
-                            if (newHidden.has(c.field)) newHidden.delete(c.field);
-                            else newHidden.add(c.field);
-                            setHiddenCols(newHidden);
-                        }} className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
+                        <input type="checkbox" checked={!hiddenCols.includes(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
                         {t(c.header_fa, c.header_en)}
                       </label>
                     ))}
@@ -449,7 +464,6 @@
                               </div>
                             )}
                             
-                            {/* Node Icon */}
                             <div className={`${isSelectedRow ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 dark:group-hover:text-indigo-300 transition-colors'} shrink-0`}>
                               {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                             </div>
@@ -552,5 +566,5 @@
     );
   };
 
-  window.DSTree = { HighlightText, Tree, TreeGrid }
+  window.DSTree = { HighlightText, Tree, TreeGrid };
 })();

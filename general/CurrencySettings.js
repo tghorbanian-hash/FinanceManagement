@@ -3,8 +3,7 @@
   const React = window.React;
   const { useState, useEffect, useMemo, useCallback } = React;
   
-  // سیستم ضدگلوله برای آیکون‌ها در فرم
-  const FallbackIcon = (props) => <span {...props} style={{ display: 'inline-block', width: props.size || 16, height: props.size || 16 }} />;
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
     DollarSign = FallbackIcon, Plus = FallbackIcon, Edit = FallbackIcon, Trash2 = FallbackIcon, RefreshCw = FallbackIcon, History = FallbackIcon, Check = FallbackIcon, X = FallbackIcon,
@@ -13,7 +12,6 @@
   } = LucideIcons;
 
   const CurrencySettings = ({ language = 'fa' }) => {
-    // سیستم ضدگلوله برای کامپوننت‌های دیزاین سیستم
     const FallbackComponent = () => null;
     const Core = window.DSCore || window.DesignSystem || {};
     const { 
@@ -67,6 +65,27 @@
     const [convTo, setConvTo] = useState('');
 
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null, source: null });
+
+    const [currenciesGridState, setCurrenciesGridState] = useState(null);
+    const [ratesGridState, setRatesGridState] = useState(null);
+
+    const viewConfig = {
+      pageId: 'currency_settings_main',
+      currentState: () => ({ activeTab, rateFilters, currenciesGridState, ratesGridState }),
+      onApplyState: (state) => {
+        if (state) {
+          if (state.activeTab) setActiveTab(state.activeTab);
+          if (state.rateFilters) setRateFilters(state.rateFilters);
+          if (state.currenciesGridState) setCurrenciesGridState(state.currenciesGridState);
+          if (state.ratesGridState) setRatesGridState(state.ratesGridState);
+        } else {
+          setActiveTab('list');
+          setRateFilters({ fromDate: todayStr, toDate: todayStr });
+          setCurrenciesGridState(null);
+          setRatesGridState(null);
+        }
+      }
+    };
 
     const supabase = window.supabase;
 
@@ -468,6 +487,7 @@
           title={t('تنظیمات و مدیریت نرخ ارزها', 'Currency & Exchange Management')}
           icon={DollarSign} language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('ارزها', 'Currencies') }]}
+          viewConfig={viewConfig}
         />
 
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -482,6 +502,8 @@
                   data={currencies} 
                   columns={currencyColumns} 
                   language={language}
+                  gridState={currenciesGridState}
+                  onGridStateChange={setCurrenciesGridState}
                   actions={[
                     { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
                     { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
@@ -505,7 +527,7 @@
                   { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' },
                   { name: 'source', label: t('منبع', 'Source'), type: 'select', options: [{value:'XE', label:'XE (اتوماتیک)'}, {value:'Manual', label:'دستی'}] }
                 ]}
-                initialValues={{ fromDate: todayStr, toDate: todayStr }}
+                initialValues={rateFilters}
                 onFilter={setRateFilters}
                 onClear={() => setRateFilters({})}
                 language={language}
@@ -517,6 +539,8 @@
                    columns={historyColumns} 
                    language={language}
                    selectable={true}
+                   gridState={ratesGridState}
+                   onGridStateChange={setRatesGridState}
                    bulkActions={historyBulkActions}
                    actions={[
                      { 

@@ -53,6 +53,26 @@
     const [pieChartMode, setPieChartMode] = useState('amount');
     const [donutChartMode, setDonutChartMode] = useState('amount');
 
+    // اضافه شدن State برای مدیریت نمای گرید
+    const [gridState, setGridState] = useState(null);
+
+    // پیکربندی سیستم مدیریت نما (View Management)
+    const viewConfig = {
+      pageId: 'showcase_main',
+      currentState: () => ({ gridState, currentView, activeShowcaseTab }),
+      onApplyState: (state) => {
+        if (state) {
+          if (state.gridState) setGridState(state.gridState);
+          if (state.currentView) setCurrentView(state.currentView);
+          if (state.activeShowcaseTab) setActiveShowcaseTab(state.activeShowcaseTab);
+        } else {
+          setGridState(null);
+          setCurrentView('list');
+          setActiveShowcaseTab('tree');
+        }
+      }
+    };
+
     const rawDashboardData = useMemo(() => [
       { id:1, year: '1401', month: 'اسفند', category: 'فروش', amount: 900, count: 8 },
       { id:2, year: '1401', month: 'اسفند', category: 'خدمات', amount: 500, count: 5 },
@@ -531,6 +551,7 @@
             title={t('کاتالوگ کامپوننت‌ها (Showcase)', 'Component Showcase')}
             icon={LayoutGrid} language={language}
             breadcrumbs={[{ label: t('میز کار', 'Workspace') }, { label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سیستم طراحی', 'Design System') }]}
+            viewConfig={viewConfig}
           />
 
           <Tabs tabs={showcaseTabs} activeTab={activeShowcaseTab} onChange={setActiveShowcaseTab} className="mb-4" />
@@ -551,6 +572,8 @@
                       onDownloadSample={() => showToast(t('در حال دانلود نمونه فایل اکسل...', 'Downloading Excel Sample...'), 'info')}
                       selectable={true}
                       showSummaryRow={true}
+                      gridState={gridState}
+                      onGridStateChange={setGridState}
                       bulkActions={[
                         { label: t('حذف همه انتخاب شده‌ها', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: handleBulkDelete },
                         { label: t('تایید اسناد', 'Approve Selected'), icon: Check, variant: 'outline', onClick: () => showToast(t('اسناد انتخاب شده تایید شدند.', 'Selected documents approved.'), 'success') }
