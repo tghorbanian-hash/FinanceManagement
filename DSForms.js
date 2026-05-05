@@ -3,7 +3,7 @@
   const React = window.React;
   const { useState, useEffect, useRef, useCallback, useMemo } = React;
   const { 
-    AlertCircle, Search, ChevronDown, Calendar, X, UploadCloud, FileText, Download, Trash2 
+    AlertCircle, Search, ChevronDown, ChevronLeft, ChevronRight, Calendar, X, UploadCloud, FileText, Download, Trash2 
   } = window.LucideIcons || {};
 
   const { useCalendarMode, formatGlobalDate, j2g, g2j } = window.DSCore || {};
@@ -224,7 +224,7 @@
         return { y: jy, m: jm, d: jd };
       }
       return { y: gy, m: gm, d: gd };
-    }, []);
+    }, [g2j]);
 
     const globalMode = useCalendarMode ? useCalendarMode() : 'jalali';
     const [calendarMode, setCalendarMode] = useState(globalMode);
@@ -269,11 +269,11 @@
           }
         }
       }
-    }, [value, calendarMode]);
+    }, [value, calendarMode, g2j]);
 
     const displayValue = useMemo(() => {
       return formatGlobalDate ? formatGlobalDate(value, calendarMode) : value;
-    }, [value, calendarMode]);
+    }, [value, calendarMode, formatGlobalDate]);
 
     const handleDayClick = (day) => {
       if (calendarMode === 'jalali' && j2g) {
@@ -501,7 +501,6 @@
     TextAreaField, RadioGroup, DatePicker, AttachmentManager, TagInput
   };
 
-  // Merge into DSCore to prevent breaking dependencies in other files
   window.DSCore = window.DSCore || {};
   Object.assign(window.DSCore, window.DSForms);
 })();
