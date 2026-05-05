@@ -1,132 +1,87 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FM - Financial Management System</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
-  
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستم یکپارچه سازمانی (جدید)</title>
+    <link rel="icon" href="data:,">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap" rel="stylesheet">
+    
+    <script>
+        const savedTheme = window.localStorage.getItem('fm_theme') || 'light';
+        if (savedTheme === 'dark') document.documentElement.classList.add('dark');
 
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <script>
-    const savedTheme = window.localStorage.getItem('fm_theme') || 'light';
-    if (savedTheme === 'dark') document.documentElement.classList.add('dark');
-  </script>
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Vazirmatn', 'sans-serif'],
-            mono: ['Fira Code', 'monospace']
-          },
-          animation: {
-            'spin-slow': 'spin 3s linear infinite',
-            'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
         }
-      }
-    }
-  </script>
+    </script>
 
-  <style>
-    body {
-      font-family: 'Vazirmatn', sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      overflow-x: hidden;
-      @apply bg-[#f8fafc] text-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300;
-    }
-
-    .font-mono {
-      font-family: 'Fira Code', monospace;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 5px;
-      height: 5px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 10px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
-    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #475569;
-    }
-    .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: #64748b;
-    }
+    <script>
+        window.react = window.React;
+    </script>
 
-    /* Loader Animation */
-    .loader {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #4f46e5;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-    }
-    
-    .dark .loader {
-      border: 3px solid #1e293b;
-      border-top: 3px solid #6366f1;
-    }
+    <script src="https://unpkg.com/lucide-react@0.344.0/dist/umd/lucide-react.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    <script>
+        window.LucideIcons = window.lucideReact || window.LucideReact || {};
+    </script>
 
-    #root {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-    }
-  </style>
+    <style>
+        body { font-family: 'Vazirmatn', sans-serif !important; margin: 0; overflow: hidden; background-color: #f8fafc; color: #1e293b; }
+        body.dark { background-color: #0f172a; color: #f1f5f9; }
+        .font-mono { font-family: 'Fira Code', monospace; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Custom Scrollbar for Dark Mode */
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        #root { width: 100vw; height: 100vh; overflow: hidden; }
+    </style>
 </head>
-<body>
-  <div id="root">
-    <div class="flex items-center justify-center h-full w-full bg-slate-50 dark:bg-slate-900">
-      <div class="loader"></div>
-    </div>
-  </div>
+<body class="transition-colors duration-300">
+    <div id="root"></div>
 
-  <script src="./supabaseConfig.js"></script>
-  <script type="text/babel" src="./DSCore.js"></script>
-  <script type="text/babel" src="./DSFeedback.js"></script>
-  <script type="text/babel" src="./DSGrid.js"></script>
-  <script type="text/babel" src="./DSTree.js"></script>
-  <script type="text/babel" src="./DSCharts.js"></script>
-  <script type="text/babel" src="./DSOverlays.js"></script>
-  <script type="text/babel" src="./DesignSystem.js"></script>
-  
-  <script type="text/babel" src="./NotificationSidebar.js"></script>
-  <script type="text/babel" src="./NavigationSystem.js"></script>
+    <script type="text/babel" data-presets="react" src="./supabaseConfig.js"></script>
 
-  <script type="text/babel" src="./general/ComponentShowcase.js"></script>
-  <script type="text/babel" src="./general/CurrencySettings.js"></script>
-  
-  <script type="text/babel" src="./app.js"></script>
+    <script type="text/babel" data-presets="react" src="./DSCore.js"></script>
+    <script type="text/babel" data-presets="react" src="./DSFeedback.js"></script>
+    <script type="text/babel" data-presets="react" src="./DSGrid.js"></script>
+    <script type="text/babel" data-presets="react" src="./DSTree.js"></script>
+    
+    <script type="text/babel" data-presets="react" src="./DSOverlays.js"></script>
+    <script type="text/babel" data-presets="react" src="./DSCharts.js"></script>
+    
+    <script type="text/babel" data-presets="react" src="./DesignSystem.js"></script>
+    
+    <script type="text/babel" data-presets="react" src="./NotificationSidebar.js"></script>
+    <script type="text/babel" data-presets="react" src="./general/CurrencySettings.js"></script>
+    <script type="text/babel" data-presets="react" src="./general/ComponentShowcase.js"></script>
+    <script type="text/babel" data-presets="react" src="./NavigationSystem.js"></script>
+    <script type="text/babel" data-presets="react" src="./app.js"></script>
 </body>
 </html>
