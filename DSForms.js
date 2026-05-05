@@ -2,8 +2,21 @@
 (() => {
   const React = window.React;
   const { useState, useEffect, useRef, useCallback, useMemo } = React;
+  
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
+  
   const { 
-    AlertCircle, Search, ChevronDown, ChevronLeft, ChevronRight, Calendar, X, UploadCloud, FileText, Download, Trash2 
+    AlertCircle = FallbackIcon, 
+    Search = FallbackIcon, 
+    ChevronDown = FallbackIcon, 
+    ChevronLeft = FallbackIcon, 
+    ChevronRight = FallbackIcon, 
+    Calendar = FallbackIcon, 
+    X = FallbackIcon, 
+    UploadCloud = FallbackIcon, 
+    FileText = FallbackIcon, 
+    Download = FallbackIcon, 
+    Trash2 = FallbackIcon 
   } = window.LucideIcons || {};
 
   const { useCalendarMode, formatGlobalDate, j2g, g2j } = window.DSCore || {};
