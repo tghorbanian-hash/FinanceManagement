@@ -141,10 +141,10 @@
       <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
         {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative flex items-center">
-          {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
+          {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-400 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
           <input
             id={inputId} type={type} disabled={disabled}
-            className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 hover:border-slate-400 dark:hover:border-slate-500'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
+            className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
             dir={isRtl ? 'rtl' : 'ltr'} {...restProps}
           />
         </div>
@@ -190,32 +190,32 @@
       <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${wrapperClassName}`}>
         {label && <label htmlFor={selectId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div 
-          className={`relative w-full ${inputHeights[size]} bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer border-slate-300 dark:border-slate-600 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 hover:border-slate-400 dark:hover:border-slate-500'} ${className}`}
+          className={`relative w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
           onClick={() => !disabled && setIsOpen(true)}
         >
           {isOpen ? (
             <input
               ref={inputRef} type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={displayValue || placeholder || t('جستجو...', 'Search...')}
-              className={`w-full h-full bg-transparent border-none outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500 ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}
+              className={`w-full h-full bg-transparent border-none outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}
               dir={isRtl ? 'rtl' : 'ltr'}
             />
           ) : (
             <div className={`w-full h-full flex items-center truncate ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`} dir={isRtl ? 'rtl' : 'ltr'}>
-              <span className={displayValue ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}>{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
+              <span className={displayValue ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-400'}>{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
             </div>
           )}
-          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-2.5' : 'right-2.5'} pointer-events-none text-slate-400 dark:text-slate-500`}>
+          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-2.5' : 'right-2.5'} pointer-events-none text-slate-400 dark:text-slate-400`}>
             <ChevronDown size={14} />
           </div>
         </div>
         
         {isOpen && (
-          <div className={`absolute top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-50 max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
+          <div className={`absolute top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-50 max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
             {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
               <div 
                 key={idx} 
-                className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
+                className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   if(onChange) onChange({ target: { value: opt.value } });
@@ -238,8 +238,8 @@
   const ToggleField = ({ checked, onChange, disabled = false, isRtl = true, label, wrapperClassName = '' }) => {
     return (
       <div className={`flex items-center gap-2 ${disabled ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'} ${wrapperClassName}`} onClick={() => !disabled && onChange(!checked)}>
-        <div className={`w-8 h-4 rounded-full relative transition-colors duration-200 ease-in-out ${checked ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-          <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all duration-200 ease-in-out ${checked ? (isRtl ? 'left-0.5' : 'right-0.5') : (isRtl ? 'right-0.5' : 'left-0.5')}`}></div>
+        <div className={`w-8 h-4 rounded-full relative transition-colors duration-200 ease-in-out ${checked ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-500'}`}>
+          <div className={`absolute top-0.5 w-3 h-3 bg-white dark:bg-slate-100 rounded-full shadow transition-all duration-200 ease-in-out ${checked ? (isRtl ? 'left-0.5' : 'right-0.5') : (isRtl ? 'right-0.5' : 'left-0.5')}`}></div>
         </div>
         {label && <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 select-none">{label}</span>}
       </div>
@@ -254,7 +254,7 @@
           checked={checked || false} 
           onChange={(e) => onChange(e.target.checked)} 
           disabled={disabled}
-          className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer disabled:bg-slate-100 dark:disabled:bg-slate-900 disabled:border-slate-300 dark:disabled:border-slate-700"
+          className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:border-slate-300 dark:disabled:border-slate-700"
         />
         {label && <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 select-none">{label}</span>}
       </label>
@@ -344,7 +344,7 @@
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-[12px] font-bold transition-all border-b-2 outline-none whitespace-nowrap ${isActive ? 'border-indigo-600 dark:border-indigo-500 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-t-lg' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-t-lg'}`}
+              className={`flex items-center gap-2 px-4 py-2.5 text-[12px] font-bold transition-all border-b-2 outline-none whitespace-nowrap ${isActive ? 'border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-t-lg' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-t-lg'}`}
             >
               {Icon && <Icon size={16} />}
               {tab.label}
@@ -392,7 +392,7 @@
         {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <textarea
           id={inputId} disabled={disabled} rows={rows}
-          className={`w-full bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none p-2.5 text-[13px] placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 hover:border-slate-400 dark:hover:border-slate-500'} ${className}`}
+          className={`w-full bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none p-2.5 text-[13px] placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
           dir={isRtl ? 'rtl' : 'ltr'} {...restProps}
         />
         {error && <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
@@ -412,10 +412,10 @@
                   type="radio" name={label} value={opt.value} checked={value === opt.value} 
                   onChange={() => onChange(opt.value)} className="sr-only" 
                 />
-                <div className={`w-4 h-4 rounded-full border transition-all ${value === opt.value ? 'border-indigo-600 dark:border-indigo-500 bg-white dark:bg-slate-800' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 group-hover:border-slate-400 dark:group-hover:border-slate-500'}`}></div>
-                {value === opt.value && <div className="absolute w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-500 animate-in zoom-in-50 duration-200"></div>}
+                <div className={`w-4 h-4 rounded-full border transition-all ${value === opt.value ? 'border-indigo-600 dark:border-indigo-400 bg-white dark:bg-slate-700/40' : 'border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 group-hover:border-slate-400 dark:group-hover:border-slate-400'}`}></div>
+                {value === opt.value && <div className="absolute w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-in zoom-in-50 duration-200"></div>}
               </div>
-              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 select-none">{opt.label}</span>
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 select-none">{opt.label}</span>
             </label>
           ))}
         </div>
@@ -737,7 +737,7 @@
             id={inputId} type="text" value={displayValue} readOnly disabled={disabled}
             onClick={handleOpen}
             placeholder={todayStr}
-            className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none cursor-pointer focus:bg-white dark:focus:bg-slate-800 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-600 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 hover:border-slate-400 dark:hover:border-slate-500'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
+            className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none cursor-pointer focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
             dir="ltr"
           />
           <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded p-0.5 z-10`}>
@@ -843,9 +843,9 @@
     return (
       <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
         {label && <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{label}</label>}
-        <div className={`flex flex-wrap gap-1.5 p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg focus-within:border-indigo-400 dark:focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-900/30 transition-all items-center ${minHeights[size]}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className={`flex flex-wrap gap-1.5 p-1 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 transition-all items-center ${minHeights[size]}`} dir={isRtl ? 'rtl' : 'ltr'}>
           {tags.map((tag, idx) => (
-            <div key={idx} className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-800 animate-in zoom-in-90 duration-150">
+            <div key={idx} className="flex items-center gap-1 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-500/30 animate-in zoom-in-90 duration-150">
               <span className="text-[11px] font-bold">{tag}</span>
               <button onClick={() => onDelete(idx)} className="text-indigo-400 dark:text-indigo-500 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"><X size={10} /></button>
             </div>
@@ -853,7 +853,7 @@
           <input 
             type="text" value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={handleKeyDown}
             placeholder={tags.length === 0 ? placeholder : ''}
-            className="flex-1 min-w-[80px] h-6 bg-transparent border-none outline-none text-[12px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 px-1"
+            className="flex-1 min-w-[80px] h-6 bg-transparent border-none outline-none text-[12px] text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-400 px-1"
           />
         </div>
       </div>

@@ -3,7 +3,6 @@
   const React = window.React;
   const { useState, useEffect, useMemo } = React;
   
-  // سیستم ضدگلوله برای آیکون‌ها: در صورت یافت نشدن آیکون، سیستم کرش نمی‌کند
   const FallbackIcon = (props) => <span {...props} style={{ display: 'inline-block', width: props.size || 16, height: props.size || 16 }} />;
   const LucideIcons = window.LucideIcons || {};
   const { 
@@ -274,7 +273,8 @@
     };
 
     const DynamicIcon = (props) => {
-      const { name, size = 18 } = props;
+      const name = props.name;
+      const size = props.size || 18;
       const restProps = Object.assign({}, props);
       delete restProps.name;
       delete restProps.size;

@@ -2,7 +2,20 @@
 (() => {
   const React = window.React;
   const { useState, useEffect } = React;
-  const { X, Maximize2, Minimize2, CheckCircle2, AlertCircle, Info, AlertTriangle } = window.LucideIcons || {};
+  
+  // سیستم ضدگلوله برای جلوگیری از کرش در صورت لود نشدن آیکون‌ها
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
+  const LucideIcons = window.LucideIcons || {};
+  const { 
+    X = FallbackIcon, 
+    Maximize2 = FallbackIcon, 
+    Minimize2 = FallbackIcon, 
+    CheckCircle2 = FallbackIcon, 
+    AlertCircle = FallbackIcon, 
+    Info = FallbackIcon, 
+    AlertTriangle = FallbackIcon 
+  } = LucideIcons;
+  
   const { Button } = window.DSCore || {};
 
   const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {

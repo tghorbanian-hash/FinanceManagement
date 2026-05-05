@@ -2,7 +2,13 @@
 (() => {
   const React = window.React;
   const { useMemo, useState } = React;
-  const { Maximize2, Minimize2, X } = window.LucideIcons || {};
+  
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
+  const LucideIcons = window.LucideIcons || {};
+  const { 
+    Maximize2 = FallbackIcon, 
+    Minimize2 = FallbackIcon
+  } = LucideIcons;
 
   const colorMap = {
     indigo: { main: '#4f46e5', light: '#e0e7ff', gradStart: 'rgba(79, 70, 229, 0.2)', gradEnd: 'rgba(79, 70, 229, 0)' },

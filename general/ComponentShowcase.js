@@ -1,13 +1,4 @@
-/* * شما دقیقاً جای درستی را ویرایش کردید و کدی که نوشتید کاملاً صحیح است.
- * تنها دلیل اینکه تغییرات روی صفحه اعمال نشده است، «کش مرورگر» (Browser Cache) می‌باشد.
- * مرورگرها فایل‌های JS را با شدت بالایی کش می‌کنند. لطفاً پس از جایگزینی این فایل، 
- * در مرورگر خود حتماً کلیدهای (Ctrl + F5) یا (Shift + F5) را بزنید تا حافظه نهان پاک شود.
- * * در این نسخه نهایی ComponentShowcase.js:
- * ۱. فواصل بین سکشن‌ها (gap) کاملاً مشابه تب‌های گرید و درخت فشرده و استاندارد شد.
- * ۲. ارتفاع نمودار خطی به صورت پیش‌فرض روی 350 و سایر نمودارها روی 280 تنظیم شد تا فضای عالی داشته باشند.
- * ۳. تگ‌های فیلتر نمودار دقیقاً در کنار دکمه‌های "جستجو" و "پاک کردن" در باکس فیلتر پیشرفته جانمایی شدند.
- * * Filename: general/ComponentShowcase.js 
- */
+/* Filename: general/ComponentShowcase.js */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo } = React;
@@ -291,13 +282,13 @@
     };
 
     const gridActions = [
-      { icon: Eye, tooltip: t('مشاهده جزئیات (مودال)', 'View Details'), onClick: (r) => { setSelectedRow(r); setViewModalOpen(true); }, className: 'hover:text-blue-600' },
-      { icon: Edit, tooltip: t('ویرایش (ورود به فرم)', 'Edit'), onClick: handleOpenForm, className: 'hover:text-emerald-600' },
+      { icon: Eye, tooltip: t('مشاهده جزئیات (مودال)', 'View Details'), onClick: (r) => { setSelectedRow(r); setViewModalOpen(true); }, className: 'hover:text-blue-600 dark:hover:text-blue-400' },
+      { icon: Edit, tooltip: t('ویرایش (ورود به فرم)', 'Edit'), onClick: handleOpenForm, className: 'hover:text-emerald-600 dark:hover:text-emerald-400' },
       { 
         icon: Paperclip, tooltip: t('ضمائم', 'Attachments'), onClick: (r) => { setSelectedRow(r); setAttachModalOpen(true); }, 
-        className: (row) => row.attachments?.length > 0 ? 'text-indigo-600 bg-indigo-50 border-indigo-200 hover:bg-indigo-100' : 'hover:text-indigo-600' 
+        className: (row) => row.attachments?.length > 0 ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50' : 'hover:text-indigo-600 dark:hover:text-indigo-400' 
       },
-      { icon: FileSpreadsheet, tooltip: t('خروجی اکسل', 'Export'), onClick: (row) => showToast(t(`خروجی اکسل برای سند ${row.id} در حال آماده‌سازی است.`, `Preparing export for document ${row.id}`), 'info'), className: 'hover:text-emerald-600' },
+      { icon: FileSpreadsheet, tooltip: t('خروجی اکسل', 'Export'), onClick: (row) => showToast(t(`خروجی اکسل برای سند ${row.id} در حال آماده‌سازی است.`, `Preparing export for document ${row.id}`), 'info'), className: 'hover:text-emerald-600 dark:hover:text-emerald-400' },
       { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => {
           showDialog(
             t('حذف سند', 'Delete Document'),
@@ -308,7 +299,7 @@
               showToast(t('سند با موفقیت حذف شد.', 'Document deleted successfully.'), 'success');
             }
           );
-        }, className: 'hover:text-red-600' 
+        }, className: 'hover:text-red-600 dark:hover:text-red-400' 
       },
     ];
 
@@ -333,7 +324,7 @@
     };
 
     const lineItemColumns = [
-      { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2 font-mono">{idx + 1}</span> },
+      { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2 font-mono text-slate-600 dark:text-slate-400">{idx + 1}</span> },
       { 
         field: 'account', header_fa: 'حساب معین', header_en: 'Account', width: '200px', 
         render: (val, row) => editingLineItemId === row.id 
@@ -384,13 +375,13 @@
       { icon: Check, tooltip: t('تایید', 'Save'), hidden: (row) => editingLineItemId !== row.id, onClick: (row) => {
         setLineItems(lineItems.map(item => item.id === editingLineItemId ? editingLineData : item));
         setEditingLineItemId(null);
-      }, className: 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border-emerald-200' },
-      { icon: X, tooltip: t('انصراف', 'Cancel'), hidden: (row) => editingLineItemId !== row.id, onClick: () => setEditingLineItemId(null), className: 'text-red-500 bg-red-50 hover:bg-red-100 border-red-200' },
+      }, className: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border-emerald-200 dark:border-emerald-800' },
+      { icon: X, tooltip: t('انصراف', 'Cancel'), hidden: (row) => editingLineItemId !== row.id, onClick: () => setEditingLineItemId(null), className: 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 border-red-200 dark:border-red-800' },
       
       { icon: Edit, tooltip: t('ویرایش', 'Edit'), hidden: (row) => editingLineItemId === row.id, onClick: (row) => {
         setEditingLineItemId(row.id);
         setEditingLineData({...row});
-      }, className: 'hover:text-emerald-600' },
+      }, className: 'hover:text-emerald-600 dark:hover:text-emerald-400' },
       { icon: Copy, tooltip: t('کپی ردیف', 'Duplicate'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => {
         const newItems = [...lineItems];
         const newId = Date.now();
@@ -398,8 +389,8 @@
         setLineItems(newItems);
         setEditingLineItemId(newId);
         setEditingLineData({ ...row, id: newId });
-      }, className: 'hover:text-blue-600' },
-      { icon: Trash2, tooltip: t('حذف ردیف', 'Delete'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => setLineItems(lineItems.filter((_, i) => i !== idx)), className: 'hover:text-red-600' },
+      }, className: 'hover:text-blue-600 dark:hover:text-blue-400' },
+      { icon: Trash2, tooltip: t('حذف ردیف', 'Delete'), hidden: (row) => editingLineItemId === row.id, onClick: (row, idx) => setLineItems(lineItems.filter((_, i) => i !== idx)), className: 'hover:text-red-600 dark:hover:text-red-400' },
     ];
 
     const handleRowReorder = (sourceIdx, destIdx) => {
@@ -534,7 +525,7 @@
 
     return (
       <>
-        <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
           
           <PageHeader 
             title={t('کاتالوگ کامپوننت‌ها (Showcase)', 'Component Showcase')}
@@ -574,24 +565,24 @@
                   <Card 
                     title={selectedRow.id ? `${t('ویرایش سند حسابداری شماره', 'Edit Document #')} ${selectedRow.id}` : t('ایجاد سند حسابداری جدید', 'Create New Document')}
                     noPadding={true}
-                    className="flex-1 flex flex-col border border-slate-200 shadow-sm min-h-0"
-                    headerClassName="bg-white border-b-2 border-indigo-100 h-14"
+                    className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 shadow-sm min-h-0"
+                    headerClassName="bg-white dark:bg-slate-800 border-b-2 border-indigo-100 dark:border-indigo-800/50 h-14"
                     action={
                       <div className="flex items-center gap-1.5">
                         <Button size="sm" variant="ghost" icon={Paperclip} onClick={() => setAttachModalOpen(true)} title={t('ضمائم', 'Attachments')} />
                         <Button size="sm" variant="ghost" icon={Printer} onClick={() => showToast(t('در حال آماده‌سازی پیش‌نمایش چاپ...', 'Preparing print preview...'), 'info')} title={t('چاپ', 'Print')} />
                         <Button size="sm" variant="outline" icon={isRtl ? ChevronRight : ChevronLeft} onClick={() => setCurrentView('list')}>{t('بازگشت', 'Back')}</Button>
-                        <div className="w-px h-5 bg-slate-200 mx-0.5"></div>
+                        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
                         <Button size="sm" variant="primary" icon={Save} isLoading={isSubmitting} onClick={handleSaveForm}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
                       </div>
                     }
                   >
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 min-h-0">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 dark:bg-slate-900/50 min-h-0">
                       <div className="w-full flex flex-col gap-3 h-full">
                         
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 shrink-0">
-                          <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 shadow-sm !overflow-visible" headerClassName="h-10 bg-white" isCollapsible language={language}>
-                            <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white">
+                          <Card title={t('اطلاعات اصلی', 'General Info')} noPadding className="xl:col-span-2 border border-slate-200 dark:border-slate-700 shadow-sm !overflow-visible" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                            <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 bg-white dark:bg-slate-800">
                               <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id || 'جدید'} disabled isRtl={isRtl} />
                               <DatePicker size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} onChange={(v) => setSelectedRow({...selectedRow, docDate: v})} isRtl={isRtl} language={language} />
                               <div className="lg:col-span-2">
@@ -602,8 +593,8 @@
                             </div>
                           </Card>
 
-                          <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 shadow-sm" headerClassName="h-10 bg-white" isCollapsible language={language}>
-                            <div className="p-3 flex flex-col gap-4 bg-white h-full justify-center">
+                          <Card title={t('تنظیمات عملیاتی', 'Operational Settings')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                            <div className="p-3 flex flex-col gap-4 bg-white dark:bg-slate-800 h-full justify-center">
                               <ToggleField size="sm" label={t('وضعیت فعال بودن سند در سیستم', 'Document is Active')} checked={selectedRow.isActive} onChange={(val) => setSelectedRow({...selectedRow, isActive: val})} isRtl={isRtl} />
                               <CheckboxField size="sm" label={t('این سند کنترل مضاعف شده است', 'Controlled Document')} checked={selectedRow.isControlled} onChange={(val) => setSelectedRow({...selectedRow, isControlled: val})} isRtl={isRtl} />
                             </div>
@@ -612,7 +603,7 @@
 
                         <Card 
                           title={t('اقلام سند (Inline Edit)', 'Line Items')} 
-                          noPadding className="border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white shrink-0" 
+                          noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm flex-1 flex flex-col min-h-[400px]" headerClassName="h-10 bg-white dark:bg-slate-800 shrink-0" 
                         >
                           <div className="flex-1 flex flex-col min-h-0">
                             <DataGrid 
@@ -652,14 +643,14 @@
 
           {activeShowcaseTab === 'tree' && (
             <div className="flex-1 flex flex-col animate-in fade-in min-h-0">
-              <div className="flex items-center justify-between mb-3 shrink-0 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between mb-3 shrink-0 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-indigo-100 text-indigo-600 rounded-md"><ListTree size={18}/></div>
-                  <span className="text-[13px] font-black text-slate-800">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
+                  <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md"><ListTree size={18}/></div>
+                  <span className="text-[13px] font-black text-slate-800 dark:text-slate-100">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
-                  <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درختی', 'Tree View')}</button>
-                  <button onClick={() => setTreeMode('grid')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/50 p-1 rounded-lg">
+                  <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درختی', 'Tree View')}</button>
+                  <button onClick={() => setTreeMode('grid')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
                 </div>
               </div>
 
@@ -683,12 +674,12 @@
                   <div className="w-full md:w-[60%] h-full min-h-0 flex flex-col">
                     <Card 
                       title={isCreatingNode ? (newTargetParentId ? t('ایجاد زیرمجموعه جدید', 'Create New Child') : t('ایجاد ریشه جدید', 'Create New Root')) : (selectedTreeNodeId ? t('ویرایش اطلاعات', 'Edit Information') : t('اطلاعات جزئی', 'Details'))}
-                      className="h-full border border-slate-200 shadow-sm"
-                      headerClassName="bg-slate-50/80"
+                      className="h-full border border-slate-200 dark:border-slate-700 shadow-sm"
+                      headerClassName="bg-slate-50/80 dark:bg-slate-900/50"
                       action={
                         (selectedTreeNodeId || isCreatingNode) && (
                           <div className="flex gap-1.5">
-                            <Button size="sm" variant="ghost" icon={Trash2} className="!text-red-500 hover:!bg-red-50" onClick={() => !isCreatingNode && handleDeleteTreeNode(treeData.find(n => n.id === selectedTreeNodeId))} disabled={isCreatingNode} title={t('حذف', 'Delete')}/>
+                            <Button size="sm" variant="ghost" icon={Trash2} className="!text-red-500 dark:!text-red-400 hover:!bg-red-50 dark:hover:!bg-red-900/30" onClick={() => !isCreatingNode && handleDeleteTreeNode(treeData.find(n => n.id === selectedTreeNodeId))} disabled={isCreatingNode} title={t('حذف', 'Delete')}/>
                           </div>
                         )
                       }
@@ -699,7 +690,7 @@
                             {isCreatingNode && newTargetParentId && (
                               <Alert 
                                 type="info" 
-                                message={<span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong>{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>} 
+                                message={<span>{t('در حال ایجاد زیرمجموعه برای:', 'Creating child for:')} <strong className="dark:text-indigo-300">{treeData.find(n => n.id === newTargetParentId)?.title}</strong></span>} 
                               />
                             )}
                             <TextField size="sm" label={t('کد حساب', 'Account Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} required dir="ltr"/>
@@ -707,14 +698,14 @@
                             <SelectField size="sm" label={t('ماهیت حساب', 'Account Nature')} value={treeFormData.nature || ''} onChange={(e) => setTreeFormData({...treeFormData, nature: e.target.value})} options={[{value:'بدهکار',label:'بدهکار'}, {value:'بستانکار',label:'بستانکار'}]} isRtl={isRtl} />
                             <ToggleField size="sm" label={t('وضعیت فعال بودن (نمایش در سیستم)', 'Active Status')} checked={treeFormData.isActive !== false} onChange={(v) => setTreeFormData({...treeFormData, isActive: v})} isRtl={isRtl} wrapperClassName="pt-2" />
                           </div>
-                          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
+                          <div className="pt-4 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-end gap-2 shrink-0">
                             <Button size="sm" variant="ghost" onClick={handleCancelTreeForm}>{t('لغو', 'Cancel')}</Button>
                             <Button size="sm" variant="primary" icon={Save} onClick={handleSaveTreeForm}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 text-[12px] font-medium">
-                          <div className="p-3 bg-slate-50 rounded-full"><ListTree size={24} className="text-slate-300"/></div>
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 gap-3 text-[12px] font-medium">
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full"><ListTree size={24} className="text-slate-300 dark:text-slate-600"/></div>
                           <span>{t('نودی انتخاب نشده است', 'No node selected')}</span>
                         </div>
                       )}
@@ -722,13 +713,17 @@
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 min-h-0 shadow-sm border border-slate-200 rounded-lg bg-white p-1">
+                <div className="flex-1 min-h-0 shadow-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 p-1">
                   <TreeGrid 
                     data={treeData}
                     idField="id" parentField="parentId"
                     editingId={treeGridEditingId}
                     editData={treeGridEditData}
-                    onEditFieldChange={(field, val) => setTreeGridEditData(prev => ({...prev, [field]: val}))}
+                    onEditFieldChange={(field, val) => setTreeGridEditData(prev => {
+                      const newData = {};
+                      newData[field] = val;
+                      return Object.assign({}, prev, newData);
+                    })}
                     onSaveEdit={handleSaveTreeGridEdit}
                     onCancelEdit={handleCancelTreeGridEdit}
                     columns={[
@@ -738,7 +733,7 @@
                       { field: 'isActive', header_fa: 'وضعیت', header_en: 'Status', width: '90px', editable: true, type: 'toggle', render: (val) => <ToggleField checked={!!val} disabled isRtl={isRtl} wrapperClassName="justify-start" /> }
                     ]}
                     actions={[
-                      { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleStartTreeGridEdit(row), className: 'hover:text-emerald-600' }
+                      { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleStartTreeGridEdit(row), className: 'hover:text-emerald-600 dark:hover:text-emerald-400' }
                     ]}
                     selectable={true}
                     selectedIds={selectedTreeGridIds}
@@ -802,11 +797,11 @@
 
                   <Card title={t('نمایه کاربران', 'User Profiles')} className="shadow-sm !overflow-visible">
                     <div className="flex flex-col gap-4">
-                      <div className="p-3 border border-indigo-100 bg-indigo-50/30 rounded-lg flex items-center gap-3">
+                      <div className="p-3 border border-indigo-100 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-900/20 rounded-lg flex items-center gap-3">
                         <Avatar name="Ali Alavi" size="md" />
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-black text-slate-700">علی علوی</span>
-                          <span className="text-[9px] text-slate-400">مدیر ارشد مالی</span>
+                          <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">علی علوی</span>
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500">مدیر ارشد مالی</span>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -825,26 +820,26 @@
               <Card title={t('لایه های شناور (Overlays)', 'Overlays')} className="shadow-sm !overflow-visible mt-2">
                 <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
                    <div className="flex flex-col gap-3">
-                      <h4 className="text-[12px] font-bold text-slate-700">{t('سایدبار (Drawer)', 'Drawer')}</h4>
+                      <h4 className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('سایدبار (Drawer)', 'Drawer')}</h4>
                       <Button variant="outline" size="sm" onClick={() => setDrawerOpen(true)}>{t('باز کردن سایدبار متغیر', 'Open Drawer')}</Button>
                    </div>
                    
                    <div className="flex flex-col gap-3">
-                      <h4 className="text-[12px] font-bold text-slate-700">{t('منوی کلیک راست (Context Menu)', 'Context Menu')}</h4>
+                      <h4 className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('منوی کلیک راست (Context Menu)', 'Context Menu')}</h4>
                       <ContextMenu items={[
                         { label: t('مشاهده جزئیات', 'View Details'), icon: Eye },
                         { label: t('ویرایش سند', 'Edit Document'), icon: Edit },
                         { divider: true },
                         { label: t('حذف رکورد', 'Delete Record'), icon: Trash2, variant: 'danger' }
                       ]} language={language}>
-                         <div className="bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-200 border-dashed rounded-xl h-10 flex items-center justify-center text-indigo-600 text-[12px] font-bold transition-colors cursor-context-menu select-none">
+                         <div className="bg-indigo-50/50 dark:bg-indigo-900/30 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800/50 border-dashed rounded-xl h-10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 text-[12px] font-bold transition-colors cursor-context-menu select-none">
                             {t('روی من کلیک راست کنید', 'Right click here')}
                          </div>
                       </ContextMenu>
                    </div>
 
                    <div className="flex flex-col gap-3">
-                      <h4 className="text-[12px] font-bold text-slate-700">{t('پاپ‌اور (Popover)', 'Popover')}</h4>
+                      <h4 className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('پاپ‌اور (Popover)', 'Popover')}</h4>
                       <div className="flex gap-2">
                         <Popover 
                           language={language}
@@ -852,7 +847,7 @@
                           trigger={<Button variant="outline" size="sm">{t('تنظیمات', 'Settings')}</Button>}
                         >
                           <div className="w-[200px] flex flex-col gap-2 text-[11px]">
-                             <div className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-1 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
+                             <div className="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-1 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
                              <ToggleField label={t('ارسال ایمیل', 'Send Email')} checked={popoverSettings.email} onChange={(v) => setPopoverSettings({...popoverSettings, email: v})} isRtl={isRtl} />
                              <ToggleField label={t('تایید خودکار', 'Auto Approve')} checked={popoverSettings.autoApprove} onChange={(v) => setPopoverSettings({...popoverSettings, autoApprove: v})} isRtl={isRtl} wrapperClassName="pt-1" />
                           </div>
@@ -888,17 +883,17 @@
                 >
                   {(activeChartMonth || activeChartCategory) && (
                     <>
-                      <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                      <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1"></div>
                       {activeChartMonth && (
                         <Badge variant="indigo" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
                           <span className="opacity-70">{t('ماه:', 'Month:')}</span> {activeChartMonth}
-                          <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                          <button onClick={() => setActiveChartMonth(null)} className="hover:text-red-500 dark:hover:text-red-400 mr-1"><X size={10} strokeWidth={2.5} /></button>
                         </Badge>
                       )}
                       {activeChartCategory && (
                         <Badge variant="emerald" className="flex items-center gap-1 !py-0.5 !px-1.5 shadow-sm text-[10px]">
                           <span className="opacity-70">{t('دسته‌بندی:', 'Category:')}</span> {activeChartCategory}
-                          <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 mr-1"><X size={10} strokeWidth={2.5} /></button>
+                          <button onClick={() => setActiveChartCategory(null)} className="hover:text-red-500 dark:hover:text-red-400 mr-1"><X size={10} strokeWidth={2.5} /></button>
                         </Badge>
                       )}
                     </>
@@ -911,9 +906,9 @@
                   <LineChart 
                     title={t('نمودار روند یکپارچه', 'Integrated Trend Chart')}
                     action={
-                      <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                        <button onClick={() => setLineChartMode('monthly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'monthly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('ماهانه', 'Monthly')}</button>
-                        <button onClick={() => setLineChartMode('yearly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'yearly' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('سالیانه', 'Yearly')}</button>
+                      <div className="flex bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                        <button onClick={() => setLineChartMode('monthly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'monthly' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('ماهانه', 'Monthly')}</button>
+                        <button onClick={() => setLineChartMode('yearly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'yearly' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('سالیانه', 'Yearly')}</button>
                       </div>
                     }
                     data={processedChartData.trendData} 
@@ -928,9 +923,9 @@
                 <BarChart 
                   title={t('نمودار توزیع زمانی', 'Time Distribution Chart')}
                   action={
-                    <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                      <button onClick={() => setBarChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'amount' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('مبلغ', 'Amount')}</button>
-                      <button onClick={() => setBarChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'count' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('تعداد', 'Count')}</button>
+                    <div className="flex bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button onClick={() => setBarChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'amount' ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('مبلغ', 'Amount')}</button>
+                      <button onClick={() => setBarChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'count' ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('تعداد', 'Count')}</button>
                     </div>
                   }
                   data={processedChartData.barData} 
@@ -944,9 +939,9 @@
                 <PieChart 
                   title={t('نمودار سهم دسته‌بندی', 'Category Share Chart')}
                   action={
-                    <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
-                      <button onClick={() => setPieChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'amount' ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('مبلغ', 'Amount')}</button>
-                      <button onClick={() => setPieChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'count' ? 'bg-white shadow-sm text-sky-600' : 'text-slate-500 hover:text-slate-700'}`}>{t('تعداد', 'Count')}</button>
+                    <div className="flex bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <button onClick={() => setPieChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'amount' ? 'bg-white dark:bg-slate-600 shadow-sm text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('مبلغ', 'Amount')}</button>
+                      <button onClick={() => setPieChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'count' ? 'bg-white dark:bg-slate-600 shadow-sm text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('تعداد', 'Count')}</button>
                     </div>
                   }
                   data={processedChartData.pieData} 
@@ -960,7 +955,7 @@
                   title={t('نمایش دایره ای (Donut)', 'Donut View')}
                   action={
                     <DropdownMenu 
-                      trigger={<button className="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded border border-slate-200 text-[10px] font-bold transition-colors">{t('نمایش:', 'View:')} {donutChartMode === 'amount' ? t('مبلغ', 'Amount') : t('تعداد', 'Count')} <ChevronDown size={12}/></button>}
+                      trigger={<button className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 px-2 py-1 rounded border border-slate-200 dark:border-slate-600 text-[10px] font-bold transition-colors">{t('نمایش:', 'View:')} {donutChartMode === 'amount' ? t('مبلغ', 'Amount') : t('تعداد', 'Count')} <ChevronDown size={12}/></button>}
                       items={[
                         { label: t('بر اساس مبلغ', 'By Amount'), onClick: () => setDonutChartMode('amount'), icon: DollarSign },
                         { label: t('بر اساس تعداد', 'By Count'), onClick: () => setDonutChartMode('count'), icon: TrendingUp }
@@ -992,8 +987,8 @@
           <Modal isOpen={viewModalOpen} onClose={() => setViewModalOpen(false)} title={`${t('جزئیات سند حسابداری شماره', 'Document Details #')} ${selectedRow?.id || ''}`} width="max-w-5xl" language={language} showMaximize={true}>
             {selectedRow && (
               <div className="space-y-3 p-4">
-                <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
-                  <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white">
+                <Card title={t('اطلاعات کلی سند', 'General Information')} noPadding={true} className="border border-slate-200 dark:border-slate-700" headerClassName="h-10 bg-slate-50/50 dark:bg-slate-900/50">
+                  <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white dark:bg-slate-800">
                     <TextField size="sm" label={t('شماره سند', 'Doc ID')} value={selectedRow.id} disabled isRtl={isRtl} />
                     <DatePicker size="sm" label={t('تاریخ ثبت', 'Date')} value={selectedRow.docDate} disabled isRtl={isRtl} language={language} />
                     <LOVField size="sm" label={t('واحد سازمانی', 'Department')} displayValue={selectedRow.department?.title} disabled data={lovDepartments} columns={lovDeptColumns} isRtl={isRtl} />
@@ -1002,7 +997,7 @@
                     <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
                     
                     <div className="flex flex-col gap-1 w-full">
-                      <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
                       <div className="flex items-center h-8">
                         <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : selectedRow.status === 'پیش‌نویس' ? 'orange' : 'gray'}>
                           {selectedRow.status}
@@ -1010,14 +1005,14 @@
                       </div>
                     </div>
 
-                    <div className="md:col-span-4 flex items-center gap-6 pt-2 border-t border-slate-100">
+                    <div className="md:col-span-4 flex items-center gap-6 pt-2 border-t border-slate-100 dark:border-slate-700/50">
                       <ToggleField size="sm" label={t('فعال', 'Active')} checked={selectedRow.isActive} disabled isRtl={isRtl} />
                       <CheckboxField size="sm" label={t('کنترل شده', 'Controlled')} checked={selectedRow.isControlled} disabled isRtl={isRtl} />
                     </div>
                   </div>
                 </Card>
 
-                <Card title={t('اقلام سند', 'Line Items')} noPadding={true} className="border border-slate-200" headerClassName="h-10">
+                <Card title={t('اقلام سند', 'Line Items')} noPadding={true} className="border border-slate-200 dark:border-slate-700" headerClassName="h-10 bg-slate-50/50 dark:bg-slate-900/50">
                   <div className="h-[250px]">
                     <DataGrid 
                       data={[
@@ -1078,7 +1073,7 @@
             position={isRtl ? 'right' : 'left'}
             language={language}
           >
-            <div className="text-[12px] text-slate-500 font-medium leading-relaxed">
+            <div className="text-[12px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
                {t('محتوای سایدبار متغیر (Drawer) در اینجا قرار می‌گیرد. این بخش برای فرم‌های طولانی، فیلترهای جانبی، یا تنظیمات ماژول بسیار مناسب و کاربردی است.', 'Drawer content goes here. It is very suitable for long forms, side filters, or module settings.')}
             </div>
           </Drawer>

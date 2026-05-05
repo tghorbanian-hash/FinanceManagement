@@ -23,7 +23,7 @@
         {label && <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative flex items-center" onClick={() => !disabled && setIsOpen(true)}>
           <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Search size={size === 'sm' ? 14 : 16} /></div>
-          <div className={`w-full ${size === 'sm' ? 'h-8 text-[11px]' : 'h-10 text-[13px]'} bg-white dark:bg-slate-800 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-500 border-slate-300 dark:border-slate-600'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
+          <div className={`w-full ${size === 'sm' ? 'h-8 text-[11px]' : 'h-10 text-[13px]'} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
             <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
           </div>
         </div>

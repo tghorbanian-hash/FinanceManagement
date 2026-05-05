@@ -2,13 +2,27 @@
 (() => {
   const React = window.React;
   const { useState, useMemo, useEffect, useCallback, useRef } = React;
+  
+  // سیستم ضدگلوله برای آیکون‌ها
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
+  const LucideIcons = window.LucideIcons || {};
   const { 
-    ChevronDown, ChevronRight, ChevronLeft, Folder, FolderOpen, FileText, 
-    Plus, Trash2, Maximize2, Minimize2, Search, FileDown, Upload, FileSpreadsheet, 
-    Check, X, Layers, Settings 
-  } = window.LucideIcons || {};
+    ChevronDown = FallbackIcon, ChevronRight = FallbackIcon, ChevronLeft = FallbackIcon, Folder = FallbackIcon, FolderOpen = FallbackIcon, FileText = FallbackIcon, 
+    Plus = FallbackIcon, Trash2 = FallbackIcon, Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, Search = FallbackIcon, FileDown = FallbackIcon, Upload = FallbackIcon, FileSpreadsheet = FallbackIcon, 
+    Check = FallbackIcon, X = FallbackIcon, Layers = FallbackIcon, Settings = FallbackIcon 
+  } = LucideIcons;
 
-  const { Button, ToggleField, Badge, DatePicker, formatGlobalDate, useCalendarMode, useTheme } = window.DSCore || {};
+  const FallbackComponent = () => null;
+  const Core = window.DSCore || window.DesignSystem || {};
+  const { 
+    Button = FallbackComponent, 
+    ToggleField = FallbackComponent, 
+    Badge = FallbackComponent, 
+    DatePicker = FallbackComponent, 
+    formatGlobalDate = (v) => v, 
+    useCalendarMode = () => 'jalali',
+    useTheme = () => 'light'
+  } = Core;
 
   const HighlightText = ({ text, term }) => {
     if (!term || !text) return <span>{text}</span>;
@@ -102,7 +116,7 @@
           <div 
             onClick={() => onSelect && onSelect(node)}
             className={`flex items-center gap-2 py-1 px-2 my-0.5 cursor-pointer rounded-lg transition-all border border-transparent group
-              ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border-indigo-200 dark:border-indigo-800 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-200 dark:hover:border-slate-700'}`}
+              ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border-indigo-200 dark:border-indigo-800 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-300 hover:border-slate-200 dark:hover:border-slate-700'}`}
             style={{ 
               paddingInlineStart: `${depth * 20 + 8}px`,
               paddingInlineEnd: '8px'
@@ -165,8 +179,8 @@
           <div className="flex items-center gap-1 shrink-0">
             {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-            <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
-            <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
+            <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
+            <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
           </div>
           
           <div className="flex items-center gap-1 shrink-0">
@@ -179,14 +193,14 @@
               />
             </div>
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
+            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
             {onImport && (
               <>
-                <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
+                <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
                 <input id="tree-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
-            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
+            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
           </div>
         </div>
 
@@ -205,8 +219,7 @@
   const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
-    const globalMode = useCalendarMode ? useCalendarMode() : 'jalali';
-    const theme = useTheme ? useTheme() : 'light';
+    const globalMode = useCalendarMode();
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -436,6 +449,7 @@
                               </div>
                             )}
                             
+                            {/* Node Icon */}
                             <div className={`${isSelectedRow ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 dark:group-hover:text-indigo-300 transition-colors'} shrink-0`}>
                               {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                             </div>
