@@ -43,6 +43,10 @@
     const [manualTime, setManualTime] = useState('12:00');
     const [manualRatesList, setManualRatesList] = useState([]);
 
+    // States: Edit Single Rate Modal
+    const [isEditRateModalOpen, setIsEditRateModalOpen] = useState(false);
+    const [editingRate, setEditingRate] = useState(null);
+
     // States: Converter Modal
     const [isConverterOpen, setIsConverterOpen] = useState(false);
     const [convDate, setConvDate] = useState('');
@@ -58,6 +62,15 @@
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+    }, []);
+
+    const isWithinOneWeek = useCallback((dateString) => {
+      if (!dateString) return false;
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInMs = now.getTime() - date.getTime();
+      const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+      return diffInDays <= 7;
     }, []);
 
     const fetchCurrencies = async () => {
@@ -237,6 +250,26 @@
       }
     };
 
+    const handleSaveEditedRate = async () => {
+      try {
+        if (!editingRate || !editingRate.rate || editingRate.rate === '0') {
+           showToast(t('لطفاً مبلغ نرخ معتبر وارد کنید.', 'Please enter a valid rate amount.'), 'error');
+           return;
+        }
+        
+        const rateVal = parseFloat(String(editingRate.rate).replace(/,/g, ''));
+        const { error } = await supabase.from('fm_currency_rates').update({ rate: rateVal }).eq('id', editingRate.id);
+        if (error) throw error;
+        
+        showToast(t('نرخ با موفقیت ویرایش شد.', 'Rate edited successfully.'));
+        setIsEditRateModalOpen(false);
+        fetchRates();
+      } catch (err) {
+        console.error("Edit rate error:", err);
+        showToast(t('خطا در ویرایش نرخ', 'Error editing rate'), 'error');
+      }
+    };
+
     const executeDelete = async () => {
       try {
         if (deleteConfirm.source === 'currency') {
@@ -374,7 +407,29 @@
     ];
 
     const historyBulkActions = [
-      { label: t('حذف سوابق انتخاب شده', 'Delete Selected Records'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'rate' }), variant: 'danger-outline', className: '!text-red-500 !border-red-500 hover:!bg-red-50' },
+      { 
+        label: t('حذف سوابق انتخاب شده', 'Delete Selected Records'), 
+        icon: Trash2, 
+        onClick: (ids) => {
+            const validIds = ids.filter(id => {
+                const rate = rates.find(r => r.id === id);
+                return rate && isWithinOneWeek(rate.created_at);
+            });
+            
+            if (validIds.length === 0) {
+                showToast(t('هیچ یک از رکوردهای انتخاب شده قابل حذف نیستند (گذشت بیش از یک هفته).', 'None of the selected records can be deleted (older than 1 week).'), 'error');
+                return;
+            }
+            
+            if (validIds.length < ids.length) {
+                showToast(t('تنها رکوردهایی که کمتر از یک هفته از ثبت آنها گذشته برای حذف انتخاب شدند.', 'Only records newer than 1 week were selected for deletion.'), 'warning');
+            }
+            
+            setDeleteConfirm({ isOpen: true, type: 'bulk', data: validIds, source: 'rate' });
+        }, 
+        variant: 'danger-outline', 
+        className: '!text-red-500 !border-red-500 hover:!bg-red-50' 
+      },
     ];
 
     const filteredRates = useMemo(() => {
@@ -452,7 +507,20 @@
                    selectable={true}
                    bulkActions={historyBulkActions}
                    actions={[
-                     { icon: Trash2, tooltip: t('حذف سابقه', 'Delete Record'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), className: 'text-slate-400 hover:text-red-600' }
+                     { 
+                       icon: Edit, 
+                       tooltip: t('ویرایش سابقه', 'Edit Record'), 
+                       onClick: (row) => { setEditingRate({...row}); setIsEditRateModalOpen(true); },
+                       hidden: (row) => !(row.source === 'Manual' && isWithinOneWeek(row.created_at)),
+                       className: 'text-slate-400 hover:text-indigo-600' 
+                     },
+                     { 
+                       icon: Trash2, 
+                       tooltip: t('حذف سابقه', 'Delete Record'), 
+                       onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), 
+                       hidden: (row) => !isWithinOneWeek(row.created_at),
+                       className: 'text-slate-400 hover:text-red-600' 
+                     }
                    ]}
                    headerMenus={[
                      {
@@ -569,6 +637,38 @@
               <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100">
                 <Button variant="outline" size="sm" onClick={() => setIsManualModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
                 <Button variant="primary" size="sm" icon={Save} onClick={handleSaveManualRates} disabled={manualRatesList.length === 0}>{t('ذخیره اطلاعات در تاریخچه', 'Save to History')}</Button>
+              </div>
+           </div>
+        </Modal>
+
+        {/* Modal: Edit Single Rate */}
+        <Modal isOpen={isEditRateModalOpen} onClose={() => setIsEditRateModalOpen(false)} title={t('ویرایش نرخ دستی', 'Edit Manual Rate')} language={language} width="max-w-sm">
+           <div className="p-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                 <div className="flex items-center justify-between text-[13px]">
+                   <span className="text-slate-500 font-bold">{t('ارز پایه:', 'Base:')}</span>
+                   <span className="font-black text-slate-800">{editingRate?.base_currency}</span>
+                 </div>
+                 <div className="flex items-center justify-between text-[13px]">
+                   <span className="text-slate-500 font-bold">{t('ارز هدف:', 'Target:')}</span>
+                   <span className="font-black text-slate-800">{editingRate?.target_currency}</span>
+                 </div>
+                 <div className="flex items-center justify-between text-[13px]">
+                   <span className="text-slate-500 font-bold">{t('تاریخ:', 'Date:')}</span>
+                   <span className="font-black text-slate-800">{editingRate?.rate_date}</span>
+                 </div>
+              </div>
+              <CurrencyField 
+                 label={t('مبلغ نرخ', 'Rate Amount')} 
+                 value={editingRate?.rate || ''} 
+                 onChange={(v) => setEditingRate({...editingRate, rate: v})} 
+                 isRtl={isRtl} 
+                 size="md"
+                 required 
+              />
+              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100">
+                <Button variant="outline" size="sm" onClick={() => setIsEditRateModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="primary" size="sm" icon={Save} onClick={handleSaveEditedRate}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
               </div>
            </div>
         </Modal>
