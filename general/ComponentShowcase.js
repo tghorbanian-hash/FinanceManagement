@@ -24,7 +24,9 @@
     const [activeShowcaseTab, setActiveShowcaseTab] = useState('tree');
     const [currentView, setCurrentView] = useState('list'); 
     const [mockData, setMockData] = useState([]);
-    const [filteredData, setFilteredData] = useState([]);
+    
+    // وضعیت اختصاصی برای نگهداری فیلتر پیشرفته
+    const [advancedFilterValues, setAdvancedFilterValues] = useState({});
     
     const [selectedRow, setSelectedRow] = useState(null);
     const [lineItems, setLineItems] = useState([]); 
@@ -53,22 +55,45 @@
     const [pieChartMode, setPieChartMode] = useState('amount');
     const [donutChartMode, setDonutChartMode] = useState('amount');
 
-    // اضافه شدن State برای مدیریت نمای گرید
     const [gridState, setGridState] = useState(null);
 
-    // پیکربندی سیستم مدیریت نما (View Management)
+    // همگام‌سازی تمامی وضعیت‌های فرم در دیتابیس
     const viewConfig = {
       pageId: 'showcase_main',
-      currentState: () => ({ gridState, currentView, activeShowcaseTab }),
+      currentState: () => ({ 
+        gridState, 
+        currentView, 
+        activeShowcaseTab, 
+        advancedFilterValues,
+        dashFilterYear,
+        activeChartMonth,
+        activeChartCategory,
+        lineChartMode,
+        barChartMode,
+        pieChartMode,
+        donutChartMode
+      }),
       onApplyState: (state) => {
         if (state) {
           if (state.gridState) setGridState(state.gridState);
           if (state.currentView) setCurrentView(state.currentView);
           if (state.activeShowcaseTab) setActiveShowcaseTab(state.activeShowcaseTab);
+          if (state.advancedFilterValues) setAdvancedFilterValues(state.advancedFilterValues);
+          if (state.dashFilterYear) setDashFilterYear(state.dashFilterYear);
+          if (state.activeChartMonth !== undefined) setActiveChartMonth(state.activeChartMonth);
+          if (state.activeChartCategory !== undefined) setActiveChartCategory(state.activeChartCategory);
+          if (state.lineChartMode) setLineChartMode(state.lineChartMode);
+          if (state.barChartMode) setBarChartMode(state.barChartMode);
+          if (state.pieChartMode) setPieChartMode(state.pieChartMode);
+          if (state.donutChartMode) setDonutChartMode(state.donutChartMode);
         } else {
           setGridState(null);
           setCurrentView('list');
           setActiveShowcaseTab('tree');
+          setAdvancedFilterValues({});
+          setDashFilterYear('1402');
+          setActiveChartMonth(null);
+          setActiveChartCategory(null);
         }
       }
     };
@@ -243,8 +268,23 @@
         });
       }
       setMockData(data);
-      setFilteredData(data);
     }, []);
+
+    // مکانیزم جدید فیلترها که با State هماهنگ است
+    const filteredData = useMemo(() => {
+      let result = [...mockData];
+      if (Object.keys(advancedFilterValues).length === 0) return result;
+      
+      Object.keys(advancedFilterValues).forEach(key => {
+        const filterVal = advancedFilterValues[key]?.title ? advancedFilterValues[key].title.toLowerCase() : advancedFilterValues[key]?.toString().toLowerCase();
+        if (!filterVal) return;
+        result = result.filter(row => {
+          const rowVal = row[key]?.title ? row[key].title.toLowerCase() : row[key]?.toString().toLowerCase();
+          return rowVal && rowVal.includes(filterVal);
+        });
+      });
+      return result;
+    }, [mockData, advancedFilterValues]);
 
     const gridColumns = [
       { field: 'id', header_fa: 'شماره سند', header_en: 'Doc ID', type: 'number', width: '90px' },
@@ -294,7 +334,7 @@
         'error',
         () => {
           const updated = mockData.filter(r => !selectedIds.includes(r.id));
-          setMockData(updated); setFilteredData(updated);
+          setMockData(updated);
           closeDialog();
           showToast(t('موارد با موفقیت حذف شدند.', 'Items successfully deleted.'), 'success');
         }
@@ -315,6 +355,8 @@
             t(`آیا از حذف سند شماره ${row.id} اطمینان دارید؟`, `Are you sure you want to delete document #${row.id}?`),
             'error',
             () => {
+              const updated = mockData.filter(r => r.id !== row.id);
+              setMockData(updated);
               closeDialog();
               showToast(t('سند با موفقیت حذف شد.', 'Document deleted successfully.'), 'success');
             }
@@ -329,19 +371,6 @@
       { name: 'department', label: t('واحد سازمانی', 'Department'), type: 'lov', lovData: lovDepartments, lovColumns: lovDeptColumns },
       { name: 'status', label: t('وضعیت', 'Status'), type: 'select', options: [{ value: 'تایید شده', label: t('تایید شده', 'Approved') }, { value: 'در حال بررسی', label: t('در حال بررسی', 'In Review') }, { value: 'رد شده', label: t('رد شده', 'Rejected') }]},
     ];
-
-    const handleAdvancedFilter = (values) => {
-      let result = [...mockData];
-      Object.keys(values).forEach(key => {
-        const filterVal = values[key]?.title ? values[key].title.toLowerCase() : values[key]?.toString().toLowerCase();
-        if (!filterVal) return;
-        result = result.filter(row => {
-          const rowVal = row[key]?.title ? row[key].title.toLowerCase() : row[key]?.toString().toLowerCase();
-          return rowVal && rowVal.includes(filterVal);
-        });
-      });
-      setFilteredData(result);
-    };
 
     const lineItemColumns = [
       { field: 'id', header_fa: 'ردیف', header_en: 'Row', width: '60px', render: (val, row, idx) => <span className="px-2 font-mono text-slate-600 dark:text-slate-400">{idx + 1}</span> },
@@ -560,7 +589,13 @@
             <>
               {currentView === 'list' && (
                 <div className="flex-1 flex flex-col min-h-0 animate-in fade-in duration-300">
-                  <AdvancedFilter fields={advancedFilterFields} onFilter={handleAdvancedFilter} onClear={() => setFilteredData(mockData)} language={language} />
+                  <AdvancedFilter 
+                    fields={advancedFilterFields} 
+                    initialValues={advancedFilterValues}
+                    onFilter={setAdvancedFilterValues} 
+                    onClear={() => setAdvancedFilterValues({})} 
+                    language={language} 
+                  />
                   <div className="flex-1 min-h-0">
                     <DataGrid 
                       data={filteredData} 
@@ -895,6 +930,7 @@
                   fields={[
                     { name: 'year', label: t('سال مالی', 'Fiscal Year'), type: 'select', options: [{value:'1401', label:t('سال 1401','Year 1401')}, {value:'1402', label:t('سال 1402','Year 1402')}, {value:'1403', label:t('سال 1403','Year 1403')}] }
                   ]}
+                  initialValues={{ year: dashFilterYear }}
                   onFilter={(vals) => setDashFilterYear(vals.year || '1402')}
                   onClear={() => {
                     setDashFilterYear('1402');
@@ -1068,13 +1104,13 @@
                   onUpload={(newFiles) => {
                     const uploaded = newFiles.map((f, i) => ({ id: Date.now() + i, name: f.name, size: f.size }));
                     const updatedData = mockData.map(r => r.id === selectedRow.id ? { ...r, attachments: [...(r.attachments || []), ...uploaded] } : r);
-                    setMockData(updatedData); setFilteredData(updatedData);
+                    setMockData(updatedData);
                     setSelectedRow(prev => ({ ...prev, attachments: [...(prev.attachments || []), ...uploaded] }));
                     showToast(t('فایل‌ها با موفقیت آپلود شدند.', 'Files uploaded successfully.'), 'success');
                   }} 
                   onDelete={(file) => {
                     const updatedData = mockData.map(r => r.id === selectedRow.id ? { ...r, attachments: r.attachments.filter(a => a.id !== file.id) } : r);
-                    setMockData(updatedData); setFilteredData(updatedData);
+                    setMockData(updatedData);
                     setSelectedRow(prev => ({ ...prev, attachments: prev.attachments.filter(a => a.id !== file.id) }));
                     showToast(t('فایل حذف شد.', 'File deleted.'), 'success');
                   }} 

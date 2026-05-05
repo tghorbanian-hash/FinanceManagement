@@ -48,6 +48,9 @@
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
     const [rates, setRates] = useState([]);
+    
+    // وضعیت‌های اختصاصی برای ذخیره شدن در دیتابیس
+    const [currencyFilters, setCurrencyFilters] = useState({});
     const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
@@ -69,18 +72,27 @@
     const [currenciesGridState, setCurrenciesGridState] = useState(null);
     const [ratesGridState, setRatesGridState] = useState(null);
 
+    // همگام‌سازی تمامی وضعیت‌های فرم در دیتابیس
     const viewConfig = {
       pageId: 'currency_settings_main',
-      currentState: () => ({ activeTab, rateFilters, currenciesGridState, ratesGridState }),
+      currentState: () => ({ 
+        activeTab, 
+        rateFilters, 
+        currencyFilters, 
+        currenciesGridState, 
+        ratesGridState 
+      }),
       onApplyState: (state) => {
         if (state) {
           if (state.activeTab) setActiveTab(state.activeTab);
           if (state.rateFilters) setRateFilters(state.rateFilters);
+          if (state.currencyFilters) setCurrencyFilters(state.currencyFilters);
           if (state.currenciesGridState) setCurrenciesGridState(state.currenciesGridState);
           if (state.ratesGridState) setRatesGridState(state.ratesGridState);
         } else {
           setActiveTab('list');
           setRateFilters({ fromDate: todayStr, toDate: todayStr });
+          setCurrencyFilters({});
           setCurrenciesGridState(null);
           setRatesGridState(null);
         }
@@ -464,6 +476,15 @@
       },
     ];
 
+    // مکانیزم جدید فیلترها که با State هماهنگ است
+    const filteredCurrencies = useMemo(() => {
+      let result = [...currencies];
+      if (currencyFilters.code) {
+         result = result.filter(c => c.code.toLowerCase().includes(currencyFilters.code.toLowerCase()));
+      }
+      return result;
+    }, [currencies, currencyFilters]);
+
     const filteredRates = useMemo(() => {
       let result = [...rates];
       if (rateFilters.base) result = result.filter(r => r.base_currency === rateFilters.base);
@@ -497,10 +518,16 @@
           
           {activeTab === 'list' && (
             <>
-              <AdvancedFilter fields={[{ name: 'code', label: t('کد ارز', 'Code'), type: 'text' }]} language={language} />
+              <AdvancedFilter 
+                fields={[{ name: 'code', label: t('کد ارز', 'Code'), type: 'text' }]} 
+                initialValues={currencyFilters}
+                onFilter={setCurrencyFilters}
+                onClear={() => setCurrencyFilters({})}
+                language={language} 
+              />
               <div className="flex-1 min-h-0">
                 <DataGrid 
-                  data={currencies} 
+                  data={filteredCurrencies} 
                   columns={currencyColumns} 
                   language={language}
                   gridState={currenciesGridState}
@@ -578,7 +605,6 @@
           )}
         </div>
 
-        {/* Modal: Add/Edit Currency */}
         <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
           <div className="p-4 flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -646,7 +672,6 @@
           </div>
         </Modal>
 
-        {/* Modal: Manual Rate Update */}
         <Modal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} title={t('بروزرسانی دستی نرخ‌ها', 'Manual Rates Update')} language={language} width="max-w-2xl">
            <div className="p-4 flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -688,7 +713,6 @@
            </div>
         </Modal>
 
-        {/* Modal: Edit Single Rate */}
         <Modal isOpen={isEditRateModalOpen} onClose={() => setIsEditRateModalOpen(false)} title={t('ویرایش نرخ دستی', 'Edit Manual Rate')} language={language} width="max-w-sm">
            <div className="p-4 flex flex-col gap-4">
               <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -722,7 +746,6 @@
            </div>
         </Modal>
 
-        {/* Modal: Converter */}
         <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('ماشین حساب تبدیل‌گر چندلایه', 'Multi-level Currency Converter')} language={language} width="max-w-lg">
            <div className="p-5 flex flex-col items-center">
               <div className="w-full mb-6 p-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-lg">
@@ -758,7 +781,6 @@
            </div>
         </Modal>
 
-        {/* Delete Confirmation Modal */}
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null, source: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
