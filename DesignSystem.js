@@ -1,11 +1,14 @@
 /* Filename: DesignSystem.js */
 (() => {
   const { 
-    Button, TextField, SelectField, ToggleField, CheckboxField, 
-    Card, Badge, PageHeader, Tabs, CurrencyField, TextAreaField, RadioGroup, 
-    Skeleton, EmptyState, StatCard, Timeline, Avatar, DropdownMenu, 
-    ProgressBar, AttachmentManager, DatePicker, Stepper, TagInput, Spinner 
+    Button, Card, Badge, PageHeader, Tabs, Skeleton, EmptyState, StatCard, 
+    Timeline, Avatar, DropdownMenu, ProgressBar, Stepper, Spinner 
   } = window.DSCore || {};
+
+  const {
+    TextField, SelectField, ToggleField, CheckboxField, CurrencyField, 
+    TextAreaField, RadioGroup, DatePicker, AttachmentManager, TagInput
+  } = window.DSForms || {};
 
   const { AdvancedFilter, DataGrid, LOVField } = window.DSGrid || {};
 
