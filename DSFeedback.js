@@ -18,23 +18,25 @@
     if (!isOpen) return null;
 
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] animate-in fade-in duration-200" onClick={onClose} />
-        <div className={`bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex flex-col relative z-10 transition-all duration-300 animate-in zoom-in-95 overflow-hidden ${isMaximized ? 'w-full h-full inset-0 rounded-none' : `${width} w-full max-h-[95vh] rounded-2xl border border-slate-200`}`}>
-          <div className="h-11 px-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-            <h3 className="font-black text-slate-700 text-[13px] tracking-tight">{title}</h3>
-            <div className="flex items-center gap-1">
-              {showMaximize && (
-                <button onClick={() => setIsMaximized(!isMaximized)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all active:scale-95">
-                  {isMaximized ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
+      <div className="fixed inset-0 z-[100] overflow-y-auto custom-scrollbar font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-[2px] animate-in fade-in duration-200" onClick={onClose} />
+        <div className="flex items-center justify-center min-h-full p-2 sm:p-4 pointer-events-none">
+          <div className={`pointer-events-auto bg-white shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex flex-col relative z-10 transition-all duration-300 animate-in zoom-in-95 ${isMaximized ? 'w-full min-h-[calc(100vh-1rem)] rounded-xl' : `${width} w-full rounded-2xl`} border border-slate-200`}>
+            <div className="h-11 px-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0 rounded-t-2xl">
+              <h3 className="font-black text-slate-700 text-[13px] tracking-tight">{title}</h3>
+              <div className="flex items-center gap-1">
+                {showMaximize && (
+                  <button onClick={() => setIsMaximized(!isMaximized)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all active:scale-95">
+                    {isMaximized ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
+                  </button>
+                )}
+                <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg transition-all active:scale-95">
+                  <X size={16} strokeWidth={2.5} />
                 </button>
-              )}
-              <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg transition-all active:scale-95">
-                <X size={16} strokeWidth={2.5} />
-              </button>
+              </div>
             </div>
+            <div className="flex-1 bg-white flex flex-col rounded-b-2xl">{children}</div>
           </div>
-          <div className="flex-1 overflow-auto custom-scrollbar bg-white flex flex-col min-h-0">{children}</div>
         </div>
       </div>
     );

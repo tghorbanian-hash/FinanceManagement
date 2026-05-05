@@ -130,8 +130,6 @@
         let updatePayload = {};
         if (actionType === 'activate') updatePayload = { is_active: true };
         if (actionType === 'deactivate') updatePayload = { is_active: false };
-        if (actionType === 'setAuto') updatePayload = { fetch_type: 'auto' };
-        if (actionType === 'setManual') updatePayload = { fetch_type: 'manual' };
 
         const { error } = await supabase.from('fm_currencies').update(updatePayload).in('id', selectedIds);
         if (error) throw error;
@@ -343,8 +341,6 @@
     const currencyBulkActions = [
       { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600' },
       { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600' },
-      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600' },
-      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600' },
       { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 !border-red-500 hover:!bg-red-50' },
     ];
 
@@ -557,7 +553,7 @@
                     </div>
                  ))}
                  {manualRatesList.length === 0 && (
-                    <div className="p-8 text-center text-slate-400 text-[12px] font-bold bg-slate-50">
+                     <div className="p-8 text-center text-slate-400 text-[12px] font-bold bg-slate-50">
                        {t('هیچ ارزی با تنظیم دریافت دستی و دارای ارز هدف در سیستم یافت نشد.', 'No manual currencies with targets found.')}
                     </div>
                  )}
@@ -573,15 +569,15 @@
         {/* Modal: Converter */}
         <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('ماشین حساب تبدیل‌گر چندلایه', 'Multi-level Currency Converter')} language={language} width="max-w-lg">
            <div className="p-5 flex flex-col items-center">
-              <div className="w-full mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+              <div className="w-full mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg relative z-20">
                  <DatePicker size="sm" label={t('تاریخ مبنای محاسبات', 'Calculation Base Date')} value={convDate} onChange={setConvDate} isRtl={isRtl} language={language} required wrapperClassName="w-full" />
               </div>
               
-              <div className="flex flex-col sm:flex-row items-end gap-3 w-full">
+              <div className="flex flex-col sm:flex-row items-end gap-3 w-full relative z-10">
                  <CurrencyField label={t('مبلغ مبدا', 'Source Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
                  <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
                  
-                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
+                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1 shrink-0" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
                     <ArrowRightLeft size={16} className={isRtl ? '' : 'rotate-180'} />
                  </div>
                  
