@@ -553,7 +553,7 @@
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title={t('تغییر تقویم', 'Change Calendar')}>
-                  <Calendar size={12} className="text-indigo-500" /><span>{calendarMode === 'jalali' ? (isRtl ? 'شمسی' : 'Jalali') : (isRtl ? 'میلادی' : 'Gregorian')}</span>
+                  <Calendar size={12} className="text-indigo-500" /><span>{calendarMode === 'jalali' ? (isRtl ? 'میلادی' : 'Gregorian') : (isRtl ? 'شمسی' : 'Jalali')}</span>
                 </button>
                 <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title={t('تغییر زبان', 'Change Language')}>
                   <Globe size={12} className="text-indigo-500" /><span>{isRtl ? 'EN' : 'فا'}</span>

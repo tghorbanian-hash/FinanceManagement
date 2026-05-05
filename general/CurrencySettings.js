@@ -10,14 +10,19 @@
 
   const CurrencySettings = ({ language = 'fa' }) => {
     const { 
-      DataGrid, Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
-      AdvancedFilter, Modal, Tabs, CurrencyField, DatePicker, Toast,
-      formatGlobalDate, useCalendarMode
+      Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
+      Tabs, CurrencyField, DatePicker 
     } = window.DSCore || window.DesignSystem || {};
+    
+    const { DataGrid, AdvancedFilter } = window.DSGrid || window.DesignSystem || {};
+    const { Modal, Toast } = window.DSFeedback || window.DesignSystem || {};
+    
+    const formatGlobalDate = window.DSCore?.formatGlobalDate || ((v) => v);
+    const useCalendarMode = window.DSCore?.useCalendarMode || (() => 'jalali');
 
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
-    const globalCalendarMode = useCalendarMode ? useCalendarMode() : 'jalali';
+    const globalCalendarMode = useCalendarMode();
 
     const getTodayGregorian = () => {
       const d = new Date();
@@ -30,33 +35,27 @@
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [isLoading, setIsLoading] = useState(false);
     
-    // States: Currencies
     const [currencies, setCurrencies] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
-    // States: Rates
     const [rates, setRates] = useState([]);
     const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     
-    // States: Manual Update Modal
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [manualDate, setManualDate] = useState('');
     const [manualTime, setManualTime] = useState('12:00');
     const [manualRatesList, setManualRatesList] = useState([]);
 
-    // States: Edit Single Rate Modal
     const [isEditRateModalOpen, setIsEditRateModalOpen] = useState(false);
     const [editingRate, setEditingRate] = useState(null);
 
-    // States: Converter Modal
     const [isConverterOpen, setIsConverterOpen] = useState(false);
     const [convDate, setConvDate] = useState('');
     const [convAmount, setConvAmount] = useState('1');
     const [convFrom, setConvFrom] = useState('');
     const [convTo, setConvTo] = useState('');
 
-    // States: Delete Confirmation Modal
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null, source: null });
 
     const supabase = window.supabase;
