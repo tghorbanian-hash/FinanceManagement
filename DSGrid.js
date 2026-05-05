@@ -386,9 +386,9 @@
           <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
             <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
               <tr>
-                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className={`p-1.5 border-b border-slate-200 bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}></th>}
+                {rowReorderable && <th style={{ width: '30px', ...getStickyStyles('ROW_REORDER_COL', false, true) }} className="p-1.5 border-b border-slate-200 bg-slate-100"></th>}
                 {selectable && (
-                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className={`p-1.5 border-b border-slate-200 text-center bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}>
+                  <th style={{ width: '40px', ...getStickyStyles('SELECT_COL', false, true) }} className="p-1.5 border-b border-slate-200 text-center bg-slate-100">
                     <input type="checkbox" onChange={handleSelectAll} checked={paginatedData.length > 0 && paginatedData.filter(r => !r.isGroupHeader).every(r => selectedRows.includes(r.id))} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
                   </th>
                 )}
@@ -400,7 +400,7 @@
                       key={col.field} draggable
                       onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
                       style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
-                      className={`p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 select-none bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}
+                      className="p-1.5 border-b border-slate-200 text-[11px] font-black text-slate-700 select-none bg-slate-100"
                     >
                       <div className="flex items-center justify-between gap-1 group">
                         <div className="flex items-center gap-1.5 cursor-pointer flex-1 overflow-hidden" onClick={() => handleSort(col.field)}>
@@ -423,11 +423,11 @@
               </tr>
 
               <tr>
-                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
-                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}></td>}
+                {rowReorderable && <td style={getStickyStyles('ROW_REORDER_COL', false, true)} className="p-1 border-b border-slate-200 bg-slate-50"></td>}
+                {selectable && <td style={getStickyStyles('SELECT_COL', false, true)} className="p-1 border-b border-slate-200 bg-slate-50"></td>}
                 {visibleColumns.map((col) => {
                   return (
-                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 border-b border-slate-200 bg-slate-50 ${isRtl ? 'border-l' : 'border-r'}`}>
+                    <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className="p-1 border-b border-slate-200 bg-slate-50">
                       <div className="relative">
                         {(col.type === 'text' || col.type === 'number') && <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400`} />}
                         {col.type !== 'toggle' && col.type !== 'checkbox' && (
