@@ -153,7 +153,7 @@
     );
   };
 
-  const SelectField = ({ label, error, options = [], value, onChange, disabled = false, required = false, className = '', wrapperClassName = '', id, size = 'md', isRtl = true, placeholder = '' }) => {
+  const SelectField = ({ label, error, options = [], value, onChange, disabled = false, required = false, className = '', wrapperClassName = '', id, name, size = 'md', isRtl = true, placeholder = '' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef(null);
@@ -216,9 +216,10 @@
               <div 
                 key={idx} 
                 className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
-                onClick={(e) => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
-                  if(onChange) onChange({ target: { value: opt.value } });
+                  if(onChange) onChange({ target: { name: name || id, value: opt.value } });
                   setIsOpen(false);
                   setSearchTerm('');
                 }}
@@ -358,7 +359,6 @@
       if (!newViewName || !viewConfig) return;
       const dataToSave = typeof viewConfig.currentState === 'function' ? viewConfig.currentState() : viewConfig.currentState;
       const newView = {
-        id: Date.now().toString(),
         user_id: MOCK_USER_ID,
         page_id: viewConfig.pageId,
         view_name: newViewName,
@@ -369,23 +369,35 @@
       try {
         if (window.supabase) {
            if (isDefaultView) await window.supabase.from('fm_user_views').update({ is_default: false }).eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
-           await window.supabase.from('fm_user_views').insert([newView]);
+           const { data, error } = await window.supabase.from('fm_user_views').insert([newView]).select();
+           if (error) throw error;
+           
+           setViews(prev => {
+             let updated = [...prev];
+             if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
+             return [...updated, data[0]];
+           });
+           setActiveView(data[0]);
+           setIsSaveModalOpen(false);
+           setNewViewName('');
+           return;
         } else throw new Error();
       } catch(e) {
+        newView.id = Date.now().toString();
         let local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
         if (isDefaultView) local = local.map(v => ({...v, is_default: false}));
         local.push(newView);
         localStorage.setItem(`fm_views_${viewConfig.pageId}`, JSON.stringify(local));
+        
+        setViews(prev => {
+          let updated = [...prev];
+          if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
+          return [...updated, newView];
+        });
+        setActiveView(newView);
+        setIsSaveModalOpen(false);
+        setNewViewName('');
       }
-
-      setViews(prev => {
-        let updated = [...prev];
-        if (isDefaultView) updated = updated.map(v => ({...v, is_default: false}));
-        return [...updated, newView];
-      });
-      setActiveView(newView);
-      setIsSaveModalOpen(false);
-      setNewViewName('');
     };
 
     const handleDeleteView = async (id) => {
@@ -446,6 +458,16 @@
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
+            {viewConfig && activeView && (
+               <div className="flex items-center gap-1.5 mr-2 bg-indigo-50/50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800/50 rounded-lg px-2 h-8 animate-in fade-in">
+                  <span className="text-[10px] font-bold text-indigo-700 dark:text-indigo-300">
+                    <span className="opacity-60">{t('نمای فعال:', 'Active View:')}</span> {activeView.view_name}
+                  </span>
+                  <button onClick={handleResetView} className="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800 transition-colors text-indigo-500 dark:text-indigo-400 ml-1" title={t('لغو نما', 'Clear View')}>
+                    <X size={12} strokeWidth={2.5} />
+                  </button>
+               </div>
+            )}
             {viewConfig && (
               <div className="relative" ref={dropdownRef}>
                 <button 
@@ -484,18 +506,6 @@
             {actions}
           </div>
         </div>
-
-        {viewConfig && activeView && (
-          <div className="mt-3 flex items-center justify-between p-2.5 bg-indigo-50/50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-lg animate-in slide-in-from-top-2 duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
-             <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-300 text-[11px] font-bold">
-                <Info size={14} className="text-indigo-500 dark:text-indigo-400" />
-                <span>{t('نمای اختصاصی', 'Custom View')} <span className="px-1.5 py-0.5 bg-indigo-100 dark:bg-indigo-800/50 rounded text-indigo-700 dark:text-indigo-200 mx-1">{activeView.view_name}</span> {t('اعمال شده است. ممکن است برخی از اطلاعات فیلتر شده باشند.', 'is applied. Some data might be filtered.')}</span>
-             </div>
-             <button onClick={handleResetView} className="px-2 py-1 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 rounded shadow-sm text-[10px] font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 transition-colors shrink-0">
-                {t('لغو نما', 'Clear View')}
-             </button>
-          </div>
-        )}
 
         {viewConfig && window.DSFeedback && (
           <>

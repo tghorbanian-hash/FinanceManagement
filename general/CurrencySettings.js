@@ -399,7 +399,8 @@
         )
       },
       { 
-        field: 'fetch_type', header_fa: 'نوع دریافت', header_en: 'Fetch Type', width: '110px',
+        field: 'fetch_type', header_fa: 'نوع دریافت', header_en: 'Fetch Type', width: '110px', type: 'select',
+        options: [{value: 'auto', label: t('اتوماتیک', 'Auto')}, {value: 'manual', label: t('دستی', 'Manual')}],
         render: (v) => <Badge variant={v === 'auto' ? 'emerald' : 'slate'} className="text-[10px]">{v === 'auto' ? t('اتوماتیک', 'Auto') : t('دستی', 'Manual')}</Badge>
       },
       { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '70px', render: (v) => <span className="text-slate-500 dark:text-slate-400 font-mono">{v}</span> },

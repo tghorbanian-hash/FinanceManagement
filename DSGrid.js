@@ -8,7 +8,7 @@
   const {
     Search = FallbackIcon, Settings = FallbackIcon, Trash2 = FallbackIcon, Pin = FallbackIcon, PinOff = FallbackIcon, GripVertical = FallbackIcon, ChevronDown = FallbackIcon, 
     ChevronUp = FallbackIcon, ChevronLeft = FallbackIcon, ChevronRight = FallbackIcon, ChevronsLeft = FallbackIcon, ChevronsRight = FallbackIcon,
-    Layers = FallbackIcon, X = FallbackIcon, Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, Plus = FallbackIcon, Filter = FallbackIcon, Upload = FallbackIcon, FileSpreadsheet = FallbackIcon, FileDown = FallbackIcon
+    Layers = FallbackIcon, X = FallbackIcon, Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, Plus = FallbackIcon, Filter = FallbackIcon, Upload = FallbackIcon, FileSpreadsheet = FallbackIcon, FileDown = FallbackIcon, Check = FallbackIcon
   } = LucideIcons;
 
   const FallbackComponent = () => null;
@@ -38,6 +38,9 @@
               <DataGrid 
                 data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
                 onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
+                actions={[
+                   { icon: Check, tooltip: t('انتخاب این مورد', 'Select this item'), onClick: (row) => { onChange(row); setIsOpen(false); }, className: 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30' }
+                ]}
               />
             </div>
           </Modal>
@@ -232,12 +235,14 @@
     }, [processedData, columns, showSummaryRow]);
 
     const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
+    
     const handleFilterChange = (field, value) => { 
       const newFilters = { ...filters, [field]: value };
       if (!value) delete newFilters[field];
       setFilters(newFilters); 
       setPage(1); 
     };
+    
     const togglePin = (field) => { setPinnedCols(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]); };
     const toggleVisibility = (field) => { setHiddenCols(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]); };
 
@@ -395,7 +400,7 @@
             )}
             
             <div className="relative flex items-center h-full" ref={colMenuRef}>
-              <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
+              <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
               {showColMenu && (
                 <div className="absolute top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
                   <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 mb-2 pb-2 border-b border-slate-100 dark:border-slate-700 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
@@ -473,6 +478,12 @@
                             onChange={(val) => handleFilterChange(col.field, val)}
                             isRtl={isRtl} language={language} size="sm" wrapperClassName="!gap-0"
                           />
+                        ) : col.type === 'select' ? (
+                          <SelectField 
+                            size="sm" options={col.options || []} value={filters[col.field] || ''} 
+                            onChange={(e) => handleFilterChange(col.field, e.target.value)} 
+                            isRtl={isRtl} wrapperClassName="!gap-0" placeholder={t('همه', 'All')} 
+                          />
                         ) : col.type !== 'toggle' && col.type !== 'checkbox' ? (
                           <>
                             <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400 dark:text-slate-500`} />
@@ -547,7 +558,7 @@
                             if (act.hidden && act.hidden(row)) return null;
                             const actClass = typeof act.className === 'function' ? act.className(row) : (act.className || 'hover:text-indigo-600 dark:hover:text-indigo-400');
                             return (
-                              <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 dark:text-slate-500 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all ${actClass}`}>
+                              <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 dark:text-slate-500 border border-transparent hover:border-slate-200 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all ${actClass}`}>
                                 <act.icon size={14} strokeWidth={2} />
                               </button>
                             );
