@@ -55,20 +55,27 @@
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const [values, setValues] = useState(initialValues || {});
 
-    // Sync from parent flawlessly
+    // Use a ref to break the infinite sync loop
+    const lastSyncValues = useRef(null);
+
     useEffect(() => {
-      setValues(initialValues || {});
+      const initialStr = JSON.stringify(initialValues || {});
+      if (initialStr !== JSON.stringify(lastSyncValues.current || {})) {
+        lastSyncValues.current = initialValues || {};
+        setValues(initialValues || {});
+      }
     }, [initialValues]);
 
-    // Update local state and instantly notify parent so View Saves correctly catch everything
     const handleChange = (name, val) => {
       const newValues = { ...values, [name]: val };
       setValues(newValues);
+      lastSyncValues.current = newValues;
       if (onFilter) onFilter(newValues);
     };
-    
+
     const handleClear = () => { 
       setValues({}); 
+      lastSyncValues.current = {};
       if (onClear) onClear(); 
       else if (onFilter) onFilter({});
     };
@@ -138,16 +145,25 @@
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
 
+    // Ref to completely block the infinite render loop
+    const lastSyncState = useRef(null);
+
     // 1. Receive State from Parent (View Applied)
     useEffect(() => {
-      if (gridState) {
-        setColumnOrder(gridState.columnOrder || columns.map(c => c.field));
-        setHiddenCols(gridState.hiddenCols || []);
-        setPinnedCols(gridState.pinnedCols || []);
-        setFilters(gridState.filters || {});
-        setSortConfig(gridState.sortConfig || { field: null, direction: 'asc' });
-        setGroupCols(gridState.groupCols || []);
-      } else if (gridState === null) {
+      if (gridState !== undefined && gridState !== null) {
+        const stateStr = JSON.stringify(gridState);
+        if (stateStr !== JSON.stringify(lastSyncState.current || {})) {
+          lastSyncState.current = gridState;
+          
+          setColumnOrder(gridState.columnOrder || columns.map(c => c.field));
+          setHiddenCols(gridState.hiddenCols || []);
+          setPinnedCols(gridState.pinnedCols || []);
+          setFilters(gridState.filters || {});
+          setSortConfig(gridState.sortConfig || { field: null, direction: 'asc' });
+          setGroupCols(gridState.groupCols || []);
+        }
+      } else if (gridState === null && lastSyncState.current !== null) {
+        lastSyncState.current = null;
         setColumnOrder(columns.map(c => c.field));
         setHiddenCols([]);
         setPinnedCols([]);
@@ -155,16 +171,24 @@
         setSortConfig({ field: null, direction: 'asc' });
         setGroupCols([]);
       }
+      // Omit `columns` from dependency to prevent new array references causing loops
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gridState]);
 
-    // 2. Notify Parent of Local Changes flawlessly without loop
+    // 2. Notify Parent of Local Changes seamlessly
     useEffect(() => {
       if (onGridStateChange) {
         const currentState = { columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols };
-        if (gridState && JSON.stringify(currentState) === JSON.stringify(gridState)) return;
-        onGridStateChange(currentState);
+        const stateStr = JSON.stringify(currentState);
+        
+        if (stateStr !== JSON.stringify(lastSyncState.current || {})) {
+          lastSyncState.current = currentState;
+          onGridStateChange(currentState);
+        }
       }
-    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, onGridStateChange, gridState]);
+      // Omit `onGridStateChange` to avoid recreation triggers
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { 
