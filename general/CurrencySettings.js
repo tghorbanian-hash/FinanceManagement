@@ -9,20 +9,18 @@
   } = window.LucideIcons || {};
 
   const CurrencySettings = ({ language = 'fa' }) => {
+    // اصلاح بسیار مهم: تفکیک دقیق Import ها برای جلوگیری از خطای 130 (undefined component)
     const { 
       Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
-      Tabs, CurrencyField, DatePicker 
-    } = window.DSCore || window.DesignSystem || {};
+      Tabs, CurrencyField, DatePicker, formatGlobalDate, useCalendarMode 
+    } = window.DSCore || {};
     
-    const { DataGrid, AdvancedFilter } = window.DSGrid || window.DesignSystem || {};
-    const { Modal, Toast } = window.DSFeedback || window.DesignSystem || {};
-    
-    const formatGlobalDate = window.DSCore?.formatGlobalDate || ((v) => v);
-    const useCalendarMode = window.DSCore?.useCalendarMode || (() => 'jalali');
+    const { DataGrid, AdvancedFilter } = window.DSGrid || {};
+    const { Modal, Toast } = window.DSFeedback || {};
 
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
-    const globalCalendarMode = useCalendarMode();
+    const globalCalendarMode = useCalendarMode ? useCalendarMode() : 'jalali';
 
     const getTodayGregorian = () => {
       const d = new Date();
@@ -35,27 +33,33 @@
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [isLoading, setIsLoading] = useState(false);
     
+    // States: Currencies
     const [currencies, setCurrencies] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
+    // States: Rates
     const [rates, setRates] = useState([]);
     const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     
+    // States: Manual Update Modal
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [manualDate, setManualDate] = useState('');
     const [manualTime, setManualTime] = useState('12:00');
     const [manualRatesList, setManualRatesList] = useState([]);
 
+    // States: Edit Single Rate Modal
     const [isEditRateModalOpen, setIsEditRateModalOpen] = useState(false);
     const [editingRate, setEditingRate] = useState(null);
 
+    // States: Converter Modal
     const [isConverterOpen, setIsConverterOpen] = useState(false);
     const [convDate, setConvDate] = useState('');
     const [convAmount, setConvAmount] = useState('1');
     const [convFrom, setConvFrom] = useState('');
     const [convTo, setConvTo] = useState('');
 
+    // States: Delete Confirmation Modal
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null, source: null });
 
     const supabase = window.supabase;
@@ -357,7 +361,7 @@
     ];
 
     const currencyColumns = [
-      { field: 'code', header_fa: 'کد ارز', header_en: 'Code', width: '90px', render: (v) => <span className="font-black text-slate-800">{v}</span> },
+      { field: 'code', header_fa: 'کد ارز', header_en: 'Code', width: '90px', render: (v) => <span className="font-black text-slate-800 dark:text-slate-200">{v}</span> },
       { field: 'title', header_fa: 'عنوان', header_en: 'Title', width: '180px' },
       { field: 'symbol', header_fa: 'نماد', header_en: 'Symbol', width: '70px' },
       { 
@@ -365,7 +369,7 @@
         render: (val) => (
           <div className="flex gap-1 flex-wrap">
             {Array.isArray(val) && val.map(c => <Badge key={c} variant="indigo" size="sm" className="px-1.5 py-0 text-[10px]">{c}</Badge>)}
-            {(!val || val.length === 0) && <span className="text-slate-300 text-[10px]">{t('بدون وابستگی', 'No targets')}</span>}
+            {(!val || val.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px]">{t('بدون وابستگی', 'No targets')}</span>}
           </div>
         )
       },
@@ -373,16 +377,16 @@
         field: 'fetch_type', header_fa: 'نوع دریافت', header_en: 'Fetch Type', width: '110px',
         render: (v) => <Badge variant={v === 'auto' ? 'emerald' : 'slate'} className="text-[10px]">{v === 'auto' ? t('اتوماتیک', 'Auto') : t('دستی', 'Manual')}</Badge>
       },
-      { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '70px', render: (v) => <span className="text-slate-500 font-mono">{v}</span> },
+      { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '70px', render: (v) => <span className="text-slate-500 dark:text-slate-400 font-mono">{v}</span> },
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '90px' },
     ];
 
     const currencyBulkActions = [
-      { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600' },
-      { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600' },
-      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600' },
-      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600' },
-      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 !border-red-500 hover:!bg-red-50' },
+      { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400' },
+      { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400' },
+      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400' },
+      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400' },
+      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
     ];
 
     const historyColumns = [
@@ -393,18 +397,18 @@
           const d = new Date(v);
           const formattedDate = formatGlobalDate ? formatGlobalDate(v, globalCalendarMode) : d.toISOString().split('T')[0].replace(/-/g, '/');
           return (
-             <div className="flex items-center gap-1.5 text-slate-700">
-               <Calendar size={12} className="text-slate-400" />
+             <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+               <Calendar size={12} className="text-slate-400 dark:text-slate-500" />
                <span className="font-mono text-[11px] font-medium" dir="ltr">{formattedDate}</span>
-               <Clock size={12} className="text-slate-400 ml-1" />
-               <span className="font-mono text-[10px] bg-slate-100 px-1 rounded" dir="ltr">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
+               <Clock size={12} className="text-slate-400 dark:text-slate-500 ml-1" />
+               <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-700 px-1 rounded" dir="ltr">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
              </div>
           );
         }
       },
-      { field: 'base_currency', header_fa: 'ارز پایه', header_en: 'Base', width: '100px', render: (v) => <span className="font-bold text-slate-800">{v}</span> },
+      { field: 'base_currency', header_fa: 'ارز پایه', header_en: 'Base', width: '100px', render: (v) => <span className="font-bold text-slate-800 dark:text-slate-200">{v}</span> },
       { field: 'target_currency', header_fa: 'ارز هدف', header_en: 'Target', width: '100px' },
-      { field: 'rate', header_fa: 'نرخ تبدیل', header_en: 'Rate', width: '150px', render: (v) => <span className="font-mono font-bold text-indigo-700">{v.toLocaleString()}</span> },
+      { field: 'rate', header_fa: 'نرخ تبدیل', header_en: 'Rate', width: '150px', render: (v) => <span className="font-mono font-bold text-indigo-700 dark:text-indigo-400">{v.toLocaleString()}</span> },
       { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px', render: (v) => <Badge variant={v === 'XE' ? 'emerald' : 'blue'} size="sm">{v}</Badge> }
     ];
 
@@ -430,7 +434,7 @@
             setDeleteConfirm({ isOpen: true, type: 'bulk', data: validIds, source: 'rate' });
         }, 
         variant: 'danger-outline', 
-        className: '!text-red-500 !border-red-500 hover:!bg-red-50' 
+        className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' 
       },
     ];
 
@@ -453,7 +457,7 @@
     }, [rates, rateFilters]);
 
     return (
-      <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
           title={t('تنظیمات و مدیریت نرخ ارزها', 'Currency & Exchange Management')}
           icon={DollarSign} language={language}
@@ -473,8 +477,8 @@
                   columns={currencyColumns} 
                   language={language}
                   actions={[
-                    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 hover:text-indigo-600' },
-                    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 hover:text-red-600' }
+                    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
+                    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
                   ]}
                   selectable={true}
                   onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
@@ -514,26 +518,26 @@
                        tooltip: t('ویرایش سابقه', 'Edit Record'), 
                        onClick: (row) => { setEditingRate({...row}); setIsEditRateModalOpen(true); },
                        hidden: (row) => !(row.source === 'Manual' && isWithinOneWeek(row.created_at)),
-                       className: 'text-slate-400 hover:text-indigo-600' 
+                       className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' 
                      },
                      { 
                        icon: Trash2, 
                        tooltip: t('حذف سابقه', 'Delete Record'), 
                        onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), 
                        hidden: (row) => !isWithinOneWeek(row.created_at),
-                       className: 'text-slate-400 hover:text-red-600' 
+                       className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' 
                      }
                    ]}
                    headerMenus={[
                      {
                        label: t('عملیات نرخ‌گذاری', 'Rate Operations'),
                        icon: Zap,
-                       className: 'text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border-indigo-200',
+                       className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800',
                        items: [
-                         { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 hover:text-emerald-800' },
-                         { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 hover:text-blue-800' },
+                         { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' },
+                         { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' },
                          { divider: true },
-                         { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 hover:text-indigo-600' }
+                         { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400' }
                        ]
                      }
                    ]}
@@ -563,8 +567,8 @@
               <TextField label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
             </div>
             
-            <div className="mt-1 pt-3 border-t border-slate-100">
-               <label className="text-[11px] font-black text-slate-500 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
+            <div className="mt-1 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+               <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
                <div className="flex flex-col gap-2">
                  <SelectField 
                    value="" 
@@ -580,21 +584,21 @@
                      ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
                    ]} 
                  />
-                 <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white rounded-lg border border-slate-200 shadow-inner mt-1">
+                 <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] mt-1">
                     {(selectedCurrency?.targets || []).map(tcode => (
                       <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
                         <span className="font-bold text-[10px]">{tcode}</span>
-                        <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 hover:bg-red-100 hover:text-red-600 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}>
+                        <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 dark:bg-indigo-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}>
                            <X size={10} />
                         </div>
                       </Badge>
                     ))}
-                    {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-300 text-[10px] italic py-1">{t('هیچ ارزی انتخاب نشده است.', 'No targets selected.')}</span>}
+                    {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px] italic py-1">{t('هیچ ارزی انتخاب نشده است.', 'No targets selected.')}</span>}
                  </div>
                </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
               <Button variant="outline" size="sm" onClick={() => setIsCurrencyModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSaveCurrency} className="px-6">{t('ذخیره تغییرات', 'Save Changes')}</Button>
             </div>
@@ -604,22 +608,22 @@
         {/* Modal: Manual Rate Update */}
         <Modal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} title={t('بروزرسانی دستی نرخ‌ها', 'Manual Rates Update')} language={language} width="max-w-2xl">
            <div className="p-4 flex flex-col gap-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
                  <DatePicker size="sm" label={t('تاریخ ثبت نرخ', 'Rate Date')} value={manualDate} onChange={setManualDate} isRtl={isRtl} language={language} required />
                  <div className="flex flex-col gap-1 w-full">
-                    <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500">*</span></label>
-                    <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[11px] bg-white border border-slate-300 rounded-lg text-slate-800 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 px-2.5 transition-all`} required />
+                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500 dark:text-red-400">*</span></label>
+                    <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[11px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 px-2.5 transition-all`} required />
                  </div>
               </div>
 
-              <div className="flex flex-col max-h-[350px] overflow-y-auto custom-scrollbar pr-1 bg-white border border-slate-200 rounded-lg">
+              <div className="flex flex-col max-h-[350px] overflow-y-auto custom-scrollbar pr-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
                  {manualRatesList.map((item, idx) => (
-                    <div key={`${item.base}-${item.target}`} className="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0 hover:bg-slate-50 px-3 transition-colors">
-                       <div className="w-16 font-black text-slate-800 text-[13px] text-center">{item.base}</div>
-                       <div className="text-indigo-400 shrink-0 flex items-center justify-center">
+                    <div key={`${item.base}-${item.target}`} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-700/50 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 px-3 transition-colors">
+                       <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[13px] text-center">{item.base}</div>
+                       <div className="text-indigo-400 dark:text-indigo-500 shrink-0 flex items-center justify-center">
                           {isRtl ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                        </div>
-                       <div className="w-16 font-black text-slate-800 text-[13px] text-center">{item.target}</div>
+                       <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[13px] text-center">{item.target}</div>
                        <div className="flex-1 ml-2">
                           <CurrencyField size="sm" value={item.rate} onChange={(v) => {
                               const newList = [...manualRatesList];
@@ -630,13 +634,13 @@
                     </div>
                  ))}
                  {manualRatesList.length === 0 && (
-                    <div className="p-8 text-center text-slate-400 text-[12px] font-bold bg-slate-50">
+                    <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-[12px] font-bold bg-slate-50 dark:bg-slate-900/50">
                        {t('هیچ ارزی با تنظیم دریافت دستی و دارای ارز هدف در سیستم یافت نشد.', 'No manual currencies with targets found.')}
                     </div>
                  )}
               </div>
 
-              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
                 <Button variant="outline" size="sm" onClick={() => setIsManualModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
                 <Button variant="primary" size="sm" icon={Save} onClick={handleSaveManualRates} disabled={manualRatesList.length === 0}>{t('ذخیره اطلاعات در تاریخچه', 'Save to History')}</Button>
               </div>
@@ -646,18 +650,18 @@
         {/* Modal: Edit Single Rate */}
         <Modal isOpen={isEditRateModalOpen} onClose={() => setIsEditRateModalOpen(false)} title={t('ویرایش نرخ دستی', 'Edit Manual Rate')} language={language} width="max-w-sm">
            <div className="p-4 flex flex-col gap-4">
-              <div className="flex flex-col gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+              <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
                  <div className="flex items-center justify-between text-[13px]">
-                   <span className="text-slate-500 font-bold">{t('ارز پایه:', 'Base:')}</span>
-                   <span className="font-black text-slate-800">{editingRate?.base_currency}</span>
+                   <span className="text-slate-500 dark:text-slate-400 font-bold">{t('ارز پایه:', 'Base:')}</span>
+                   <span className="font-black text-slate-800 dark:text-slate-200">{editingRate?.base_currency}</span>
                  </div>
                  <div className="flex items-center justify-between text-[13px]">
-                   <span className="text-slate-500 font-bold">{t('ارز هدف:', 'Target:')}</span>
-                   <span className="font-black text-slate-800">{editingRate?.target_currency}</span>
+                   <span className="text-slate-500 dark:text-slate-400 font-bold">{t('ارز هدف:', 'Target:')}</span>
+                   <span className="font-black text-slate-800 dark:text-slate-200">{editingRate?.target_currency}</span>
                  </div>
                  <div className="flex items-center justify-between text-[13px]">
-                   <span className="text-slate-500 font-bold">{t('تاریخ:', 'Date:')}</span>
-                   <span className="font-black text-slate-800 font-mono" dir="ltr">
+                   <span className="text-slate-500 dark:text-slate-400 font-bold">{t('تاریخ:', 'Date:')}</span>
+                   <span className="font-black text-slate-800 dark:text-slate-200 font-mono" dir="ltr">
                      {formatGlobalDate ? formatGlobalDate(editingRate?.rate_date, globalCalendarMode) : editingRate?.rate_date}
                    </span>
                  </div>
@@ -670,7 +674,7 @@
                  size="md"
                  required 
               />
-              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100">
+              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
                 <Button variant="outline" size="sm" onClick={() => setIsEditRateModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
                 <Button variant="primary" size="sm" icon={Save} onClick={handleSaveEditedRate}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
               </div>
@@ -680,7 +684,7 @@
         {/* Modal: Converter */}
         <Modal isOpen={isConverterOpen} onClose={() => setIsConverterOpen(false)} title={t('ماشین حساب تبدیل‌گر چندلایه', 'Multi-level Currency Converter')} language={language} width="max-w-lg">
            <div className="p-5 flex flex-col items-center">
-              <div className="w-full mb-6 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
+              <div className="w-full mb-6 p-3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800/50 rounded-lg">
                  <DatePicker size="sm" label={t('تاریخ مبنای محاسبات', 'Calculation Base Date')} value={convDate} onChange={setConvDate} isRtl={isRtl} language={language} required wrapperClassName="w-full" />
               </div>
               
@@ -688,7 +692,7 @@
                  <CurrencyField label={t('مبلغ مبدا', 'Source Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
                  <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
                  
-                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-400 cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 transition-colors mb-1 shrink-0" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
+                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-400 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-1 shrink-0" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
                     <ArrowRightLeft size={16} className={isRtl ? '' : 'rotate-180'} />
                  </div>
                  
@@ -696,18 +700,18 @@
               </div>
               
               {currentConvRate !== null && (
-                 <div className="w-full mt-4 flex items-center justify-between p-3 bg-emerald-50 border border-emerald-100 rounded-lg animate-in fade-in">
-                    <span className="text-[12px] font-bold text-emerald-700">{t('نرخ برابری:', 'Exchange Rate:')}</span>
-                    <span className="text-[14px] font-black font-mono text-emerald-800" dir="ltr">
+                 <div className="w-full mt-4 flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 rounded-lg animate-in fade-in">
+                    <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400">{t('نرخ برابری:', 'Exchange Rate:')}</span>
+                    <span className="text-[14px] font-black font-mono text-emerald-800 dark:text-emerald-300" dir="ltr">
                        1 {convFrom} = {currentConvRate.toLocaleString(undefined, { maximumFractionDigits: 10 })} {convTo}
                     </span>
                  </div>
               )}
               
-              <div className="mt-6 w-full p-5 bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{t('حاصل تبدیل بر اساس تاریخ انتخابی', 'Conversion Result by Date')}</span>
-                 <div className="text-2xl font-black text-indigo-700 font-mono tracking-tight" dir="ltr">
-                    {convResult === null ? t('نامشخص', 'Unknown') : convResult} <span className="text-sm text-slate-400 font-sans ml-1">{convTo}</span>
+              <div className="mt-6 w-full p-5 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
+                 <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{t('حاصل تبدیل بر اساس تاریخ انتخابی', 'Conversion Result by Date')}</span>
+                 <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 font-mono tracking-tight" dir="ltr">
+                    {convResult === null ? t('نامشخص', 'Unknown') : convResult} <span className="text-sm text-slate-400 dark:text-slate-500 font-sans ml-1">{convTo}</span>
                  </div>
               </div>
            </div>
@@ -716,13 +720,13 @@
         {/* Delete Confirmation Modal */}
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null, source: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-1">
+            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
                <AlertTriangle size={22} />
             </div>
-            <div className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
+            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
                <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
             </div>
-            <p className="text-slate-600 text-sm leading-relaxed">
+            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
               {deleteConfirm.type === 'bulk' 
                 ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
                 : t(`آیا از حذف این مورد و تمام سوابق آن اطمینان دارید؟`, `Delete this item and its history?`)
@@ -730,7 +734,7 @@
             </p>
             <div className="flex gap-2 mt-4 w-full">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null, source: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeDelete} className="flex-1 bg-red-600 hover:bg-red-700 border-red-600 shadow-lg shadow-red-100">{t('تایید حذف', 'Delete Now')}</Button>
+              <Button variant="primary" size="sm" onClick={executeDelete} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500 shadow-lg shadow-red-100 dark:shadow-none">{t('تایید حذف', 'Delete Now')}</Button>
             </div>
           </div>
         </Modal>

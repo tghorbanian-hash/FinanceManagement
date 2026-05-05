@@ -8,8 +8,7 @@
     Check, X, Layers, Settings 
   } = window.LucideIcons || {};
 
-  // اضافه شدن DatePicker، formatGlobalDate و useCalendarMode
-  const { Button, ToggleField, Badge, DatePicker, formatGlobalDate, useCalendarMode } = window.DSCore || {};
+  const { Button, ToggleField, Badge, DatePicker, formatGlobalDate, useCalendarMode, useTheme } = window.DSCore || {};
 
   const HighlightText = ({ text, term }) => {
     if (!term || !text) return <span>{text}</span>;
@@ -17,7 +16,7 @@
     return (
       <span>
         {parts.map((part, i) => 
-          part.toLowerCase() === term.toLowerCase() ? <mark key={i} className="bg-yellow-200 text-yellow-900 rounded px-0.5 font-black">{part}</mark> : part
+          part.toLowerCase() === term.toLowerCase() ? <mark key={i} className="bg-yellow-200 dark:bg-yellow-500/30 text-yellow-900 dark:text-yellow-200 rounded px-0.5 font-black">{part}</mark> : part
         )}
       </span>
     );
@@ -103,7 +102,7 @@
           <div 
             onClick={() => onSelect && onSelect(node)}
             className={`flex items-center gap-2 py-1 px-2 my-0.5 cursor-pointer rounded-lg transition-all border border-transparent group
-              ${isSelected ? 'bg-indigo-50 text-indigo-700 font-bold border-indigo-200 shadow-sm' : 'hover:bg-slate-50 text-slate-700 hover:border-slate-200'}`}
+              ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-bold border-indigo-200 dark:border-indigo-800 shadow-sm' : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-200 dark:hover:border-slate-700'}`}
             style={{ 
               paddingInlineStart: `${depth * 20 + 8}px`,
               paddingInlineEnd: '8px'
@@ -111,7 +110,7 @@
           >
             {hasChildren ? (
               <div 
-                className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors z-10 bg-white rounded border border-slate-200 shadow-sm shrink-0 cursor-pointer"
+                className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors z-10 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600 shadow-sm shrink-0 cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); toggleExpand(node[idField], e); }}
               >
                 <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
@@ -120,19 +119,17 @@
               </div>
             ) : (
               <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
               </div>
             )}
 
-            {/* Node Icon */}
-            <div className={`${isSelected ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0 ${!isNodeActive ? 'opacity-60' : ''}`}>
+            <div className={`${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 dark:group-hover:text-indigo-300 transition-colors'} shrink-0 ${!isNodeActive ? 'opacity-60' : ''}`}>
               {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
             </div>
 
-            {/* Node Content */}
             <div className={`flex items-center gap-2 truncate flex-1 min-w-0 ${!isNodeActive ? 'opacity-60' : ''}`}>
               {secondaryField && node[secondaryField] && (
-                  <span className="font-mono text-[11px] font-bold bg-white/60 border border-slate-200/50 px-1 rounded shrink-0">
+                  <span className="font-mono text-[11px] font-bold bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 px-1 rounded shrink-0 text-slate-600 dark:text-slate-400">
                     <HighlightText text={node[secondaryField]} term={searchTerm} />
                   </span>
               )}
@@ -140,22 +137,21 @@
                   <HighlightText text={node[displayField]} term={searchTerm} />
               </span>
               {!isNodeActive && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200/50 text-slate-500 border border-slate-300 shrink-0 font-bold mx-1">
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200/50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shrink-0 font-bold mx-1">
                   {t('غیرفعال', 'Inactive')}
                 </span>
               )}
             </div>
 
-            {/* Actions */}
             <div className={`flex items-center gap-0.5 shrink-0 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-              {onAddChild && <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded"><Plus size={14}/></button>}
-              {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} title={t('حذف', 'Delete')} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"><Trash2 size={14}/></button>}
+              {onAddChild && <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"><Plus size={14}/></button>}
+              {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} title={t('حذف', 'Delete')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={14}/></button>}
             </div>
           </div>
 
           {hasChildren && isExpanded && (
             <div className="overflow-hidden relative">
-              <div className={`absolute top-0 bottom-2 w-px bg-slate-200`} style={{ [isRtl ? 'right' : 'left']: `${depth * 20 + 17}px` }}></div>
+              <div className={`absolute top-0 bottom-2 w-px bg-slate-200 dark:bg-slate-700`} style={{ [isRtl ? 'right' : 'left']: `${depth * 20 + 17}px` }}></div>
               {node.children.map(child => renderNode(child, depth + 1))}
             </div>
           )}
@@ -164,40 +160,40 @@
     };
 
     return (
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1 shrink-0">
             {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
-            <div className="w-px h-5 bg-slate-200 mx-1"></div>
-            <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Maximize2 size={14}/></button>
-            <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Minimize2 size={14}/></button>
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+            <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
+            <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
           </div>
           
           <div className="flex items-center gap-1 shrink-0">
             <div className="relative">
-              <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400`} />
+              <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400 dark:text-slate-500`} />
               <input 
                 type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('جستجو در درخت...', 'Search tree...')}
-                className={`w-48 h-8 text-[11px] font-bold bg-white border border-slate-200 rounded-md outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                className={`w-48 h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
               />
             </div>
-            <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
-            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileDown size={14} /></button>}
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
             {onImport && (
               <>
-                <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Upload size={14} /></button>
+                <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
                 <input id="tree-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
-            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
+            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto custom-scrollbar p-2 bg-white">
+        <div className="flex-1 overflow-auto custom-scrollbar p-2 bg-white dark:bg-slate-800">
           {treeData.length > 0 ? treeData.map(node => renderNode(node, 0)) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 text-[12px] font-medium p-8">
-              <Layers size={32} className="text-slate-300" />
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-slate-400 dark:text-slate-500 text-[12px] font-medium p-8">
+              <Layers size={32} className="text-slate-300 dark:text-slate-600" />
               <span>{t('هیچ موردی یافت نشد.', 'No items found.')}</span>
             </div>
           )}
@@ -210,6 +206,7 @@
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
     const globalMode = useCalendarMode ? useCalendarMode() : 'jalali';
+    const theme = useTheme ? useTheme() : 'light';
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -310,41 +307,41 @@
     };
 
     return (
-      <div className="bg-white border border-slate-200 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1 shrink-0">
             {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
-            <div className="w-px h-5 bg-slate-200 mx-1"></div>
-            <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Maximize2 size={14}/></button>
-            <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Minimize2 size={14}/></button>
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+            <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
+            <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
           </div>
           
           <div className="flex items-center gap-1 shrink-0">
             <div className="relative">
-              <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400`} />
+              <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400 dark:text-slate-500`} />
               <input 
                 type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('جستجو در درخت...', 'Search tree...')}
-                className={`w-48 h-8 text-[11px] font-bold bg-white border border-slate-200 rounded-md outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                className={`w-48 h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
               />
             </div>
             
-            <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
             
             <div className="relative flex items-center h-full" ref={colMenuRef}>
-              <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all h-full flex items-center justify-center"><Settings size={14} /></button>
+              <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Settings size={14} /></button>
               {showColMenu && (
-                <div className="absolute top-full mt-1 bg-white border border-slate-200 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
-                  <div className="text-[12px] font-black text-slate-800 mb-2 pb-2 border-b border-slate-100 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
+                <div className="absolute top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
+                  <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 mb-2 pb-2 border-b border-slate-100 dark:border-slate-700 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
                     {columns.map(c => (
-                      <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 rounded-md text-[11px] font-bold text-slate-600 transition-colors">
+                      <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[11px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
                         <input type="checkbox" checked={!hiddenCols.has(c.field)} onChange={() => {
                             const newHidden = new Set(hiddenCols);
                             if (newHidden.has(c.field)) newHidden.delete(c.field);
                             else newHidden.add(c.field);
                             setHiddenCols(newHidden);
-                        }} className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5" />
+                        }} className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
                         {t(c.header_fa, c.header_en)}
                       </label>
                     ))}
@@ -353,12 +350,12 @@
               )}
             </div>
 
-            <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
 
-            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileDown size={14} /></button>}
+            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
             {onImport && (
               <>
-                <button onClick={() => document.getElementById('treegrid-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><Upload size={14} /></button>
+                <button onClick={() => document.getElementById('treegrid-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
                 <input id="treegrid-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
@@ -374,26 +371,26 @@
                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.setAttribute('download', `tree_export_${new Date().getTime()}.csv`); document.body.appendChild(link); link.click(); document.body.removeChild(link);
                 }
-            }} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
+            }} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
           </div>
         </div>
 
-        <div className="overflow-auto custom-scrollbar flex-1 relative bg-white">
+        <div className="overflow-auto custom-scrollbar flex-1 relative bg-white dark:bg-slate-800">
           <table className="w-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
-            <thead className="sticky top-0 z-40 bg-slate-100 shadow-sm">
+            <thead className="sticky top-0 z-40 bg-slate-100 dark:bg-slate-900 shadow-sm">
               <tr>
                 {selectable && (
-                  <th className={`p-1.5 border-b border-slate-200 text-center bg-slate-100 w-10 sticky ${isRtl ? 'right-0' : 'left-0'} z-50 ${isRtl ? 'border-l' : 'border-r'}`}>
-                    <input type="checkbox" onChange={handleSelectAll} checked={flatData.length > 0 && selectedIds.length === flatData.length} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                  <th className={`p-1.5 border-b border-slate-200 dark:border-slate-700 text-center bg-slate-100 dark:bg-slate-900 w-10 sticky ${isRtl ? 'right-0' : 'left-0'} z-50 ${isRtl ? 'border-l' : 'border-r'}`}>
+                    <input type="checkbox" onChange={handleSelectAll} checked={flatData.length > 0 && selectedIds.length === flatData.length} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
                   </th>
                 )}
                 {visibleColumns.map((col, index) => (
-                  <th key={col.field} style={{ width: col.width || '150px' }} className={`p-2 border-b border-slate-200 text-[11px] font-black text-slate-700 bg-slate-100 ${isRtl ? 'border-l' : 'border-r'}`}>
+                  <th key={col.field} style={{ width: col.width || '150px' }} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}>
                     {t(col.header_fa, col.header_en)}
                   </th>
                 ))}
                 {actions.length > 0 && (
-                  <th className={`p-2 border-b border-slate-200 text-[11px] font-black text-slate-700 w-[120px] bg-slate-100 text-center sticky ${isRtl ? 'left-0' : 'right-0'} z-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)]`}>
+                  <th className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center sticky ${isRtl ? 'left-0' : 'right-0'} z-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none`}>
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
@@ -411,22 +408,22 @@
                   <tr 
                     key={row[idField]} 
                     onClick={() => setSelectedRowId(row[idField])}
-                    className={`bg-white transition-colors group border-b border-slate-100 
-                      ${isSelectedRow || isEditing ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}
+                    className={`bg-white dark:bg-slate-800 transition-colors group border-b border-slate-100 dark:border-slate-700/50 
+                      ${isSelectedRow || isEditing ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
                   >
                     {selectable && (
-                      <td className={`p-1.5 text-center bg-inherit sticky ${isRtl ? 'right-0' : 'left-0'} z-20 ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
-                        <input type="checkbox" checked={isSelectedCheckbox} onChange={() => handleSelectCheckbox(row[idField])} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" />
+                      <td className={`p-1.5 text-center bg-inherit sticky ${isRtl ? 'right-0' : 'left-0'} z-20 ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
+                        <input type="checkbox" checked={isSelectedCheckbox} onChange={() => handleSelectCheckbox(row[idField])} className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 cursor-pointer" />
                       </td>
                     )}
                     {visibleColumns.map((col, colIndex) => (
-                      <td key={col.field} className={`py-1 px-2 text-[11px] text-slate-700 truncate bg-inherit ${isRtl ? 'border-l border-slate-100' : 'border-r border-slate-100'}`}>
+                      <td key={col.field} className={`py-1 px-2 text-[11px] text-slate-700 dark:text-slate-300 truncate bg-inherit ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
                         
                         {colIndex === 0 ? (
                           <div className="flex items-center gap-2 relative" style={{ paddingInlineStart: `${row._depth * 20}px` }}>
                             {hasChildren ? (
                               <div 
-                                className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors z-10 bg-white rounded border border-slate-200 shadow-sm shrink-0 cursor-pointer"
+                                className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors z-10 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600 shadow-sm shrink-0 cursor-pointer"
                                 onClick={(e) => toggleExpand(row[idField], e)}
                               >
                                 <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
@@ -435,12 +432,11 @@
                               </div>
                             ) : (
                               <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300"></div>
+                                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></div>
                               </div>
                             )}
                             
-                            {/* Node Icon */}
-                            <div className={`${isSelectedRow ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-400 transition-colors'} shrink-0`}>
+                            <div className={`${isSelectedRow ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 dark:group-hover:text-indigo-300 transition-colors'} shrink-0`}>
                               {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                             </div>
                             
@@ -448,10 +444,10 @@
                               <input 
                                 value={editData[col.field] || ''} 
                                 onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
-                                className="h-7 text-xs border border-indigo-300 focus:ring-1 focus:ring-indigo-300 rounded px-1 w-full"
+                                className="h-7 text-xs bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-600 text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-indigo-300 dark:focus:ring-indigo-500 rounded px-1 w-full outline-none"
                               />
                             ) : (
-                              <span className={`text-[12px] truncate ${isSelectedRow ? 'font-bold text-indigo-900' : 'text-slate-800'}`}>
+                              <span className={`text-[12px] truncate ${isSelectedRow ? 'font-bold text-indigo-900 dark:text-indigo-300' : 'text-slate-800 dark:text-slate-200'}`}>
                                 <HighlightText text={row[col.field]} term={searchTerm} />
                               </span>
                             )}
@@ -462,7 +458,7 @@
                               <select 
                                 value={editData[col.field] || ''} 
                                 onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
-                                className="h-7 text-xs border border-indigo-300 focus:ring-1 focus:ring-indigo-300 rounded px-1 w-full outline-none"
+                                className="h-7 text-xs bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-600 text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-indigo-300 dark:focus:ring-indigo-500 rounded px-1 w-full outline-none"
                               >
                                 <option value="">...</option>
                                 {col.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -479,13 +475,13 @@
                               <input 
                                 value={editData[col.field] || ''} 
                                 onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
-                                className="h-7 text-xs border border-indigo-300 focus:ring-1 focus:ring-indigo-300 rounded px-1 w-full outline-none"
+                                className="h-7 text-xs bg-white dark:bg-slate-900 border border-indigo-300 dark:border-indigo-600 text-slate-800 dark:text-slate-100 focus:ring-1 focus:ring-indigo-300 dark:focus:ring-indigo-500 rounded px-1 w-full outline-none"
                               />
                             )
                           ) : (
                             col.render ? col.render(row[col.field], row) : (
                                col.type === 'date' ? (
-                                   <span dir="ltr" className="font-mono text-[11px] font-medium text-slate-800">
+                                   <span dir="ltr" className="font-mono text-[11px] font-medium text-slate-800 dark:text-slate-200">
                                        {formatGlobalDate ? formatGlobalDate(row[col.field], globalMode) : row[col.field]}
                                    </span>
                                ) : <HighlightText text={row[col.field]} term={searchTerm} />
@@ -495,30 +491,30 @@
                       </td>
                     ))}
                     {actions.length > 0 && (
-                      <td className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] bg-inherit sticky ${isRtl ? 'left-0' : 'right-0'} z-20 border-slate-100`}>
+                      <td className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] dark:shadow-none bg-inherit sticky ${isRtl ? 'left-0' : 'right-0'} z-20 border-slate-100 dark:border-slate-700/50`}>
                         {isEditing ? (
                           <div className="flex items-center justify-center gap-1 opacity-100">
-                            <button onClick={(e) => { e.stopPropagation(); onSaveEdit(row); }} title={t('ذخیره', 'Save')} className="p-1.5 rounded-md text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                            <button onClick={(e) => { e.stopPropagation(); onSaveEdit(row); }} title={t('ذخیره', 'Save')} className="p-1.5 rounded-md text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all">
                               <Check size={14} strokeWidth={2} />
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); onCancelEdit(); }} title={t('انصراف', 'Cancel')} className="p-1.5 rounded-md text-red-600 bg-red-50 hover:bg-red-100 transition-all">
+                            <button onClick={(e) => { e.stopPropagation(); onCancelEdit(); }} title={t('انصراف', 'Cancel')} className="p-1.5 rounded-md text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 transition-all">
                               <X size={14} strokeWidth={2} />
                             </button>
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-0.5 opacity-100">
                             {onAddChild && (
-                              <button onClick={(e) => { e.stopPropagation(); onAddChild(row); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-emerald-600 hover:shadow-sm transition-all">
+                              <button onClick={(e) => { e.stopPropagation(); onAddChild(row); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-sm transition-all">
                                 <Plus size={14} strokeWidth={2} />
                               </button>
                             )}
                             {actions.map((act, i) => (
-                              <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 border border-transparent hover:border-slate-200 hover:bg-white hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600'}`}>
+                              <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 dark:text-slate-500 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600 dark:hover:text-indigo-400'}`}>
                                 <act.icon size={14} strokeWidth={2} />
                               </button>
                             ))}
                             {onDelete && (
-                              <button onClick={(e) => { e.stopPropagation(); onDelete(row); }} title={t('حذف', 'Delete')} className="p-1.5 rounded-md text-slate-400 hover:border-slate-200 hover:bg-white hover:text-red-600 hover:shadow-sm transition-all">
+                              <button onClick={(e) => { e.stopPropagation(); onDelete(row); }} title={t('حذف', 'Delete')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-red-600 dark:hover:text-red-400 hover:shadow-sm transition-all">
                                 <Trash2 size={14} strokeWidth={2} />
                               </button>
                             )}
@@ -530,8 +526,8 @@
                 );
               }) : (
                 <tr>
-                  <td colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0)} className="p-12 text-center text-slate-400 text-[12px] font-medium bg-slate-50/50">
-                    <div className="flex flex-col items-center justify-center gap-3"><Layers size={32} className="text-slate-300" /><span>{t('هیچ داده‌ای برای نمایش یافت نشد.', 'No data found to display.')}</span></div>
+                  <td colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0)} className="p-12 text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
+                    <div className="flex flex-col items-center justify-center gap-3"><Layers size={32} className="text-slate-300 dark:text-slate-600" /><span>{t('هیچ داده‌ای برای نمایش یافت نشد.', 'No data found to display.')}</span></div>
                   </td>
                 </tr>
               )}

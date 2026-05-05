@@ -7,7 +7,7 @@
     Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
     ListTree, FileText, Bell, Monitor, Clock,
     Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning,
-    Maximize2, Minimize2, FileSpreadsheet, Calendar
+    Maximize2, Minimize2, FileSpreadsheet, Calendar, Moon, Sun
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -19,12 +19,12 @@
     if (!DynamicComponent) {
       return (
         <div className="flex flex-col items-center justify-center h-full p-10 text-center animate-in fade-in">
-          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
+          <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mb-4">
             <FileWarning size={32} />
           </div>
-          <h3 className="text-[16px] font-black text-slate-800 mb-2">خطا در بارگذاری فرم</h3>
-          <p className="text-[13px] text-slate-500 max-w-xs leading-relaxed border border-red-100 bg-red-50 p-3 rounded-lg mt-2 font-sans">
-            کامپوننت <br/><strong className="text-red-600 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که در فایل index.html آپلود شده باشد).
+          <h3 className="text-[16px] font-black text-slate-800 dark:text-slate-100 mb-2">خطا در بارگذاری فرم</h3>
+          <p className="text-[13px] text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg mt-2 font-sans">
+            کامپوننت <br/><strong className="text-red-600 dark:text-red-400 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که در فایل index.html آپلود شده باشد).
           </p>
         </div>
       );
@@ -61,7 +61,8 @@
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
-    const [calendarMode, setCalendarMode] = useState(() => window.localStorage.getItem('fm_calendar_mode') || 'jalali');
+    const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
+    const theme = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
 
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -79,12 +80,6 @@
       setCollapsedModules({});
       setTreeSearchTerm('');
     }, [activeDomainId]);
-
-    useEffect(() => {
-      const handler = (e) => setCalendarMode(e.detail);
-      window.addEventListener('fm_calendar_mode_change', handler);
-      return () => window.removeEventListener('fm_calendar_mode_change', handler);
-    }, []);
 
     const fetchMenuData = async () => {
       setLoading(true);
@@ -142,9 +137,13 @@
       const newMode = calendarMode === 'jalali' ? 'gregorian' : 'jalali';
       if (window.DSCore?.setGlobalCalendarMode) {
         window.DSCore.setGlobalCalendarMode(newMode);
-      } else {
-        window.localStorage.setItem('fm_calendar_mode', newMode);
-        window.dispatchEvent(new CustomEvent('fm_calendar_mode_change', { detail: newMode }));
+      }
+    };
+
+    const toggleTheme = () => {
+      const newTheme = theme === 'light' ? 'dark' : 'light';
+      if (window.DSCore?.setGlobalTheme) {
+        window.DSCore.setGlobalTheme(newTheme);
       }
     };
 
@@ -289,22 +288,22 @@
       return (
         <div key={node.id} className="select-none relative">
           <div 
-            className={`flex items-center py-1 my-[2px] rounded-md cursor-pointer transition-colors group ${isSelected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-700'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800' : ''}`}
+            className={`flex items-center py-1 my-[2px] rounded-md cursor-pointer transition-colors group ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-700 dark:hover:text-indigo-400'} ${depth === 0 && !isSelected ? 'font-bold text-slate-800 dark:text-slate-100' : ''}`}
             style={{ paddingInlineStart: `${depth * 20 + 8}px`, paddingInlineEnd: '8px' }}
             onClick={() => { if (hasChildren) toggleNode(node.id); else if (isForm) handleFormClick(node); }}
           >
             {hasChildren ? (
               <>
                 <div className="flex items-center justify-center w-5 shrink-0">
-                  <div className={`transition-transform duration-200 ${isExpanded ? (isRtl ? '-rotate-90 text-indigo-500' : 'rotate-90 text-indigo-500') : 'text-slate-400 group-hover:text-indigo-400'}`}>
+                  <div className={`transition-transform duration-200 ${isExpanded ? (isRtl ? '-rotate-90 text-indigo-500 dark:text-indigo-400' : 'rotate-90 text-indigo-500 dark:text-indigo-400') : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 dark:group-hover:text-indigo-300'}`}>
                     {isRtl ? <ChevronLeft size={14} strokeWidth={2.5} /> : <ChevronRight size={14} strokeWidth={2.5} />}
                   </div>
                 </div>
                 <div className="flex items-center justify-center w-6 shrink-0">
                   {isExpanded ? (
-                    <FolderOpen size={15} className="text-indigo-500" fill="currentColor" fillOpacity={0.15} strokeWidth={2} />
+                    <FolderOpen size={15} className="text-indigo-500 dark:text-indigo-400" fill="currentColor" fillOpacity={0.15} strokeWidth={2} />
                   ) : (
-                    <Folder size={15} className="text-slate-400 group-hover:text-indigo-500" strokeWidth={2} />
+                    <Folder size={15} className="text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400" strokeWidth={2} />
                   )}
                 </div>
               </>
@@ -312,7 +311,7 @@
               <>
                 <div className="w-5 shrink-0" />
                 <div className="flex items-center justify-center w-6 shrink-0">
-                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isSelected ? 'bg-indigo-600 scale-[1.5] ring-[3px] ring-indigo-100' : 'bg-slate-300 group-hover:bg-indigo-400 group-hover:scale-125'}`} />
+                  <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${isSelected ? 'bg-indigo-600 dark:bg-indigo-500 scale-[1.5] ring-[3px] ring-indigo-100 dark:ring-indigo-900/50' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-indigo-400 dark:group-hover:bg-indigo-500 group-hover:scale-125'}`} />
                 </div>
               </>
             )}
@@ -320,14 +319,14 @@
               {getLabel(node)}
             </span>
             {isForm && (
-              <button onClick={(e) => toggleFavorite(e, node.id)} className={`transition-all p-1 shrink-0 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}>
+              <button onClick={(e) => toggleFavorite(e, node.id)} className={`transition-all p-1 shrink-0 ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-amber-400'}`}>
                 <Star size={13} fill={isFav ? "currentColor" : "none"} />
               </button>
             )}
           </div>
           {hasChildren && isExpanded && (
             <div className="relative">
-              <div className="absolute top-0 bottom-0 w-px bg-slate-200" style={{ [isRtl ? 'right' : 'left']: `${guideLinePos}px` }} />
+              <div className="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700" style={{ [isRtl ? 'right' : 'left']: `${guideLinePos}px` }} />
               <div className="space-y-[2px] animate-in slide-in-from-top-1 duration-200 pt-0.5 pb-1 relative z-10 font-sans">
                 {node.children.map(child => renderSidebarNode(child, depth + 1))}
               </div>
@@ -340,17 +339,17 @@
     const renderTileCard = (item) => {
       const isFav = favorites.has(item.id);
       return (
-        <div key={item.id} onClick={() => handleFormClick(item)} className="w-[100px] h-[100px] shrink-0 bg-white border border-slate-200 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer group relative overflow-hidden">
+        <div key={item.id} onClick={() => handleFormClick(item)} className="w-[100px] h-[100px] shrink-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5 flex flex-col justify-between hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-500 transition-all cursor-pointer group relative overflow-hidden">
           <div className="flex items-start justify-between z-10">
-            <div className="p-1.5 rounded-md transition-colors bg-slate-50 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600">
+            <div className="p-1.5 rounded-md transition-colors bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/40 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
               <DynamicIcon name={item.icon || 'FileText'} size={18} strokeWidth={2.5} />
             </div>
-            <button onClick={(e) => toggleFavorite(e, item.id)} className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 hover:text-amber-400'}`}>
+            <button onClick={(e) => toggleFavorite(e, item.id)} className={`z-20 p-0.5 transition-all ${isFav ? 'text-amber-400' : 'opacity-0 group-hover:opacity-100 text-slate-300 dark:text-slate-600 hover:text-amber-400'}`}>
               <Star size={16} fill={isFav ? "currentColor" : "none"} />
             </button>
           </div>
           <div className="z-10 mt-auto pt-1">
-            <div className="text-[12px] font-bold text-slate-700 leading-snug group-hover:text-indigo-700 whitespace-normal break-words line-clamp-3">
+            <div className="text-[12px] font-bold text-slate-700 dark:text-slate-200 leading-snug group-hover:text-indigo-700 dark:group-hover:text-indigo-400 whitespace-normal break-words line-clamp-3">
               {getLabel(item)}
             </div>
           </div>
@@ -369,11 +368,11 @@
         <div className="p-8 space-y-10 animate-in fade-in duration-300 font-sans">
           {directForms.length > 0 && (
             <section className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md font-sans" onClick={() => toggleModuleCollapse('direct_forms')}>
-                <div className="text-slate-400">
+              <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors px-2 -mx-2 rounded-t-md font-sans" onClick={() => toggleModuleCollapse('direct_forms')}>
+                <div className="text-slate-400 dark:text-slate-500">
                   {collapsedModules['direct_forms'] ? (isRtl ? <ChevronLeft size={18} strokeWidth={2.5}/> : <ChevronRight size={18} strokeWidth={2.5}/>) : <ChevronDown size={18} strokeWidth={2.5} />}
                 </div>
-                <h3 className="text-[16px] font-black text-slate-800">{t('فرم‌های مستقل', 'Independent Forms')}</h3>
+                <h3 className="text-[16px] font-black text-slate-800 dark:text-slate-100">{t('فرم‌های مستقل', 'Independent Forms')}</h3>
               </div>
               {!collapsedModules['direct_forms'] && <div className="flex flex-wrap gap-3 animate-in slide-in-from-top-1 duration-200">{directForms.map(renderTileCard)}</div>}
             </section>
@@ -390,18 +389,18 @@
             const isCollapsed = collapsedModules[moduleNode.id];
             return (
               <section key={moduleNode.id} className="space-y-4 font-sans">
-                <div className="flex items-center gap-3 border-b border-slate-200 pb-2 cursor-pointer hover:bg-slate-50 transition-colors px-2 -mx-2 rounded-t-md select-none font-sans" onClick={() => toggleModuleCollapse(moduleNode.id)}>
-                  <div className="text-slate-400">
+                <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-700 pb-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors px-2 -mx-2 rounded-t-md select-none font-sans" onClick={() => toggleModuleCollapse(moduleNode.id)}>
+                  <div className="text-slate-400 dark:text-slate-500">
                     {isCollapsed ? (isRtl ? <ChevronLeft size={18} strokeWidth={2.5}/> : <ChevronRight size={18} strokeWidth={2.5}/>) : <ChevronDown size={18} strokeWidth={2.5} />}
                   </div>
-                  <h3 className="text-[16px] font-black text-slate-800">{getLabel(moduleNode)}</h3>
-                  <span className="bg-slate-100 text-slate-500 text-[12px] px-2.5 py-0.5 rounded-full font-bold">{allNested.length} {t('فرم', 'Forms')}</span>
+                  <h3 className="text-[16px] font-black text-slate-800 dark:text-slate-100">{getLabel(moduleNode)}</h3>
+                  <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[12px] px-2.5 py-0.5 rounded-full font-bold">{allNested.length} {t('فرم', 'Forms')}</span>
                 </div>
                 {!isCollapsed && (
                   <div className="space-y-4 pt-1 animate-in slide-in-from-top-1 duration-200">
                     {moduleDirectForms.length > 0 && (
                       <div className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
-                        <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 text-[13px] uppercase tracking-wider">{t('عمومی', 'General')}</div>
+                        <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 dark:text-slate-500 text-[13px] uppercase tracking-wider">{t('عمومی', 'General')}</div>
                         <div className="flex-1 flex flex-wrap gap-3">{moduleDirectForms.map(renderTileCard)}</div>
                       </div>
                     )}
@@ -410,8 +409,8 @@
                       if (sectionForms.length === 0) return null;
                       return (
                         <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4 font-sans">
-                          <div className="w-24 shrink-0 pt-1.5 flex items-center gap-1.5 font-black text-slate-700 text-[13px]">
-                            <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full"></div>
+                          <div className="w-24 shrink-0 pt-1.5 flex items-center gap-1.5 font-black text-slate-700 dark:text-slate-300 text-[13px]">
+                            <div className="w-1.5 h-1.5 bg-indigo-400 dark:bg-indigo-500 rounded-full"></div>
                             <span className="leading-tight">{getLabel(section)}</span>
                           </div>
                           <div className="flex-1 flex flex-wrap gap-3">{sectionForms.map(renderTileCard)}</div>
@@ -433,28 +432,28 @@
       return (
         <div className="p-8 space-y-10 animate-in fade-in font-sans">
           <section>
-            <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
-              <Clock size={18} className="text-indigo-500" strokeWidth={2.5} />
-              <h2 className="text-[16px] font-black text-slate-800">{t('بازدیدهای اخیر', 'Recent Visits')}</h2>
+            <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 dark:border-slate-700 pb-2">
+              <Clock size={18} className="text-indigo-500 dark:text-indigo-400" strokeWidth={2.5} />
+              <h2 className="text-[16px] font-black text-slate-800 dark:text-slate-100">{t('بازدیدهای اخیر', 'Recent Visits')}</h2>
             </div>
-            <div className="flex flex-wrap gap-3">{recentItems.length > 0 ? recentItems.map(renderTileCard) : <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px] font-sans">{t('شما هنوز از فرمی بازدید نکرده‌اید.', 'You have not visited any forms yet.')}</div>}</div>
+            <div className="flex flex-wrap gap-3">{recentItems.length > 0 ? recentItems.map(renderTileCard) : <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center text-slate-400 dark:text-slate-500 text-[13px] font-sans">{t('شما هنوز از فرمی بازدید نکرده‌اید.', 'You have not visited any forms yet.')}</div>}</div>
           </section>
           <section>
-            <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 pb-2">
-              <Star size={18} className="text-amber-500" fill="currentColor" />
-              <h2 className="text-[16px] font-black text-slate-800">{t('فرم‌های منتخب (علاقه‌مندی‌ها)', 'Favorite Forms')}</h2>
+            <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 dark:border-slate-700 pb-2">
+              <Star size={18} className="text-amber-500 dark:text-amber-400" fill="currentColor" />
+              <h2 className="text-[16px] font-black text-slate-800 dark:text-slate-100">{t('فرم‌های منتخب (علاقه‌مندی‌ها)', 'Favorite Forms')}</h2>
             </div>
-            <div className="flex flex-wrap gap-3">{favItems.length > 0 ? favItems.map(renderTileCard) : <div className="w-full bg-slate-50 border border-dashed border-slate-200 rounded-xl p-8 text-center text-slate-400 text-[13px] font-sans">{t('فرمی به علاقه‌مندی‌ها اضافه نشده است.', 'No forms added to favorites.')}</div>}</div>
+            <div className="flex flex-wrap gap-3">{favItems.length > 0 ? favItems.map(renderTileCard) : <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center text-slate-400 dark:text-slate-500 text-[13px] font-sans">{t('فرمی به علاقه‌مندی‌ها اضافه نشده است.', 'No forms added to favorites.')}</div>}</div>
           </section>
         </div>
       );
     };
 
     if (loading) return (
-      <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc]">
+      <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc] dark:bg-slate-900">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p className="text-[13px] font-bold text-slate-500 font-sans">در حال بارگذاری...</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin"></div>
+          <p className="text-[13px] font-bold text-slate-500 dark:text-slate-400 font-sans">در حال بارگذاری...</p>
         </div>
       </div>
     );
@@ -462,52 +461,52 @@
     const NotificationSidebarComponent = window.NotificationSidebar;
 
     return (
-      <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
-        <nav className={`w-[60px] bg-white border-slate-200 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
-          <button onClick={() => { setActiveDomainId('HOME_FAV'); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+      <div className="h-screen w-full flex bg-[#f8fafc] dark:bg-slate-900 overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+        <nav className={`w-[60px] bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
+          <button onClick={() => { setActiveDomainId('HOME_FAV'); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all mb-4 ${activeDomainId === 'HOME_FAV' ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
             <Star size={18} fill={activeDomainId === 'HOME_FAV' ? "currentColor" : "none"} />
-            <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{t('میز کار و علاقه‌مندی‌ها', 'Workspace & Favorites')}</div>
+            <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 dark:bg-slate-700 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{t('میز کار و علاقه‌مندی‌ها', 'Workspace & Favorites')}</div>
           </button>
           {domains.map(domain => (
-            <button key={domain.id} onClick={() => { setActiveDomainId(domain.id); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <button key={domain.id} onClick={() => { setActiveDomainId(domain.id); setActiveForm(null); setActiveFormId(null); }} className={`relative group flex items-center justify-center w-10 h-10 rounded-xl transition-all ${activeDomainId === domain.id ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
               <DynamicIcon name={domain.icon} size={18} />
-              <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{getLabel(domain)}</div>
+              <div className={`absolute ${isRtl ? 'right-full mr-3' : 'left-full ml-3'} px-3 py-1.5 bg-slate-800 dark:bg-slate-700 text-white text-[12px] font-medium rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 shadow-lg font-sans`}>{getLabel(domain)}</div>
             </button>
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
-            <button className="text-slate-400 hover:text-slate-600 transition-colors"><Settings size={18} /></button>
-            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-black text-[11px] cursor-pointer hover:bg-slate-200 transition-colors">PM</div>
+            <button className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"><Settings size={18} /></button>
+            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[11px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">PM</div>
           </div>
         </nav>
 
         {showSidebar && (
-          <aside className={`bg-white border-slate-200 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden opacity-0'} ${isRtl ? 'border-l' : 'border-r'}`}>
-            <div className="h-12 flex items-center justify-between px-4 border-b border-slate-100 shrink-0 font-sans">
-              <h2 className="font-black text-slate-800 tracking-tight text-[13px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
-              <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
+          <aside className={`bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden opacity-0'} ${isRtl ? 'border-l' : 'border-r'}`}>
+            <div className="h-12 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-700/50 shrink-0 font-sans">
+              <h2 className="font-black text-slate-800 dark:text-slate-100 tracking-tight text-[13px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
+              <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-400 dark:text-slate-500 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
             </div>
             
-            <div className="flex items-center justify-between p-1.5 border-b border-slate-200 bg-slate-50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
+            <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={handleExpandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                <button onClick={handleExpandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-md transition-all">
                   <Maximize2 size={14}/>
                 </button>
-                <button onClick={handleCollapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                <button onClick={handleCollapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-md transition-all">
                   <Minimize2 size={14}/>
                 </button>
               </div>
               
               <div className="flex items-center gap-1 shrink-0 flex-1">
                 <div className="relative flex-1">
-                  <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400`} />
+                  <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-2' : 'left-2'} text-slate-400 dark:text-slate-500`} />
                   <input 
                     type="text" value={treeSearchTerm} onChange={(e) => setTreeSearchTerm(e.target.value)}
                     placeholder={t('جستجو در درخت...', 'Search tree...')}
-                    className={`w-full h-8 text-[11px] font-bold bg-white border border-slate-200 rounded-md outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                    className={`w-full h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
                   />
                 </div>
-                <div className="w-px h-5 bg-slate-200 mx-1 hidden sm:block"></div>
-                <button onClick={handleExportMenu} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 hover:text-emerald-600 hover:bg-white border border-transparent hover:border-slate-200 rounded-md transition-all">
+                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
+                <button onClick={handleExportMenu} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-md transition-all">
                   <FileSpreadsheet size={14} />
                 </button>
               </div>
@@ -516,7 +515,7 @@
             <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans">
               <div className="space-y-[2px]">
                 {filteredActiveTree.length > 0 ? filteredActiveTree.map(node => renderSidebarNode(node)) : (
-                  <div className="py-8 text-center text-slate-400 text-[11px] font-sans">
+                  <div className="py-8 text-center text-slate-400 dark:text-slate-500 text-[11px] font-sans">
                     {t('نتیجه‌ای یافت نشد.', 'No results found.')}
                   </div>
                 )}
@@ -525,45 +524,52 @@
           </aside>
         )}
 
-        <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] relative font-sans">
-          <header className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-20 font-sans">
+        <main className="flex-1 flex flex-col min-w-0 bg-[#f8fafc] dark:bg-slate-900 relative font-sans">
+          <header className="h-12 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-6 shrink-0 z-20 font-sans">
             <div className="flex items-center gap-4 w-full max-w-3xl">
-              {showSidebar && !sidebarOpen && <button onClick={() => setSidebarOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 transition-all active:scale-95 shrink-0">{isRtl ? <ChevronLeft size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}</button>}
+              {showSidebar && !sidebarOpen && <button onClick={() => setSidebarOpen(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-500 dark:text-slate-400 transition-all active:scale-95 shrink-0">{isRtl ? <ChevronLeft size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}</button>}
               {activeDomainId !== 'HOME_FAV' && (
-                <div className="flex bg-slate-100 p-0.5 rounded-md border border-slate-200 shrink-0 h-8">
-                  <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tree' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><ListTree size={14} /><span>{t('درختی', 'Tree')}</span></button>
-                  <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tile' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><LayoutGrid size={14} /><span>{t('کاشی', 'Tile')}</span></button>
+                <div className="flex bg-slate-100 dark:bg-slate-900/50 p-0.5 rounded-md border border-slate-200 dark:border-slate-700 shrink-0 h-8">
+                  <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tree' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}><ListTree size={14} /><span>{t('درختی', 'Tree')}</span></button>
+                  <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tile' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}><LayoutGrid size={14} /><span>{t('کاشی', 'Tile')}</span></button>
                 </div>
               )}
               <div className="relative w-full max-w-md">
-                <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400`} />
-                <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 border border-slate-200 rounded-md text-[11px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white focus:border-indigo-300 outline-none transition-all placeholder:text-slate-400 text-slate-700 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400 dark:text-slate-500`} />
+                <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-300 dark:focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 {searchTerm && (
-                  <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50 font-sans">
+                  <div className="absolute top-full right-0 left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50 font-sans">
                     {filteredItems.length > 0 ? filteredItems.map(item => (
-                      <div key={item.id} onClick={() => { handleFormClick(item); setSearchTerm(''); }} className="px-5 py-2.5 hover:bg-indigo-50 cursor-pointer border-b border-slate-50 last:border-0 transition-all flex items-center justify-between">
-                        <div><div className="font-bold text-slate-800 text-[12px] font-sans">{getLabel(item)}</div><div className="text-[11px] text-slate-400 mt-0.5 font-sans">{item.fullPath}</div></div>
-                        {isRtl ? <ArrowLeft size={14} className="text-slate-300" /> : <ArrowRight size={14} className="text-slate-300" />}
+                      <div key={item.id} onClick={() => { handleFormClick(item); setSearchTerm(''); }} className="px-5 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer border-b border-slate-50 dark:border-slate-700/50 last:border-0 transition-all flex items-center justify-between">
+                        <div><div className="font-bold text-slate-800 dark:text-slate-100 text-[12px] font-sans">{getLabel(item)}</div><div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 font-sans">{item.fullPath}</div></div>
+                        {isRtl ? <ArrowLeft size={14} className="text-slate-300 dark:text-slate-600" /> : <ArrowRight size={14} className="text-slate-300 dark:text-slate-600" />}
                       </div>
-                    )) : <div className="p-4 text-center text-slate-400 text-[11px] font-sans">{t('نتیجه‌ای یافت نشد.', 'No results found.')}</div>}
+                    )) : <div className="p-4 text-center text-slate-400 dark:text-slate-500 text-[11px] font-sans">{t('نتیجه‌ای یافت نشد.', 'No results found.')}</div>}
                   </div>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title={t('تغییر تقویم', 'Change Calendar')}>
-                  <Calendar size={12} className="text-indigo-500" /><span>{calendarMode === 'jalali' ? (isRtl ? 'میلادی' : 'Gregorian') : (isRtl ? 'شمسی' : 'Jalali')}</span>
+                <button onClick={toggleTheme} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t('تغییر تم', 'Change Theme')}>
+                  {theme === 'dark' ? (
+                     <><Sun size={12} className="text-amber-500" /><span>{isRtl ? 'روشن' : 'Light'}</span></>
+                  ) : (
+                     <><Moon size={12} className="text-indigo-500" /><span>{isRtl ? 'تاریک' : 'Dark'}</span></>
+                  )}
                 </button>
-                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 rounded-md text-slate-600 font-bold text-[11px] transition-colors border border-slate-200 bg-slate-50 font-sans" title={t('تغییر زبان', 'Change Language')}>
-                  <Globe size={12} className="text-indigo-500" /><span>{isRtl ? 'EN' : 'فا'}</span>
+                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t('تغییر تقویم', 'Change Calendar')}>
+                  <Calendar size={12} className="text-indigo-500 dark:text-indigo-400" /><span>{calendarMode === 'jalali' ? (isRtl ? 'میلادی' : 'Gregorian') : (isRtl ? 'شمسی' : 'Jalali')}</span>
+                </button>
+                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t('تغییر زبان', 'Change Language')}>
+                  <Globe size={12} className="text-indigo-500 dark:text-indigo-400" /><span>{isRtl ? 'EN' : 'فا'}</span>
                 </button>
               </div>
-              <div className="w-px h-4 bg-slate-200"></div>
-              <button onClick={() => setIsNotifOpen(true)} className="p-1.5 hover:bg-slate-100 rounded-md text-slate-500 relative transition-all">
+              <div className="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
+              <button onClick={() => setIsNotifOpen(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-500 dark:text-slate-400 relative transition-all">
                 <Bell size={16} />
                 {unreadNotifCount > 0 && (
-                  <span className={`absolute top-1 ${isRtl ? 'right-1' : 'left-1'} flex h-2 w-2 items-center justify-center rounded-full bg-red-500 border-[1.5px] border-white`}></span>
+                  <span className={`absolute top-1 ${isRtl ? 'right-1' : 'left-1'} flex h-2 w-2 items-center justify-center rounded-full bg-red-500 border-[1.5px] border-white dark:border-slate-800`}></span>
                 )}
               </button>
             </div>
@@ -574,9 +580,9 @@
               <FormLoader path={activeForm.component_path} language={currentLanguage} />
             ) : activeDomainId === 'HOME_FAV' ? renderHomeView() : viewMode === 'tile' ? renderFioriTiles() : (
               <div className="h-full flex flex-col items-center justify-center text-center p-12 font-sans">
-                <Monitor size={40} className="text-slate-300 mb-4" strokeWidth={1.5} />
-                <h2 className="text-xl font-black text-slate-700 font-sans">{t('ناحیه کاری ', 'Workspace ')} {getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
-                <p className="text-slate-500 text-[13px] mt-3 max-w-sm leading-relaxed font-sans">{t('جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.', 'Use the tree menu to open forms.')}</p>
+                <Monitor size={40} className="text-slate-300 dark:text-slate-700 mb-4" strokeWidth={1.5} />
+                <h2 className="text-xl font-black text-slate-700 dark:text-slate-200 font-sans">{t('ناحیه کاری ', 'Workspace ')} {getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-[13px] mt-3 max-w-sm leading-relaxed font-sans">{t('جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.', 'Use the tree menu to open forms.')}</p>
               </div>
             )}
           </div>

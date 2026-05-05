@@ -8,7 +8,6 @@
     const { Button, Badge, EmptyState, Dialog, Toast } = window.DesignSystem || {};
     const supabase = window.supabase;
     
-    // اتصال به سیستم سراسری تقویم
     const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     
     const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
@@ -156,7 +155,6 @@
       );
     };
 
-    // این تابع کاملاً هوشمند شده و به جای وابستگی به زبان، تقویم را از متغیر سراسری می‌گیرد
     const formatTime = (isoString) => {
       try {
         const date = new Date(isoString);
@@ -177,18 +175,18 @@
 
     return (
       <>
-        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] transition-opacity" onClick={onClose} />
+        <div className="fixed inset-0 bg-slate-900/20 dark:bg-slate-900/60 backdrop-blur-sm z-[60] transition-opacity" onClick={onClose} />
         
         <aside 
-          className={`fixed top-0 bottom-0 w-full max-w-[340px] bg-white shadow-2xl z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
+          className={`fixed top-0 bottom-0 w-full max-w-[340px] bg-white dark:bg-slate-800 shadow-2xl z-[70] flex flex-col transition-transform duration-300 ease-in-out ${
             isRtl ? 'left-0 animate-slide-in-left' : 'right-0 animate-slide-in-right'
           }`}
           dir={isRtl ? 'rtl' : 'ltr'}
         >
-          <div className="h-12 border-b border-slate-100 flex items-center justify-between px-4 shrink-0 bg-slate-50/50">
+          <div className="h-12 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between px-4 shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-center gap-2">
-              <Bell size={16} className="text-indigo-600" />
-              <span className="font-black text-slate-800 text-[12px]">{t('اعلان‌های سیستم', 'System Notifications')}</span>
+              <Bell size={16} className="text-indigo-600 dark:text-indigo-400" />
+              <span className="font-black text-slate-800 dark:text-slate-100 text-[12px]">{t('اعلان‌های سیستم', 'System Notifications')}</span>
               <Badge variant={unreadCount > 0 ? 'danger' : 'gray'}>
                 {unreadCount > 0 ? `${unreadCount} ${t('جدید', 'New')}` : t('همه خوانده شده', 'All Read')}
               </Badge>
@@ -197,10 +195,10 @@
           </div>
 
           {notifications.length > 0 && (
-            <div className="px-3 py-1.5 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+            <div className="px-3 py-1.5 border-b border-slate-50 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/30 dark:bg-slate-900/30">
               <Button 
                 size="sm" variant="ghost" icon={Check} onClick={markAllAsRead} disabled={unreadCount === 0}
-                className="!text-indigo-600 hover:!bg-indigo-50 !px-2 !h-7 !text-[10px]"
+                className="!text-indigo-600 dark:!text-indigo-400 hover:!bg-indigo-50 dark:hover:!bg-indigo-900/30 !px-2 !h-7 !text-[10px]"
               >
                 {t('خواندن همه', 'Mark All Read')}
               </Button>
@@ -215,25 +213,25 @@
 
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1.5">
             {loading ? (
-              <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" /></div>
+              <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" /></div>
             ) : currentData.length > 0 ? (
               currentData.map((notif) => (
                 <div 
                   key={notif.id} 
                   className={`group relative border rounded-lg p-2.5 transition-all animate-in fade-in slide-in-from-bottom-2 ${
                     notif.is_read 
-                      ? 'bg-white border-slate-100 hover:border-slate-200' 
-                      : 'bg-indigo-50/40 border-indigo-100 hover:border-indigo-200 hover:shadow-sm'
+                      ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600' 
+                      : 'bg-indigo-50/40 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-sm'
                   }`}
                 >
                   <div className="flex gap-2">
-                    <div className={`mt-0.5 shrink-0 ${notif.is_read ? 'opacity-50' : ''} ${notif.type === 'success' ? 'text-emerald-500' : notif.type === 'error' ? 'text-red-500' : 'text-blue-500'}`}>
+                    <div className={`mt-0.5 shrink-0 ${notif.is_read ? 'opacity-50' : ''} ${notif.type === 'success' ? 'text-emerald-500 dark:text-emerald-400' : notif.type === 'error' ? 'text-red-500 dark:text-red-400' : 'text-blue-500 dark:text-blue-400'}`}>
                       {notif.type === 'success' ? <CheckCircle2 size={14} /> : notif.type === 'error' ? <AlertCircle size={14} /> : <Info size={14} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className={`text-[11px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600' : 'text-slate-800'}`}>{notif.title}</h4>
-                      <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400' : 'text-slate-600'}`}>{notif.message}</p>
-                      <span className="text-[8px] text-slate-400 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</span>
+                      <h4 className={`text-[11px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{notif.title}</h4>
+                      <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{notif.message}</p>
+                      <span className="text-[8px] text-slate-400 dark:text-slate-500 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</span>
                     </div>
                     
                     <div className="flex flex-col gap-0.5 transition-all self-start shrink-0">
@@ -242,19 +240,19 @@
                           size="sm" variant="ghost" icon={Check} 
                           onClick={() => markAsRead(notif.id)} 
                           title={t('علامت‌گذاری خوانده شده', 'Mark as read')} 
-                          className="!text-slate-400 hover:!text-indigo-600 hover:!bg-indigo-50 !px-1 !h-6" 
+                          className="!text-slate-400 dark:!text-slate-500 hover:!text-indigo-600 dark:hover:!text-indigo-400 hover:!bg-indigo-50 dark:hover:!bg-indigo-900/30 !px-1 !h-6" 
                         />
                       )}
                       <Button 
                         size="sm" variant="ghost" icon={Trash2} 
                         onClick={() => deleteOne(notif.id)} 
                         title={t('حذف اعلان', 'Delete')} 
-                        className="!text-slate-400 hover:!text-red-500 hover:!bg-red-50 !px-1 !h-6" 
+                        className="!text-slate-400 dark:!text-slate-500 hover:!text-red-500 dark:hover:!text-red-400 hover:!bg-red-50 dark:hover:!bg-red-900/30 !px-1 !h-6" 
                       />
                     </div>
                   </div>
                   {!notif.is_read && (
-                    <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-0 w-1 rounded-l-md' : 'left-0 w-1 rounded-r-md'} h-6 bg-indigo-500`} />
+                    <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-0 w-1 rounded-l-md' : 'left-0 w-1 rounded-r-md'} h-6 bg-indigo-500 dark:bg-indigo-400`} />
                   )}
                 </div>
               ))
@@ -270,9 +268,9 @@
           </div>
 
           {totalPages > 1 && (
-            <div className="p-2 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div className="p-2 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
               <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)} className="!px-2 !h-7 !text-[10px]">{t('قبلی', 'Prev')}</Button>
-              <span className="text-[10px] font-bold text-slate-500">
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                 {t('صفحه', 'Page')} {page} {t('از', 'of')} {totalPages}
               </span>
               <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)} className="!px-2 !h-7 !text-[10px]">{t('بعدی', 'Next')}</Button>

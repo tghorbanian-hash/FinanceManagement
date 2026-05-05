@@ -17,30 +17,29 @@
     if (!visible) return null;
     return (
       <div 
-        className="fixed z-[9999] pointer-events-none bg-slate-800 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl transform -translate-x-1/2 -translate-y-full mt-[-15px] animate-in fade-in zoom-in-95 duration-150" 
+        className="fixed z-[9999] pointer-events-none bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl transform -translate-x-1/2 -translate-y-full mt-[-15px] animate-in fade-in zoom-in-95 duration-150" 
         style={{ left: x, top: y }}
       >
         {content}
-        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-slate-800"></div>
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-[1px] border-4 border-transparent border-t-slate-800 dark:border-t-slate-700"></div>
       </div>
     );
   };
 
-  // کانتینر چارت اصلاح شد تا استایل height مستقیماً به باکسی که در صفحه است اعمال شود
   const ChartContainer = ({ title, action, isMaximized, setIsMaximized, children, height, isRtl, t }) => {
     const renderHeader = (isMaxMode = false) => {
       if (!title && !action) return null;
       return (
-        <div className={`flex items-center justify-between border-b border-slate-200 px-3 shrink-0 ${isMaxMode ? 'h-10 bg-slate-50 rounded-t-xl' : 'h-10 bg-white rounded-t-xl'}`}>
+        <div className={`flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-3 shrink-0 ${isMaxMode ? 'h-10 bg-slate-50 dark:bg-slate-900/50 rounded-t-xl' : 'h-10 bg-white dark:bg-slate-800 rounded-t-xl'}`}>
            <div className="flex items-center gap-2">
               <button 
                 onClick={() => setIsMaximized(!isMaxMode)} 
-                className={`p-1 rounded transition-colors ${isMaxMode ? 'text-rose-500 hover:bg-rose-50' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`} 
+                className={`p-1 rounded transition-colors ${isMaxMode ? 'text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30' : 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'}`} 
                 title={isMaxMode ? t('بستن', 'Close') : t('بزرگنمایی', 'Maximize')}
               >
                 {isMaxMode ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
               </button>
-              <h3 className="text-[12px] font-black text-slate-800">{title}</h3>
+              <h3 className="text-[12px] font-black text-slate-800 dark:text-slate-100">{title}</h3>
            </div>
            {action && <div className="flex items-center gap-2">{action}</div>}
         </div>
@@ -49,14 +48,14 @@
 
     if (isMaximized) {
       return (
-        <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="w-full flex flex-col font-sans bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
           {renderHeader(false)}
           <div className="flex-1 min-h-0 relative w-full p-4">
             {children}
           </div>
           
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
-          <div className="fixed inset-4 sm:inset-8 z-[9950] bg-white rounded-xl shadow-2xl flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
+          <div className="fixed inset-0 bg-slate-900/40 dark:bg-slate-900/60 backdrop-blur-sm z-[9900] animate-in fade-in" onClick={() => setIsMaximized(false)} />
+          <div className="fixed inset-4 sm:inset-8 z-[9950] bg-white dark:bg-slate-800 rounded-xl shadow-2xl flex flex-col border border-slate-200 dark:border-slate-700 animate-in zoom-in-95 duration-200" dir={isRtl ? 'rtl' : 'ltr'}>
             {renderHeader(true)}
             <div className="flex-1 p-4 min-h-0 flex flex-col overflow-hidden w-full h-full relative">
                {children}
@@ -67,7 +66,7 @@
     }
     
     return (
-      <div className="w-full flex flex-col font-sans bg-white rounded-xl shadow-sm border border-slate-200" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="w-full flex flex-col font-sans bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700" style={{ height }} dir={isRtl ? 'rtl' : 'ltr'}>
          {renderHeader(false)}
          <div className="flex-1 min-h-0 flex flex-col relative w-full p-4">
             {children}
@@ -90,9 +89,9 @@
 
     return (
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
-        <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 relative pt-6 pb-2 border-b border-slate-100 w-full h-full">
+        <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 relative pt-6 pb-2 border-b border-slate-100 dark:border-slate-700 w-full h-full">
           {data.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400">
+            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
               {t('داده‌ای برای نمایش وجود ندارد', 'No data to display')}
             </div>
           ) : data.map((item, idx) => {
@@ -117,7 +116,7 @@
         </div>
         <div className="flex justify-between gap-1 sm:gap-2 pt-2 h-6 shrink-0">
           {data.map((item, idx) => (
-            <div key={idx} className={`flex-1 text-center truncate text-[10px] font-bold transition-colors ${activeLabel === item.label ? 'text-indigo-600' : 'text-slate-400'}`}>
+            <div key={idx} className={`flex-1 text-center truncate text-[10px] font-bold transition-colors ${activeLabel === item.label ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
               {item.label}
             </div>
           ))}
@@ -184,7 +183,7 @@
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="flex-1 relative w-full h-full mb-6">
           {data.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400">
+            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
               {t('داده‌ای برای نمایش وجود ندارد', 'No data to display')}
             </div>
           ) : (
@@ -227,7 +226,7 @@
           {data.map((item, idx) => {
             const isEdgeOrMiddle = idx === 0 || idx === data.length - 1 || idx === Math.floor(data.length / 2);
             if (isEdgeOrMiddle) {
-               return <span key={idx} className="text-[10px] font-bold text-slate-400 truncate">{item.label}</span>;
+               return <span key={idx} className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate">{item.label}</span>;
             }
             return <span key={idx} className="w-4"></span>;
           })}
@@ -242,6 +241,7 @@
     const t = (fa, en) => isRtl ? fa : en;
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
     const [isMaximized, setIsMaximized] = useState(false);
+    const themeMode = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
     
     const colors = [colorMap.indigo.main, colorMap.emerald.main, colorMap.amber.main, colorMap.sky.main, colorMap.purple.main, colorMap.rose.main];
     const total = useMemo(() => data.reduce((acc, curr) => acc + curr.value, 0), [data]);
@@ -262,12 +262,12 @@
         <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
           <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-full max-w-full'}`}>
             {data.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 border-4 border-slate-100 rounded-full">
+              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500 border-4 border-slate-100 dark:border-slate-700 rounded-full">
                 {t('بدون داده', 'No data')}
               </div>
             ) : (
               <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90 transform">
-                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4" />
+                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke={themeMode === 'dark' ? '#334155' : '#f1f5f9'} strokeWidth="4" />
                 {segments.map((seg, i) => {
                   const isActive = activeLabel === null || activeLabel === undefined || activeLabel === seg.label;
                   return (
@@ -286,8 +286,8 @@
             )}
             {data.length > 0 && (
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                 <span className="text-[11px] text-slate-400 font-bold">{hoveredSeg ? hoveredSeg.label : t('مجموع', 'Total')}</span>
-                 <span className="text-[14px] font-black text-slate-800 tracking-tight mt-1">
+                 <span className="text-[11px] text-slate-400 dark:text-slate-500 font-bold">{hoveredSeg ? hoveredSeg.label : t('مجموع', 'Total')}</span>
+                 <span className="text-[14px] font-black text-slate-800 dark:text-slate-100 tracking-tight mt-1">
                    {hoveredSeg ? hoveredSeg.value.toLocaleString() : total.toLocaleString()}
                  </span>
               </div>
@@ -307,8 +307,8 @@
                 >
                   <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-bold text-slate-700 truncate">{seg.label}</span>
-                    <span className="text-[10px] text-slate-500">{seg.percent.toFixed(1)}%</span>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{seg.label}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{seg.percent.toFixed(1)}%</span>
                   </div>
                 </div>
               );
@@ -343,7 +343,7 @@
         <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
           <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-full max-w-full'}`}>
             {data.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 bg-slate-50 rounded-full">
+              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-full">
                 {t('بدون داده', 'No data')}
               </div>
             ) : (
@@ -379,8 +379,8 @@
                 >
                   <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-bold text-slate-700 truncate">{seg.label}</span>
-                    <span className="text-[10px] text-slate-500">{seg.percent.toFixed(1)}%</span>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{seg.label}</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">{seg.percent.toFixed(1)}%</span>
                   </div>
                 </div>
               );
@@ -396,6 +396,7 @@
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const theme = colorMap[color] || colorMap.indigo;
+    const themeMode = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
     const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, content: '' });
     const [isMaximized, setIsMaximized] = useState(false);
 
@@ -416,7 +417,7 @@
             onMouseLeave={() => setTooltip({ visible: false, x: 0, y: 0, content: '' })}
           >
             <svg viewBox="0 0 100 55" className={`w-full ${!isMaximized ? 'max-h-full' : ''} overflow-visible`}>
-              <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" strokeWidth="12" strokeLinecap="round" />
+              <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke={themeMode === 'dark' ? '#334155' : '#f1f5f9'} strokeWidth="12" strokeLinecap="round" />
               <path 
                 d="M 10 50 A 40 40 0 0 1 90 50" 
                 fill="none" 
@@ -428,13 +429,13 @@
               />
             </svg>
             <div className="absolute bottom-0 left-0 right-0 flex flex-col items-center justify-end pb-2 pointer-events-none">
-              <span className={`${isMaximized ? 'text-[32px]' : 'text-[20px]'} font-black text-slate-800 tracking-tight transition-all`}>
+              <span className={`${isMaximized ? 'text-[32px]' : 'text-[20px]'} font-black text-slate-800 dark:text-slate-100 tracking-tight transition-all`}>
                 {safeValue.toLocaleString()}
               </span>
-              {label && <span className={`${isMaximized ? 'text-[13px]' : 'text-[10px]'} font-bold text-slate-400 mt-1 transition-all`}>{label}</span>}
+              {label && <span className={`${isMaximized ? 'text-[13px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 mt-1 transition-all`}>{label}</span>}
             </div>
-            <div className={`absolute bottom-1 left-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 pointer-events-none transition-all`}>{min}</div>
-            <div className={`absolute bottom-1 right-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 pointer-events-none transition-all`}>{max}</div>
+            <div className={`absolute bottom-1 left-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 pointer-events-none transition-all`}>{min}</div>
+            <div className={`absolute bottom-1 right-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 pointer-events-none transition-all`}>{max}</div>
           </div>
           <ChartTooltip {...tooltip} />
         </div>
