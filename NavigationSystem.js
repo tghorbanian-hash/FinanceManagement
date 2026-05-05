@@ -2,12 +2,15 @@
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo } = React;
+  
+  // سیستم ضدگلوله برای آیکون‌ها: در صورت یافت نشدن آیکون، سیستم کرش نمی‌کند
+  const FallbackIcon = (props) => <span {...props} style={{ display: 'inline-block', width: props.size || 16, height: props.size || 16 }} />;
   const LucideIcons = window.LucideIcons || {};
   const { 
-    Search, Star, ChevronLeft, ChevronRight, LayoutGrid, 
-    ListTree, FileText, Bell, Monitor, Clock,
-    Settings, ArrowLeft, ArrowRight, ChevronDown, Folder, FolderOpen, Globe, Loader2, FileWarning,
-    Maximize2, Minimize2, FileSpreadsheet, Calendar, Moon, Sun
+    Search = FallbackIcon, Star = FallbackIcon, ChevronLeft = FallbackIcon, ChevronRight = FallbackIcon, LayoutGrid = FallbackIcon, 
+    ListTree = FallbackIcon, FileText = FallbackIcon, Bell = FallbackIcon, Monitor = FallbackIcon, Clock = FallbackIcon,
+    Settings = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, ChevronDown = FallbackIcon, Folder = FallbackIcon, FolderOpen = FallbackIcon, Globe = FallbackIcon, Loader2 = FallbackIcon, FileWarning = FallbackIcon,
+    Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, FileSpreadsheet = FallbackIcon, Calendar = FallbackIcon, Moon = FallbackIcon, Sun = FallbackIcon
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -24,7 +27,7 @@
           </div>
           <h3 className="text-[16px] font-black text-slate-800 dark:text-slate-100 mb-2">خطا در بارگذاری فرم</h3>
           <p className="text-[13px] text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg mt-2 font-sans">
-            کامپوننت <br/><strong className="text-red-600 dark:text-red-400 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که در فایل index.html آپلود شده باشد).
+            کامپوننت <br/><strong className="text-red-600 dark:text-red-400 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که فایل آن آپلود شده باشد).
           </p>
         </div>
       );
@@ -270,9 +273,11 @@
       document.body.removeChild(link);
     };
 
-    const DynamicIcon = ({ name, size = 18 }) => {
-      const Icon = LucideIcons[name] || FileText;
-      return <Icon size={size} />;
+    const DynamicIcon = ({ name, size = 18, ...props }) => {
+      let Icon = typeof name === 'string' ? LucideIcons[name] : name;
+      if (!Icon) Icon = FileText;
+      if (!Icon) return <FallbackIcon size={size} {...props} />;
+      return <Icon size={size} {...props} />;
     };
 
     const showSidebar = viewMode === 'tree' && activeDomainId !== 'HOME_FAV';

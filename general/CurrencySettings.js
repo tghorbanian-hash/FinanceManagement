@@ -2,25 +2,37 @@
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useCallback } = React;
+  
+  // سیستم ضدگلوله برای آیکون‌ها در فرم
+  const FallbackIcon = (props) => <span {...props} style={{ display: 'inline-block', width: props.size || 16, height: props.size || 16 }} />;
+  const LucideIcons = window.LucideIcons || {};
   const { 
-    DollarSign, Plus, Edit, Trash2, RefreshCw, History, Check, X,
-    Calculator, Save, Globe, Lock, Unlock, ArrowRightLeft, AlertTriangle, 
-    Clock, Calendar, Settings, Zap, ArrowLeft, ArrowRight
-  } = window.LucideIcons || {};
+    DollarSign = FallbackIcon, Plus = FallbackIcon, Edit = FallbackIcon, Trash2 = FallbackIcon, RefreshCw = FallbackIcon, History = FallbackIcon, Check = FallbackIcon, X = FallbackIcon,
+    Calculator = FallbackIcon, Save = FallbackIcon, Globe = FallbackIcon, Lock = FallbackIcon, Unlock = FallbackIcon, ArrowRightLeft = FallbackIcon, AlertTriangle = FallbackIcon, 
+    Clock = FallbackIcon, Calendar = FallbackIcon, Settings = FallbackIcon, Zap = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon
+  } = LucideIcons;
 
   const CurrencySettings = ({ language = 'fa' }) => {
-    // اصلاح بسیار مهم: تفکیک دقیق Import ها برای جلوگیری از خطای 130 (undefined component)
+    // سیستم ضدگلوله برای کامپوننت‌های دیزاین سیستم
+    const FallbackComponent = () => null;
+    const Core = window.DSCore || window.DesignSystem || {};
     const { 
-      Button, TextField, SelectField, ToggleField, CheckboxField, Card, Badge, PageHeader, 
-      Tabs, CurrencyField, DatePicker, formatGlobalDate, useCalendarMode 
-    } = window.DSCore || {};
+      Button = FallbackComponent, TextField = FallbackComponent, SelectField = FallbackComponent, ToggleField = FallbackComponent, CheckboxField = FallbackComponent, Card = FallbackComponent, Badge = FallbackComponent, PageHeader = FallbackComponent, 
+      Tabs = FallbackComponent, CurrencyField = FallbackComponent, DatePicker = FallbackComponent 
+    } = Core;
     
-    const { DataGrid, AdvancedFilter } = window.DSGrid || {};
-    const { Modal, Toast } = window.DSFeedback || {};
+    const Grid = window.DSGrid || window.DesignSystem || {};
+    const { DataGrid = FallbackComponent, AdvancedFilter = FallbackComponent } = Grid;
+    
+    const Feedback = window.DSFeedback || window.DesignSystem || {};
+    const { Modal = FallbackComponent, Toast = FallbackComponent } = Feedback;
+
+    const formatGlobalDate = Core.formatGlobalDate || ((v) => v);
+    const useCalendarMode = Core.useCalendarMode || (() => 'jalali');
 
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
-    const globalCalendarMode = useCalendarMode ? useCalendarMode() : 'jalali';
+    const globalCalendarMode = useCalendarMode();
 
     const getTodayGregorian = () => {
       const d = new Date();
@@ -33,33 +45,27 @@
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [isLoading, setIsLoading] = useState(false);
     
-    // States: Currencies
     const [currencies, setCurrencies] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
 
-    // States: Rates
     const [rates, setRates] = useState([]);
     const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     
-    // States: Manual Update Modal
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [manualDate, setManualDate] = useState('');
     const [manualTime, setManualTime] = useState('12:00');
     const [manualRatesList, setManualRatesList] = useState([]);
 
-    // States: Edit Single Rate Modal
     const [isEditRateModalOpen, setIsEditRateModalOpen] = useState(false);
     const [editingRate, setEditingRate] = useState(null);
 
-    // States: Converter Modal
     const [isConverterOpen, setIsConverterOpen] = useState(false);
     const [convDate, setConvDate] = useState('');
     const [convAmount, setConvAmount] = useState('1');
     const [convFrom, setConvFrom] = useState('');
     const [convTo, setConvTo] = useState('');
 
-    // States: Delete Confirmation Modal
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null, source: null });
 
     const supabase = window.supabase;
