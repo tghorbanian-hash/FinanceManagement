@@ -7,7 +7,8 @@
 
   const {
     TextField, SelectField, ToggleField, CheckboxField, CurrencyField, 
-    TextAreaField, RadioGroup, DatePicker, AttachmentManager, TagInput
+    TextAreaField, RadioGroup, DatePicker, AttachmentManager, TagInput,
+    SuffixField
   } = window.DSForms || {};
 
   const { AdvancedFilter, DataGrid, LOVField } = window.DSGrid || {};
@@ -64,7 +65,8 @@
     LineChart,
     DonutChart,
     PieChart,
-    GaugeChart
+    GaugeChart,
+    SuffixField
   };
 
   window.DesignSystem = DesignSystem;
