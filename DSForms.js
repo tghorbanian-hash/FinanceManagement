@@ -509,9 +509,128 @@
     );
   };
 
+  const SuffixField = ({ 
+    label, error, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true,
+    value, onChange, placeholder = '', isCurrency = false,
+    unitValue, onUnitChange, unitOptions = [], unitPlaceholder = ''
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const containerRef = useRef(null);
+    const searchInputRef = useRef(null);
+    const t = (fa, en) => isRtl ? fa : en;
+
+    const selectedOption = unitOptions.find(o => String(o.value) === String(unitValue));
+    const displayUnit = selectedOption ? selectedOption.label : '';
+
+    useEffect(() => {
+      const handleClickOutside = (e) => {
+        if (containerRef.current && !containerRef.current.contains(e.target)) {
+          setIsOpen(false);
+          setSearchTerm('');
+        }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+      if (isOpen && searchInputRef.current) searchInputRef.current.focus();
+    }, [isOpen]);
+
+    const filteredOptions = unitOptions.filter(o => 
+      o.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      String(o.value).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const format = (v) => {
+      if (!v && v !== 0) return '';
+      const clean = String(v).replace(/,/g, '');
+      return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    };
+
+    const handleValueChange = (e) => {
+      if (isCurrency) {
+        const raw = e.target.value.replace(/,/g, '');
+        if (!isNaN(raw) || raw === '') onChange(raw);
+      } else {
+        onChange(e.target.value);
+      }
+    };
+
+    const heights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+
+    return (
+      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+        {label && <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
+        
+        <div ref={containerRef} className={`relative flex items-center w-full ${heights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border-slate-200 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+          
+          <input
+            type="text"
+            disabled={disabled}
+            value={isCurrency ? format(value) : (value || '')}
+            onChange={handleValueChange}
+            placeholder={placeholder}
+            dir={isCurrency || !isRtl ? 'ltr' : 'rtl'}
+            className={`flex-1 h-full bg-transparent border-none outline-none px-2.5 w-full min-w-0 ${disabled ? 'cursor-not-allowed' : ''}`}
+          />
+
+          <div className="w-px h-2/3 bg-slate-200 dark:bg-slate-600 shrink-0"></div>
+
+          <div 
+            className={`relative h-full flex items-center justify-between shrink-0 min-w-[90px] md:min-w-[110px] px-2 cursor-pointer ${disabled ? 'pointer-events-none' : ''}`}
+            onClick={() => !disabled && setIsOpen(!isOpen)}
+          >
+            {isOpen ? (
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={t('جستجو...', 'Search...')}
+                className="w-full h-full bg-transparent border-none outline-none text-[11px] placeholder:text-slate-400"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span className={`truncate text-[11px] font-bold ${displayUnit ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}>
+                {displayUnit || unitPlaceholder || t('واحد...', 'Unit...')}
+              </span>
+            )}
+            <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1" />
+          </div>
+
+          {isOpen && (
+            <div className={`absolute top-full mt-1 ${isRtl ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-50 max-h-60 overflow-y-auto custom-scrollbar`}>
+              {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
+                <div 
+                  key={idx} 
+                  className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(unitValue) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if(onUnitChange) onUnitChange(opt.value);
+                    setIsOpen(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  {opt.label}
+                </div>
+              )) : (
+                <div className="px-3 py-4 text-center text-[11px] text-slate-400 dark:text-slate-500">{t('موردی یافت نشد', 'No results')}</div>
+              )}
+            </div>
+          )}
+        </div>
+        {error && <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
+      </div>
+    );
+  };
+
   window.DSForms = {
     TextField, SelectField, ToggleField, CheckboxField, CurrencyField, 
-    TextAreaField, RadioGroup, DatePicker, AttachmentManager, TagInput
+    TextAreaField, RadioGroup, DatePicker, AttachmentManager, TagInput,
+    SuffixField
   };
 
   window.DSCore = window.DSCore || {};

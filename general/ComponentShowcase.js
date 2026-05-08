@@ -15,7 +15,8 @@
       AdvancedFilter, Modal, AttachmentManager, Tabs, Tree, TreeGrid,
       CurrencyField, TextAreaField, RadioGroup, Tooltip, Skeleton, EmptyState, StatCard, Timeline, Avatar, 
       DropdownMenu, ProgressBar, DatePicker, Stepper, TagInput, Alert, Dialog, Toast,
-      Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart
+      Drawer, ContextMenu, Popover, BarChart, LineChart, DonutChart, PieChart, GaugeChart,
+      SuffixField
     } = window.DesignSystem || {};
     
     const isRtl = language === 'fa';
@@ -43,6 +44,11 @@
     const [progressVal, setProgressVal] = useState(45);
     const [tags, setTags] = useState(['حسابداری', 'خزانه']);
     
+    const [weightVal, setWeightVal] = useState('125');
+    const [weightUnit, setWeightUnit] = useState('g');
+    const [foreignAmount, setForeignAmount] = useState('520');
+    const [foreignUnit, setForeignUnit] = useState('usd');
+
     const [popoverSettings, setPopoverSettings] = useState({ email: true, autoApprove: false });
     const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -196,6 +202,17 @@
 
     const [dialogState, setDialogState] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
     const [toastState, setToastState] = useState({ isVisible: false, message: '', type: 'success' });
+
+    const weightUnits = [
+      { value: 'g', label: 'گرم' },
+      { value: 'kg', label: 'کیلوگرم' },
+      { value: 'ton', label: 'تن' },
+    ];
+    const currencyUnits = [
+      { value: 'usd', label: 'دلار' },
+      { value: 'eur', label: 'یورو' },
+      { value: 'aed', label: 'درهم' },
+    ];
 
     const showToast = (message, type = 'info') => {
       setToastState({ isVisible: true, message, type });
@@ -824,6 +841,10 @@
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <CurrencyField size="sm" label={t('ورودی مبلغ (جداکننده هزارگان)', 'Currency Input')} value={currencyVal} onChange={setCurrencyVal} isRtl={isRtl} required />
                       <DatePicker size="sm" label={t('انتخاب تاریخ (شمسی/میلادی)', 'Date Picker')} value={dateVal} onChange={setDateVal} isRtl={isRtl} language={language} />
+                      
+                      <SuffixField size="sm" label={t('ورودی مقدار با واحد (وزن)', 'Value with Unit (Weight)')} value={weightVal} onChange={setWeightVal} unitValue={weightUnit} onUnitChange={setWeightUnit} unitOptions={weightUnits} isRtl={isRtl} />
+                      <SuffixField size="sm" label={t('مبلغ ارزی', 'Foreign Currency')} value={foreignAmount} onChange={setForeignAmount} unitValue={foreignUnit} onUnitChange={setForeignUnit} unitOptions={currencyUnits} isCurrency={true} isRtl={isRtl} />
+
                       <div className="md:col-span-2">
                         <TextAreaField size="sm" label={t('توضیحات طولانی', 'Text Area')} placeholder={t('متن خود را اینجا وارد کنید...', 'Enter long text here...')} rows={2} isRtl={isRtl} />
                       </div>
