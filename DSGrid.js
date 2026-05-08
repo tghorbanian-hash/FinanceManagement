@@ -55,7 +55,6 @@
     const [isOpen, setIsOpen] = useState(defaultOpen);
     const [values, setValues] = useState(initialValues || {});
 
-    // Use a ref to break the infinite sync loop
     const lastSyncValues = useRef(null);
 
     useEffect(() => {
@@ -130,6 +129,7 @@
     const [hiddenCols, setHiddenCols] = useState([]);
     const [pinnedCols, setPinnedCols] = useState([]);
     const [filters, setFilters] = useState({});
+    const [localFilters, setLocalFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
     const [groupCols, setGroupCols] = useState([]);
     const [collapsedGroups, setCollapsedGroups] = useState([]);
@@ -145,10 +145,8 @@
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
 
-    // Ref to completely block the infinite render loop
     const lastSyncState = useRef(null);
 
-    // 1. Receive State from Parent (View Applied)
     useEffect(() => {
       if (gridState !== undefined && gridState !== null) {
         const stateStr = JSON.stringify(gridState);
@@ -159,6 +157,7 @@
           setHiddenCols(gridState.hiddenCols || []);
           setPinnedCols(gridState.pinnedCols || []);
           setFilters(gridState.filters || {});
+          setLocalFilters(gridState.filters || {});
           setSortConfig(gridState.sortConfig || { field: null, direction: 'asc' });
           setGroupCols(gridState.groupCols || []);
         }
@@ -168,14 +167,13 @@
         setHiddenCols([]);
         setPinnedCols([]);
         setFilters({});
+        setLocalFilters({});
         setSortConfig({ field: null, direction: 'asc' });
         setGroupCols([]);
       }
-      // Omit `columns` from dependency to prevent new array references causing loops
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gridState]);
 
-    // 2. Notify Parent of Local Changes seamlessly
     useEffect(() => {
       if (onGridStateChange) {
         const currentState = { columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols };
@@ -186,7 +184,6 @@
           onGridStateChange(currentState);
         }
       }
-      // Omit `onGridStateChange` to avoid recreation triggers
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols]);
 
@@ -283,11 +280,23 @@
 
     const handleSort = (field) => { setSortConfig(prev => ({ field, direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc' })); };
     
-    const handleFilterChange = (field, value) => { 
-      const newFilters = { ...filters, [field]: value };
-      if (!value) delete newFilters[field];
-      setFilters(newFilters); 
-      setPage(1); 
+    const handleLocalFilterChange = (field, value) => { 
+      setLocalFilters(prev => {
+        const newFilters = { ...prev, [field]: value };
+        if (!value) delete newFilters[field];
+        return newFilters;
+      }); 
+    };
+
+    const applyInlineFilters = () => {
+      setFilters(localFilters);
+      setPage(1);
+    };
+
+    const clearInlineFilters = () => {
+      setLocalFilters({});
+      setFilters({});
+      setPage(1);
     };
     
     const togglePin = (field) => { setPinnedCols(prev => prev.includes(field) ? prev.filter(f => f !== field) : [...prev, field]); };
@@ -521,14 +530,14 @@
                       <div className="relative">
                         {col.type === 'date' ? (
                           <DatePicker 
-                            value={filters[col.field] || ''} 
-                            onChange={(val) => handleFilterChange(col.field, val)}
+                            value={localFilters[col.field] || ''} 
+                            onChange={(val) => handleLocalFilterChange(col.field, val)}
                             isRtl={isRtl} language={language} size="sm" wrapperClassName="!gap-0"
                           />
                         ) : col.type === 'select' ? (
                           <SelectField 
-                            size="sm" options={col.options || []} value={filters[col.field] || ''} 
-                            onChange={(e) => handleFilterChange(col.field, e.target.value)} 
+                            size="sm" options={col.options || []} value={localFilters[col.field] || ''} 
+                            onChange={(e) => handleLocalFilterChange(col.field, e.target.value)} 
                             isRtl={isRtl} wrapperClassName="!gap-0" placeholder={t('همه', 'All')} 
                           />
                         ) : col.type !== 'toggle' && col.type !== 'checkbox' ? (
@@ -537,7 +546,9 @@
                             <input 
                               type={col.type === 'number' ? 'number' : 'text'}
                               dir={!isRtl ? 'ltr' : 'rtl'}
-                              value={filters[col.field] || ''} onChange={(e) => handleFilterChange(col.field, e.target.value)}
+                              value={localFilters[col.field] || ''} 
+                              onChange={(e) => handleLocalFilterChange(col.field, e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') applyInlineFilters(); }}
                               placeholder={t('جستجو...', 'Search...')}
                               className={`w-full h-6 text-[10px] font-sans font-bold bg-white dark:bg-slate-700/40 border border-slate-200 dark:border-slate-500 rounded outline-none text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-400/20 transition-all ${isRtl ? 'pr-5 pl-1' : 'pl-5 pr-1'}`}
                             />
@@ -547,7 +558,20 @@
                     </td>
                   );
                 })}
-                {actions.length > 0 && <td style={getStickyStyles('ACTIONS', true, true)} className="p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
+                {actions.length > 0 && (
+                  <td style={getStickyStyles('ACTIONS', true, true)} className="p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
+                    <div className="flex items-center justify-center gap-1">
+                      <button onClick={applyInlineFilters} title={t('اعمال فیلتر', 'Apply Filter')} className="p-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm transition-colors">
+                        <Search size={12} strokeWidth={2.5} />
+                      </button>
+                      {Object.keys(localFilters).some(k => localFilters[k]) && (
+                        <button onClick={clearInlineFilters} title={t('پاک کردن فیلترها', 'Clear Filters')} className="p-1 rounded text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                          <X size={12} strokeWidth={2.5} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             </thead>
 
