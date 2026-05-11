@@ -109,7 +109,7 @@
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
     }, []);
 
-    const logAction = async (entityType, recordId, action, details = '') => {
+    const logAction = async (entityType, recordId, action, details = '', oldData = null, newData = null) => {
       try {
         if (!supabase) return;
         await supabase.from('fm_record_logs').insert([{
@@ -117,7 +117,9 @@
           record_id: String(recordId),
           action: action,
           user_name: currentUser,
-          details: details
+          details: details,
+          old_data: oldData,
+          new_data: newData
         }]);
       } catch (err) {
         console.error('Failed to log action:', err);
@@ -207,16 +209,18 @@
         };
 
         if (selectedCurrency.id) {
+          const oldRecord = currencies.find(c => c.id === selectedCurrency.id);
           const { error } = await supabase.from('fm_currencies').update(payload).eq('id', selectedCurrency.id);
           if (error) throw error;
-          await logAction('fm_currencies', selectedCurrency.id, 'ویرایش', `بروزرسانی مشخصات ارز: ${payload.title}`);
+          const newRecord = { ...oldRecord, ...payload };
+          await logAction('fm_currencies', selectedCurrency.id, 'ویرایش', `بروزرسانی مشخصات ارز: ${payload.title}`, oldRecord, newRecord);
           showToast(t('ارز با موفقیت بروزرسانی شد', 'Currency updated successfully'));
         } else {
           payload.created_by = currentUser;
           const { data, error } = await supabase.from('fm_currencies').insert([payload]).select();
           if (error) throw error;
           if (data && data.length > 0) {
-             await logAction('fm_currencies', data[0].id, 'ایجاد', `تعریف ارز جدید: ${payload.title} (${payload.code})`);
+             await logAction('fm_currencies', data[0].id, 'ایجاد', `تعریف ارز جدید: ${payload.title} (${payload.code})`, null, data[0]);
           }
           showToast(t('ارز جدید با موفقیت تعریف شد', 'New currency added successfully'));
         }
@@ -244,7 +248,9 @@
         if (error) throw error;
         
         for (const id of selectedIds) {
-           await logAction('fm_currencies', id, 'ویرایش', `عملیات گروهی: ${actionDesc}`);
+           const oldRecord = currencies.find(c => c.id === id);
+           const newRecord = { ...oldRecord, ...updatePayload };
+           await logAction('fm_currencies', id, 'ویرایش', `عملیات گروهی: ${actionDesc}`, oldRecord, newRecord);
         }
         
         showToast(t('عملیات گروهی با موفقیت انجام شد', 'Bulk action successful'));
@@ -290,7 +296,7 @@
            
            if (data) {
              for (const rate of data) {
-               await logAction('fm_currency_rates', rate.id, 'ایجاد', `دریافت اتوماتیک نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`);
+               await logAction('fm_currency_rates', rate.id, 'ایجاد', `دریافت اتوماتیک نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`, null, rate);
              }
            }
            
@@ -354,7 +360,7 @@
 
         if (data) {
            for (const rate of data) {
-              await logAction('fm_currency_rates', rate.id, 'ایجاد', `ثبت دستی نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`);
+              await logAction('fm_currency_rates', rate.id, 'ایجاد', `ثبت دستی نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`, null, rate);
            }
         }
 
@@ -376,10 +382,13 @@
         
         const rateVal = parseFloat(String(editingRate.rate).replace(/,/g, ''));
         const nowStr = new Date().toISOString();
+        const oldRecord = rates.find(r => r.id === editingRate.id);
+        const newRecord = { ...oldRecord, rate: rateVal, updated_by: currentUser, updated_at: nowStr };
+
         const { error } = await supabase.from('fm_currency_rates').update({ rate: rateVal, updated_by: currentUser, updated_at: nowStr }).eq('id', editingRate.id);
         if (error) throw error;
         
-        await logAction('fm_currency_rates', editingRate.id, 'ویرایش', `ویرایش نرخ به مبلغ جدید: ${rateVal}`);
+        await logAction('fm_currency_rates', editingRate.id, 'ویرایش', `ویرایش نرخ به مبلغ جدید: ${rateVal}`, oldRecord, newRecord);
         
         showToast(t('نرخ با موفقیت ویرایش شد.', 'Rate edited successfully.'));
         setIsEditRateModalOpen(false);
@@ -394,27 +403,31 @@
       try {
         if (deleteConfirm.source === 'currency') {
           if (deleteConfirm.type === 'single') {
+            const oldRec = currencies.find(c => c.id === deleteConfirm.data.id);
             const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
             if (error) throw error;
-            await logAction('fm_currencies', deleteConfirm.data.id, 'حذف', `حذف ارز با کد: ${deleteConfirm.data.code}`);
+            await logAction('fm_currencies', deleteConfirm.data.id, 'حذف', `حذف ارز با کد: ${deleteConfirm.data.code}`, oldRec, null);
           } else if (deleteConfirm.type === 'bulk') {
+            const oldRecords = deleteConfirm.data.map(id => currencies.find(c => c.id === id)).filter(Boolean);
             const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
             if (error) throw error;
-            for (const id of deleteConfirm.data) {
-                await logAction('fm_currencies', id, 'حذف', `حذف گروهی ارز`);
+            for (const oldRec of oldRecords) {
+                await logAction('fm_currencies', oldRec.id, 'حذف', `حذف گروهی ارز`, oldRec, null);
             }
           }
           fetchCurrencies();
         } else if (deleteConfirm.source === 'rate') {
           if (deleteConfirm.type === 'single') {
+            const oldRec = rates.find(r => r.id === deleteConfirm.data.id);
             const { error } = await supabase.from('fm_currency_rates').delete().eq('id', deleteConfirm.data.id);
             if (error) throw error;
-            await logAction('fm_currency_rates', deleteConfirm.data.id, 'حذف', `حذف تاریخچه نرخ: ${deleteConfirm.data.base_currency} -> ${deleteConfirm.data.target_currency}`);
+            await logAction('fm_currency_rates', deleteConfirm.data.id, 'حذف', `حذف تاریخچه نرخ: ${deleteConfirm.data.base_currency} -> ${deleteConfirm.data.target_currency}`, oldRec, null);
           } else if (deleteConfirm.type === 'bulk') {
+            const oldRecords = deleteConfirm.data.map(id => rates.find(r => r.id === id)).filter(Boolean);
             const { error } = await supabase.from('fm_currency_rates').delete().in('id', deleteConfirm.data);
             if (error) throw error;
-            for (const id of deleteConfirm.data) {
-                await logAction('fm_currency_rates', id, 'حذف', `حذف گروهی تاریخچه نرخ‌ها`);
+            for (const oldRec of oldRecords) {
+                await logAction('fm_currency_rates', oldRec.id, 'حذف', `حذف گروهی تاریخچه نرخ‌ها`, oldRec, null);
             }
           }
           fetchRates();

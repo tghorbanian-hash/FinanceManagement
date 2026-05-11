@@ -18,7 +18,8 @@
     Edit = FallbackIcon,
     Trash2 = FallbackIcon,
     Clock = FallbackIcon,
-    Calendar = FallbackIcon
+    Calendar = FallbackIcon,
+    ArrowLeft = FallbackIcon
   } = LucideIcons;
   
   const { Button } = window.DSCore || {};
@@ -230,6 +231,26 @@
     );
   };
 
+  const getFieldLabel = (key) => {
+    const labels = {
+      code: 'کد ارز', title: 'عنوان', symbol: 'نماد', is_active: 'وضعیت فعالیت', 
+      fetch_type: 'نحوه دریافت', decimal_places: 'اعشار', targets: 'ارزهای هدف', 
+      rate: 'نرخ تبدیل', rate_date: 'تاریخ نرخ', source: 'منبع اطلاعات',
+      base_currency: 'ارز پایه', target_currency: 'ارز هدف',
+      created_by: 'ایجاد کننده', updated_by: 'ویرایش کننده',
+      created_at: 'تاریخ ایجاد', updated_at: 'تاریخ ویرایش', id: 'شناسه رکورد'
+    };
+    return labels[key] || key;
+  };
+
+  const formatValue = (val) => {
+    if (val === null || val === undefined || val === '') return 'خالی';
+    if (typeof val === 'boolean') return val ? 'بله (فعال)' : 'خیر (غیرفعال)';
+    if (Array.isArray(val)) return val.length ? val.join('، ') : 'بدون مقدار';
+    if (typeof val === 'object') return JSON.stringify(val);
+    return String(val);
+  };
+
   const LogTimeline = ({ logs = [], isLoading = false, language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
@@ -274,12 +295,60 @@
             const dateStr = formatDate ? formatDate(log.timestamp, globalMode) : d.toISOString().split('T')[0];
             const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
+            const renderDiffs = () => {
+              if (!log.old_data && !log.new_data) return null;
+              
+              if (isUpdate && log.old_data && log.new_data) {
+                 const changes = [];
+                 Object.keys(log.new_data).forEach(key => {
+                    if (['updated_at', 'updated_by', 'created_at', 'created_by'].includes(key)) return;
+                    
+                    const oldVal = log.old_data[key];
+                    const newVal = log.new_data[key];
+                    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                        changes.push({ key, oldVal, newVal });
+                    }
+                 });
+                 if (changes.length === 0) return null;
+                 return (
+                    <div className="mt-3 flex flex-col gap-1.5 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{t('تغییرات فیلدها:', 'Field Changes:')}</span>
+                       {changes.map(c => (
+                          <div key={c.key} className="flex items-center flex-wrap gap-2 text-[11px] bg-slate-100/50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-200/50 dark:border-slate-700/50">
+                             <span className="font-bold text-slate-600 dark:text-slate-300 min-w-[80px]">{getFieldLabel(c.key)}:</span>
+                             <span className="text-rose-500 dark:text-rose-400 line-through decoration-rose-300/50 truncate max-w-[150px]" title={formatValue(c.oldVal)}>{formatValue(c.oldVal)}</span>
+                             <ArrowLeft size={10} className="text-slate-400 shrink-0" />
+                             <span className="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[150px]" title={formatValue(c.newVal)}>{formatValue(c.newVal)}</span>
+                          </div>
+                       ))}
+                    </div>
+                 );
+              }
+              
+              if (isDelete && log.old_data) {
+                 return (
+                    <div className="mt-3 flex flex-col gap-1.5 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{t('اطلاعات رکورد حذف شده:', 'Deleted Record Data:')}</span>
+                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {Object.keys(log.old_data).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
+                             <div key={key} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-100 dark:border-slate-700/50">
+                                <span className="text-[10px] font-bold text-slate-400 min-w-[70px]">{getFieldLabel(key)}:</span>
+                                <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 truncate" title={formatValue(log.old_data[key])}>{formatValue(log.old_data[key])}</span>
+                             </div>
+                          ))}
+                       </div>
+                    </div>
+                 )
+              }
+              return null;
+            };
+
             return (
               <div key={log.id || index} className="relative flex items-start gap-4 group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>
                 <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 relative z-10 ${iconColor} shadow-sm`}>
                   <ActionIcon size={14} strokeWidth={2.5} />
                 </div>
-                <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 shadow-sm group-hover:shadow-md transition-all">
+                <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 shadow-sm group-hover:shadow-md transition-all overflow-hidden">
                   <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                     <div className="flex items-center gap-2.5">
                       <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100">{log.action}</span>
@@ -295,6 +364,7 @@
                       {log.details}
                     </div>
                   )}
+                  {renderDiffs()}
                 </div>
               </div>
             );
