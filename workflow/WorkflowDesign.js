@@ -34,7 +34,7 @@
     const generateId = () => Math.random().toString(36).substr(2, 9);
 
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'info' });
-    const [activeTab, setActiveTab] = useState('process');
+    const [activeTab, setActiveTab] = useState('base');
     const [editingDef, setEditingDef] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
@@ -164,8 +164,8 @@
     ];
 
     const builderTabs = [
-        { id: 'process', label: t('طراحی فرآیند (Visual)', 'Process Designer'), icon: GitMerge },
-        { id: 'base', label: t('تنظیمات پایه و شروط', 'Base Settings & Rules'), icon: Settings2 }
+        { id: 'base', label: t('تنظیمات پایه و شروط', 'Base Settings & Rules'), icon: Settings2 },
+        { id: 'process', label: t('طراحی فرآیند (Visual)', 'Process Designer'), icon: GitMerge }
     ];
 
     const updateElement = (elementType, id, field, value) => {
@@ -325,52 +325,54 @@
                     <Tabs tabs={builderTabs} activeTab={activeTab} onChange={setActiveTab} />
                 </div>
 
-                <div className="flex-1 overflow-hidden bg-slate-50 dark:bg-slate-900 flex relative">
+                <div className="flex-1 overflow-hidden bg-white dark:bg-slate-800 flex relative">
                     
                     {activeTab === 'base' && (
-                        <div className="w-full h-full p-4 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/20">
-                            <div className="w-full max-w-4xl mx-auto flex flex-col gap-5 animate-in fade-in slide-in-from-bottom-2 py-4">
-                                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4 w-full">
-                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-3 mb-1"><Database size={16} className="text-indigo-500"/> {t('موجودیت هدف', 'Target Entity')}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="md" />
-                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="md" disabled={!domainFilter && uniqueModules.length === 0} />
-                                        <div className="lg:col-span-2">
-                                            <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="md" />
+                        <div className="w-full h-full p-6 overflow-y-auto custom-scrollbar">
+                            <div className="flex flex-col gap-6 animate-in fade-in">
+                                
+                                <section className="flex flex-col gap-3">
+                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2">{t('موجودیت هدف', 'Target Entity')}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="sm" />
+                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="sm" disabled={!domainFilter && uniqueModules.length === 0} />
+                                        <div className="md:col-span-2">
+                                            <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="sm" />
                                         </div>
                                     </div>
-                                </div>
+                                </section>
 
-                                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4 w-full">
-                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700/50 pb-3 mb-1"><Settings2 size={16} className="text-emerald-500"/> {t('تنظیمات گردش کار', 'Workflow Config')}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                <section className="flex flex-col gap-3">
+                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2">{t('تنظیمات گردش کار', 'Workflow Config')}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4">
                                         <div className="lg:col-span-2">
-                                            <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="md" />
+                                            <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="sm" />
                                         </div>
-                                        <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled size="md" />
-                                        <DatePicker label={t('تاریخ شروع', 'Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="md" />
-                                        <DatePicker label={t('تاریخ پایان', 'End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="md" />
-                                        <div className="flex items-center mt-7 px-2">
+                                        <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled size="sm" />
+                                        <DatePicker label={t('تاریخ شروع', 'Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="sm" />
+                                        <DatePicker label={t('تاریخ پایان', 'End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="sm" />
+                                        <div className="flex items-center pt-5 px-1">
                                             <ToggleField label={t('فعال در سیستم', 'Active in System')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
                                         </div>
                                     </div>
-                                </div>
+                                </section>
 
-                                <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4 w-full">
-                                    <div className="flex flex-col border-b border-slate-100 dark:border-slate-700/50 pb-3 mb-1">
-                                        <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 flex items-center gap-2"><GitMerge size={16} className="text-amber-500"/> {t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')}</h3>
-                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">{t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}</p>
+                                <section className="flex flex-col gap-3">
+                                    <div className="flex flex-col border-b border-slate-200 dark:border-slate-700 pb-2">
+                                        <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200">{t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')}</h3>
+                                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}</p>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                         <div className="lg:col-span-2">
-                                            <TextField label={t('نام فیلد (مثلا: loan_type)', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="md" />
+                                            <TextField label={t('نام فیلد (مثلا: loan_type)', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="sm" />
                                         </div>
-                                        <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} size="md" options={operatorOptions} />
+                                        <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} size="sm" options={operatorOptions} />
                                         <div className="lg:col-span-2">
-                                            <TextField label={t('مقدار', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="md" />
+                                            <TextField label={t('مقدار', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="sm" />
                                         </div>
                                     </div>
-                                </div>
+                                </section>
+
                             </div>
                         </div>
                     )}
@@ -568,7 +570,7 @@
                                             <button onClick={() => setSelectedElement(null)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"><X size={16}/></button>
                                         </div>
                                     </div>
-                                    <div className="p-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                                    <div className="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                         {selectedElement.type === 'node' && selectedNode ? (
                                             <>
                                                 <TextField label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} size="sm" />
@@ -606,7 +608,7 @@
                                                     const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef);
                                                     if (sourceNode?.type === 'EXCLUSIVE_GATEWAY') {
                                                         return (
-                                                            <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
+                                                            <div className="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
                                                                 <TextField label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} size="sm" placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
                                                                 <span className="text-[10px] text-slate-400 font-bold">{t('اگر شرط برقرار باشد، فرآیند این مسیر را طی می‌کند.', 'If true, process takes this path.')}</span>
                                                             </div>
