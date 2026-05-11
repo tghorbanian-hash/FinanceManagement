@@ -7,7 +7,7 @@
   const LucideIcons = window.LucideIcons || {};
   const { 
     GitMerge = FallbackIcon, Plus = FallbackIcon, Edit = FallbackIcon, Trash2 = FallbackIcon, 
-    RefreshCw = FallbackIcon, Database = FallbackIcon
+    RefreshCw = FallbackIcon, Database = FallbackIcon, Layout = FallbackIcon
   } = LucideIcons;
 
   const WorkflowManagement = ({ language = 'fa' }) => {
@@ -30,18 +30,13 @@
 
     const [viewMode, setViewMode] = useState('list');
     const [definitions, setDefinitions] = useState([]);
+    const [systemEntities, setSystemEntities] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState({});
     const [gridState, setGridState] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'info' });
     const [activeDef, setActiveDef] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
-
-    const supportedEntities = [
-        { value: 'fm_vouchers', label: t('اسناد حسابداری', 'Accounting Vouchers') },
-        { value: 'fm_payment_requests', label: t('درخواست‌های پرداخت', 'Payment Requests') },
-        { value: 'fm_invoices', label: t('فاکتورهای فروش', 'Sales Invoices') }
-    ];
 
     const viewConfig = {
       pageId: 'workflow_management_main',
@@ -62,20 +57,24 @@
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
     }, []);
 
-    const fetchDefinitions = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
         if (!supabase) throw new Error("Supabase is not initialized");
-        const { data, error } = await supabase
-          .schema('wf')
-          .from('wf_definitions')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-        setDefinitions(data || []);
+        
+        const [defRes, entRes] = await Promise.all([
+            supabase.schema('wf').from('wf_definitions').select('*').order('created_at', { ascending: false }),
+            supabase.from('sys_entities').select('*').order('domain_name')
+        ]);
+
+        if (defRes.error) throw defRes.error;
+        if (entRes.error) throw entRes.error;
+
+        setDefinitions(defRes.data || []);
+        setSystemEntities(entRes.data || []);
       } catch (err) {
         console.error("Fetch error:", err);
-        showToast(t('خطا در دریافت لیست گردش کارها', 'Error fetching workflows'), 'error');
+        showToast(t('خطا در دریافت اطلاعات', 'Error fetching data'), 'error');
       } finally {
         setIsLoading(false);
       }
@@ -83,9 +82,22 @@
 
     useEffect(() => {
       if (viewMode === 'list') {
-          fetchDefinitions();
+          fetchInitialData();
       }
     }, [viewMode]);
+
+    const entityOptions = useMemo(() => {
+        return systemEntities.map(e => ({
+            value: e.entity_code,
+            label: isRtl ? `${e.name_fa} (${e.domain_name} - ${e.module_name})` : `${e.name_en} (${e.domain_name} - ${e.module_name})`
+        }));
+    }, [systemEntities, isRtl]);
+
+    const getEntityDisplay = (code) => {
+        const ent = systemEntities.find(e => e.entity_code === code);
+        if (!ent) return code;
+        return isRtl ? ent.name_fa : ent.name_en;
+    };
 
     const handleNewWorkflow = () => {
         setActiveDef(null);
@@ -100,7 +112,7 @@
     const handleDesignBack = (shouldRefresh) => {
         setViewMode('list');
         if (shouldRefresh) {
-            fetchDefinitions();
+            fetchInitialData();
         }
     };
 
@@ -111,7 +123,7 @@
             if (error) throw error;
             showToast(t('گردش کار با موفقیت حذف شد.', 'Workflow deleted successfully.'));
             setDeleteConfirm(null);
-            fetchDefinitions();
+            fetchInitialData();
         } catch (err) {
             console.error("Delete error:", err);
             showToast(t('خطا در حذف گردش کار (ممکن است دارای سوابق اجرایی باشد)', 'Error deleting workflow (might have active instances)'), 'error');
@@ -124,7 +136,7 @@
             const { error } = await supabase.schema('wf').from('wf_definitions').update({ is_active: !currentStatus }).eq('id', id);
             if (error) throw error;
             showToast(t('وضعیت گردش کار تغییر کرد.', 'Workflow status updated.'));
-            fetchDefinitions();
+            fetchInitialData();
         } catch (err) {
             console.error("Status error:", err);
             showToast(t('خطا در تغییر وضعیت', 'Error changing status'), 'error');
@@ -133,10 +145,12 @@
 
     const columns = [
         { field: 'title', header_fa: 'عنوان گردش کار', header_en: 'Title', width: '250px', render: (v) => <span className="font-black text-slate-800 dark:text-slate-100">{v}</span> },
-        { field: 'entity_type', header_fa: 'موجودیت هدف', header_en: 'Target Entity', width: '180px', render: (v) => {
-            const ent = supportedEntities.find(e => e.value === v);
-            return <div className="flex items-center gap-1.5"><Database size={12} className="text-slate-400" /><span className="text-[11px] font-bold">{ent ? ent.label : v}</span></div>;
-        }},
+        { field: 'entity_type', header_fa: 'موجودیت هدف', header_en: 'Target Entity', width: '220px', render: (v) => (
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 w-fit">
+                <Database size={12} className="text-indigo-500" />
+                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{getEntityDisplay(v)}</span>
+            </div>
+        )},
         { field: 'version', header_fa: 'نسخه', header_en: 'Version', width: '80px', render: (v) => <Badge variant="slate" size="sm" className="font-mono">v{v}.0</Badge> },
         { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '100px', render: (v, row) => (
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleStatus(row.id, v)}>
@@ -172,7 +186,7 @@
                 </div>
             );
         }
-        return <Designer definition={activeDef} onBack={handleDesignBack} language={language} />;
+        return <Designer definition={activeDef} systemEntities={systemEntities} onBack={handleDesignBack} language={language} />;
     }
 
     return (
@@ -183,7 +197,7 @@
           breadcrumbs={[{ label: t('عملیات سیستم', 'System Operations') }, { label: t('گردش کارها', 'Workflows') }]}
           viewConfig={viewConfig}
         >
-            <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchDefinitions} className="shadow-sm bg-white dark:bg-slate-800">
+            <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchInitialData} className="shadow-sm bg-white dark:bg-slate-800">
                 {t('بروزرسانی', 'Refresh')}
             </Button>
         </PageHeader>
@@ -192,7 +206,7 @@
             <AdvancedFilter 
                 fields={[
                   { name: 'title', label: t('عنوان گردش کار', 'Workflow Title'), type: 'text' },
-                  { name: 'entity_type', label: t('موجودیت', 'Entity'), type: 'select', options: supportedEntities },
+                  { name: 'entity_type', label: t('موجودیت', 'Entity'), type: 'select', options: entityOptions },
                   { name: 'is_active', label: t('وضعیت', 'Status'), type: 'select', options: [
                       {value: 'true', label: t('فعال', 'Active')},
                       {value: 'false', label: t('غیرفعال', 'Inactive')}
@@ -204,7 +218,7 @@
                 language={language}
             />
             
-            <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-b-2xl md:rounded-b-none md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col mt-4">
+            <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-b-2xl md:rounded-b-none md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
                 {isLoading ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-12 h-full">
                         <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin mb-4"></div>
@@ -220,7 +234,7 @@
                         onGridStateChange={setGridState}
                         onAdd={() => handleNewWorkflow()}
                         actions={[
-                            { icon: Edit, tooltip: t('ویرایش و طراحی', 'Edit & Design'), onClick: (row) => handleEditWorkflow(row), className: 'text-slate-400 hover:text-indigo-600' },
+                            { icon: Edit, tooltip: t('ویرایش و طراحی فرایند', 'Edit Process Design'), onClick: (row) => handleEditWorkflow(row), className: 'text-slate-400 hover:text-indigo-600' },
                             { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm(row.id), className: 'text-slate-400 hover:text-red-600' }
                         ]}
                     />
