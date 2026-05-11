@@ -95,7 +95,7 @@
         try {
             setIsSaving(true);
             if (!editingDef.title || !editingDef.entity_type) {
-                showToast(t('لطفاً در تب تنظیمات پایه، عنوان و موجودیت را مشخص کنید.', 'Please provide title and entity type in base settings.'), 'error');
+                showToast(t('لطفاً عنوان و موجودیت را مشخص کنید.', 'Please provide title and entity type.'), 'error');
                 setActiveTab('base');
                 setIsSaving(false);
                 return;
@@ -125,9 +125,7 @@
                 showToast(t('گردش کار جدید با موفقیت ایجاد شد.', 'New workflow created successfully.'));
             }
             
-            setTimeout(() => {
-                onBack(true);
-            }, 1000);
+            setTimeout(() => onBack(true), 1000);
 
         } catch (err) {
             console.error("Save error:", err);
@@ -309,7 +307,16 @@
           title={editingDef.id ? t('ویرایش و طراحی گردش کار', 'Edit Workflow Design') : t('طراحی گردش کار جدید', 'Design New Workflow')}
           icon={GitMerge} language={language}
           breadcrumbs={[{ label: t('مدیریت گردش کارها', 'Workflow Management') }, { label: t('محیط طراح', 'Designer') }]}
-        />
+        >
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)}>
+                    {t('بازگشت به فهرست', 'Back to List')}
+                </Button>
+                <Button variant="primary" size="sm" icon={Save} onClick={handleSaveDefinition} disabled={isSaving}>
+                    {isSaving ? t('در حال ذخیره...', 'Saving...') : t('ذخیره تغییرات', 'Save Changes')}
+                </Button>
+            </div>
+        </PageHeader>
 
         <div className="px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 pt-2 shadow-sm relative z-20">
             <Tabs tabs={builderTabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -317,53 +324,53 @@
 
         <div className="flex-1 overflow-hidden flex flex-col relative z-10">
             {activeTab === 'base' && (
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 flex flex-col gap-8 animate-in fade-in">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 flex flex-col gap-6 animate-in fade-in">
                         
-                        <section className="flex flex-col gap-4">
-                            <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2">
-                                <Database size={16} className="text-indigo-500"/> {t('موجودیت هدف', 'Target Entity')}
+                        <section className="flex flex-col gap-3">
+                            <h3 className="text-[12px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2">
+                                <Database size={14} className="text-indigo-500 inline-block ml-1"/> {t('موجودیت هدف', 'Target Entity')}
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                 <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} />
                                 <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} disabled={!domainFilter && uniqueModules.length === 0} />
-                                <div className="lg:col-span-2">
+                                <div className="md:col-span-2">
                                     <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required />
                                 </div>
                             </div>
                         </section>
 
-                        <section className="flex flex-col gap-4">
-                            <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2">
-                                <Settings2 size={16} className="text-emerald-500"/> {t('تنظیمات گردش کار', 'Workflow Config')}
+                        <section className="flex flex-col gap-3">
+                            <h3 className="text-[12px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2">
+                                <Settings2 size={14} className="text-emerald-500 inline-block ml-1"/> {t('تنظیمات عمومی گردش کار', 'Workflow Config')}
                             </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                                <div className="lg:col-span-2">
+                            <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+                                <div className="md:col-span-2">
                                     <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required />
                                 </div>
                                 <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled />
                                 <DatePicker label={t('تاریخ شروع', 'Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} />
                                 <DatePicker label={t('تاریخ پایان', 'End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} />
-                                <div className="flex items-center pt-8 px-2 lg:col-span-1">
-                                    <ToggleField label={t('فعال در سیستم', 'Active in System')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
+                                <div className="flex items-center pt-5 px-1">
+                                    <ToggleField label={t('فعال در سیستم', 'Active')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
                                 </div>
                             </div>
                         </section>
 
-                        <section className="flex flex-col gap-4">
-                            <div className="flex flex-col border-b border-slate-100 dark:border-slate-700 pb-2">
-                                <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    <GitMerge size={16} className="text-amber-500"/> {t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')}
+                        <section className="flex flex-col gap-3">
+                            <div className="flex flex-col border-b border-slate-100 dark:border-slate-700/50 pb-2">
+                                <h3 className="text-[12px] font-black text-slate-700 dark:text-slate-200">
+                                    <GitMerge size={14} className="text-amber-500 inline-block ml-1"/> {t('شروط شروع (فاکتورها)', 'Start Condition')}
                                 </h3>
-                                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">{t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{t('گردش کار فقط برای رکوردهایی که این شرط را داشته باشند اجرا می‌شود.', 'Applies to records matching this condition.')}</p>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
                                 <div className="lg:col-span-2">
-                                    <TextField label={t('نام فیلد (مثلا: loan_type)', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} />
+                                    <TextField label={t('نام فیلد دیتابیس', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} placeholder="e.g. amount" />
                                 </div>
                                 <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} options={operatorOptions} />
                                 <div className="lg:col-span-2">
-                                    <TextField label={t('مقدار', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} />
+                                    <TextField label={t('مقدار مورد نظر', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} placeholder="e.g. 50000" />
                                 </div>
                             </div>
                         </section>
@@ -373,31 +380,28 @@
             )}
 
             {activeTab === 'process' && (
-                <div className="flex-1 flex overflow-hidden animate-in fade-in bg-slate-50 dark:bg-slate-900/50">
+                <div className="flex-1 flex overflow-hidden animate-in fade-in">
                     {/* Palette Sidebar */}
-                    <div className={`w-20 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col items-center py-6 gap-5 shadow-[2px_0_10px_rgba(0,0,0,0.03)] z-20`}>
-                        <div className="text-[11px] font-black text-slate-400 dark:text-slate-500 mb-2">{t('ابزارها', 'Tools')}</div>
-                        
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-12 h-12 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
+                    <div className={`w-16 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col items-center py-4 gap-4 shadow-sm z-20`}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md text-emerald-500" title={t('گره شروع', 'Start')}>
                             {getNodePaletteIcon('START_EVENT')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-12 h-12 rounded-xl border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500" title={t('فعالیت', 'Task')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-10 h-10 rounded-lg border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md text-indigo-500" title={t('فعالیت', 'Task')}>
                             {getNodePaletteIcon('USER_TASK')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'APPROVAL_GATEWAY')} className="w-12 h-12 border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500 rotate-45" title={t('دروازه تصمیم (بله/خیر)', 'Decision Gateway')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'APPROVAL_GATEWAY')} className="w-10 h-10 border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md text-indigo-500 rotate-45" title={t('تصمیم بله/خیر', 'Decision')}>
                             {getNodePaletteIcon('APPROVAL_GATEWAY')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'EXCLUSIVE_GATEWAY')} className="w-12 h-12 border-2 border-amber-400 bg-amber-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-amber-500 rotate-45" title={t('دروازه شرطی (چندگانه)', 'Conditional Gateway')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'EXCLUSIVE_GATEWAY')} className="w-10 h-10 border-2 border-amber-400 bg-amber-50 flex items-center justify-center cursor-grab hover:shadow-md text-amber-500 rotate-45" title={t('شرط چندگانه', 'Conditional')}>
                             {getNodePaletteIcon('EXCLUSIVE_GATEWAY')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-12 h-12 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-rose-500 mt-2" title={t('گره پایان', 'End Event')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-10 h-10 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md text-rose-500" title={t('گره پایان', 'End')}>
                             {getNodePaletteIcon('END_EVENT')}
                         </div>
                     </div>
 
-                    {/* Canvas Area */}
                     <div 
-                        className="flex-1 relative overflow-hidden outline-none bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px] z-10"
+                        className="flex-1 relative overflow-hidden outline-none bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px]"
                         ref={canvasRef}
                         onDragOver={handleCanvasDragOver}
                         onDrop={handleCanvasDrop}
@@ -407,7 +411,6 @@
                         onClick={() => setSelectedElement(null)}
                         dir="ltr" 
                     >
-                        {/* SVG Layer for edges */}
                         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                             <defs>
                                 <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
@@ -422,217 +425,61 @@
                                 const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
                                 const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
                                 if (!sourceNode || !targetNode) return null;
-                                
                                 const sourceEdges = getNodeEdges(sourceNode);
                                 const targetEdges = getNodeEdges(targetNode);
-                                
-                                const startX = sourceEdges.right;
-                                const startY = sourceEdges.y;
-                                const endX = targetEdges.left;
-                                const endY = targetEdges.y;
-                                
                                 const isSelected = selectedElement?.id === flow.id;
-                                const d = getBezierPath(startX, startY, endX, endY);
-                                
+                                const d = getBezierPath(sourceEdges.right, sourceEdges.y, targetEdges.left, targetEdges.y);
                                 return (
                                     <g key={flow.id} className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}>
                                         <path d={d} stroke="transparent" strokeWidth="20" fill="none" />
-                                        <path 
-                                            d={d} 
-                                            stroke={isSelected ? '#6366f1' : '#94a3b8'} 
-                                            strokeWidth={isSelected ? "3" : "2"} 
-                                            fill="none" 
-                                            markerEnd={`url(#${isSelected ? 'arrowhead-selected' : 'arrowhead'})`}
-                                            className="transition-all"
-                                        />
+                                        <path d={d} stroke={isSelected ? '#6366f1' : '#94a3b8'} strokeWidth={isSelected ? "3" : "2"} fill="none" markerEnd={`url(#${isSelected ? 'arrowhead-selected' : 'arrowhead'})`} />
                                     </g>
                                 );
                             })}
                             
                             {connectingStart && (
-                                <path 
-                                    d={getBezierPath(getNodeEdges(editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)).right, getNodeEdges(editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)).y, mousePos.x, mousePos.y)} 
-                                    stroke="#94a3b8" 
-                                    strokeWidth="2" 
-                                    strokeDasharray="5,5" 
-                                    fill="none" 
-                                />
+                                <path d={getBezierPath(getNodeEdges(editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)).right, getNodeEdges(editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)).y, mousePos.x, mousePos.y)} stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" fill="none" />
                             )}
                         </svg>
 
-                        {/* Labels for Flows */}
-                        {editingDef.bpmn_data.flows.map(flow => {
-                            const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
-                            const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
-                            if (!sourceNode || !targetNode || !flow.name) return null;
-                            
-                            const sourceEdges = getNodeEdges(sourceNode);
-                            const targetEdges = getNodeEdges(targetNode);
-                            
-                            const midX = (sourceEdges.right + targetEdges.left) / 2;
-                            const midY = (sourceEdges.y + targetEdges.y) / 2;
-                            const isSelected = selectedElement?.id === flow.id;
-
-                            return (
-                                <div 
-                                    key={`label_${flow.id}`}
-                                    className={`absolute px-2 py-0.5 rounded text-[10px] font-black z-10 pointer-events-auto cursor-pointer whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 transition-colors border ${isSelected ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-200 shadow-sm hover:border-indigo-200'}`}
-                                    style={{ left: midX, top: midY }}
-                                    onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}
-                                    dir={isRtl ? 'rtl' : 'ltr'}
-                                >
-                                    {flow.name}
-                                </div>
-                            );
-                        })}
-
-                        {/* Nodes Layer */}
                         {editingDef.bpmn_data.nodes.map(node => {
                             const isSelected = selectedElement?.id === node.id;
-                            const styleClass = getNodeStyle(node.type);
-                            
                             return (
-                                <div 
-                                    key={node.id}
-                                    className={`absolute flex items-center justify-center flex-col z-20 transition-shadow ${isSelected ? 'ring-4 ring-indigo-500/30 rounded-xl' : 'hover:ring-2 ring-slate-300 rounded-xl'}`}
-                                    style={{ left: node.position.x, top: node.position.y, transform: 'translate(-50%, -50%)' }}
-                                    onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'node', id: node.id }); }}
-                                    onMouseDown={(e) => {
-                                        if (e.target.closest('.connector') || e.target.closest('.input-anchor')) return;
-                                        e.stopPropagation();
-                                        setDraggingNode(node.id);
-                                        setSelectedElement({ type: 'node', id: node.id });
-                                    }}
-                                >
-                                    <div className={`${styleClass} flex items-center justify-center relative cursor-move bg-white shadow-md`}>
-                                        {node.type.includes('GATEWAY') ? (
-                                            <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                                                {node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : <Diamond size={24} />}
-                                            </div>
-                                        ) : (
-                                            <div className="px-3 py-2 text-center text-[11px] font-black leading-tight break-words max-w-full overflow-hidden select-none" dir={isRtl ? 'rtl' : 'ltr'}>
-                                                {node.name}
-                                            </div>
-                                        )}
-                                        
-                                        {/* Output Connection Handle */}
-                                        {node.type !== 'END_EVENT' && (
-                                            <div 
-                                                className="connector absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-indigo-500 rounded-full cursor-crosshair opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm"
-                                                onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }}
-                                                style={node.type.includes('GATEWAY') ? { right: '-12px', top: '-12px', transform: 'none' } : {}}
-                                            >
-                                                <Plus size={12} className="text-indigo-500"/>
-                                            </div>
-                                        )}
-
-                                        {/* Input Anchor */}
-                                        {node.type !== 'START_EVENT' && (
-                                            <div 
-                                                className={`input-anchor absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-100 border-2 border-emerald-500 rounded-full transition-opacity z-30 ${connectingStart && connectingStart !== node.id ? 'opacity-100 animate-pulse' : 'opacity-0'}`}
-                                                onMouseUp={(e) => {
-                                                    e.stopPropagation();
-                                                    if (connectingStart && connectingStart !== node.id) {
-                                                        addFlow(connectingStart, node.id);
-                                                        setConnectingStart(null);
-                                                    }
-                                                }}
-                                                style={node.type.includes('GATEWAY') ? { left: 'auto', bottom: '-10px', right: 'auto', transform: 'none' } : {}}
-                                            />
-                                        )}
+                                <div key={node.id} className={`absolute z-20 flex items-center justify-center flex-col transition-shadow ${isSelected ? 'ring-4 ring-indigo-500/30 rounded-xl' : 'hover:ring-2 ring-slate-300 rounded-xl'}`} style={{ left: node.position.x, top: node.position.y, transform: 'translate(-50%, -50%)' }} onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'node', id: node.id }); }} onMouseDown={(e) => { if (e.target.closest('.connector') || e.target.closest('.input-anchor')) return; e.stopPropagation(); setDraggingNode(node.id); setSelectedElement({ type: 'node', id: node.id }); }}>
+                                    <div className={`${getNodeStyle(node.type)} flex items-center justify-center relative cursor-move bg-white shadow-md`}>
+                                        {node.type.includes('GATEWAY') ? <div className="absolute inset-0 flex items-center justify-center -rotate-45">{node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : <Diamond size={24} />}</div> : <div className="px-3 text-center text-[10px] font-black leading-tight select-none" dir={isRtl ? 'rtl' : 'ltr'}>{node.name}</div>}
+                                        {node.type !== 'END_EVENT' && <div className="connector absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-indigo-500 rounded-full cursor-crosshair opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm" onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }} style={node.type.includes('GATEWAY') ? { right: '-12px', top: '-12px', transform: 'none' } : {}}><Plus size={12} className="text-indigo-500"/></div>}
+                                        {node.type !== 'START_EVENT' && <div className={`input-anchor absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-100 border-2 border-emerald-500 rounded-full transition-opacity z-30 ${connectingStart && connectingStart !== node.id ? 'opacity-100 animate-pulse' : 'opacity-0'}`} onMouseUp={(e) => { e.stopPropagation(); if (connectingStart && connectingStart !== node.id) { addFlow(connectingStart, node.id); setConnectingStart(null); } }} style={node.type.includes('GATEWAY') ? { left: 'auto', bottom: '-10px', right: 'auto', transform: 'none' } : {}} />}
                                     </div>
-                                    
-                                    {node.type.includes('GATEWAY') && (
-                                        <div className="absolute top-full mt-3 text-[11px] font-black text-slate-700 bg-white/90 px-2 py-1 rounded shadow-sm border border-slate-200 whitespace-nowrap" dir={isRtl ? 'rtl' : 'ltr'}>
-                                            {node.name}
-                                        </div>
-                                    )}
+                                    {node.type.includes('GATEWAY') && <div className="absolute top-full mt-2 text-[10px] font-black text-slate-700 bg-white/90 px-2 py-0.5 rounded shadow-sm border border-slate-200 whitespace-nowrap" dir={isRtl ? 'rtl' : 'ltr'}>{node.name}</div>}
                                 </div>
                             );
                         })}
                     </div>
 
-                    {/* Mini Settings Panel overlay */}
                     {selectedElement && (
-                        <div className={`absolute top-4 ${isRtl ? 'left-4' : 'right-4'} w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-30 flex flex-col overflow-hidden animate-in slide-in-from-right-4`}>
-                            <div className="bg-indigo-50/50 dark:bg-indigo-900/30 p-3 flex items-center justify-between border-b border-indigo-100 dark:border-indigo-800/50">
-                                <span className="text-[12px] font-black text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
-                                    {selectedElement.type === 'node' ? <Layers size={16} /> : <GitMerge size={16} />}
-                                    {selectedElement.type === 'node' ? t('تنظیمات گره (Node)', 'Node Settings') : t('تنظیمات مسیر (Flow)', 'Flow Settings')}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                    <button onClick={deleteSelected} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
-                                    <button onClick={() => setSelectedElement(null)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"><X size={16}/></button>
-                                </div>
+                        <div className={`absolute top-4 ${isRtl ? 'left-4' : 'right-4'} w-72 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-30 flex flex-col overflow-hidden animate-in slide-in-from-right-4`}>
+                            <div className="bg-slate-50 dark:bg-slate-900/50 p-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-700">
+                                <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 flex items-center gap-1.5"><Layers size={14} className="text-indigo-500"/> {selectedElement.type === 'node' ? t('تنظیمات گره', 'Node') : t('تنظیمات مسیر', 'Flow')}</span>
+                                <div className="flex items-center gap-1"><button onClick={deleteSelected} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors"><Trash2 size={14}/></button><button onClick={() => setSelectedElement(null)} className="p-1.5 text-slate-400 hover:text-slate-700 transition-colors"><X size={14}/></button></div>
                             </div>
-                            <div className="p-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            <div className="p-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 {selectedElement.type === 'node' && selectedNode ? (
-                                    <div className="flex flex-col gap-4">
-                                        <TextField label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} />
-                                        
-                                        {selectedNode.type === 'USER_TASK' && (
-                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
-                                                <SelectField label={t('نوع فعالیت', 'Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
-                                                    {value: 'APPROVAL', label: t('بررسی و تایید/رد', 'Review & Approve/Reject')},
-                                                    {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
-                                                ]} isRtl={isRtl} />
-                                                
-                                                <TextField label={t('نقش‌های مجاز (کاما جدا)', 'Assignee Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: مدیر مالی, کارشناس', 'e.g. Finance Manager')} />
-                                                
-                                                <TextField label={t('فیلدهای اجباری برای تغییر', 'Required Fields')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount, description', 'e.g. amount, description')} />
-                                            </div>
-                                        )}
-
-                                        {selectedNode.type === 'APPROVAL_GATEWAY' && (
-                                            <div className="text-[11px] font-bold text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 text-justify leading-relaxed">
-                                                {t('این دروازه مختص تصمیم‌گیری‌های بله/خیر است. دو مسیر خروجی از این گره بکشید. سیستم به صورت خودکار یکی را "تایید" و دیگری را "رد" نام‌گذاری می‌کند.', 'This gateway is for Yes/No decisions. Draw two outgoing flows; they will be automatically named Approve/Reject.')}
-                                            </div>
-                                        )}
-                                        
-                                        {selectedNode.type === 'EXCLUSIVE_GATEWAY' && (
-                                            <div className="text-[11px] font-bold text-slate-500 bg-slate-50 p-3 rounded-lg border border-slate-100 text-justify leading-relaxed">
-                                                {t('این دروازه برای انشعاب‌های شرطی چندگانه است. روی خطوط خروجی کلیک کنید تا شرط هر کدام را تعیین نمایید.', 'This gateway branches paths based on conditions. Click on outgoing flows to define their conditions.')}
-                                            </div>
-                                        )}
-                                    </div>
+                                    <>
+                                        <TextField label={t('عنوان نمایشی', 'Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} />
+                                        {selectedNode.type === 'USER_TASK' && <div className="flex flex-col gap-4 border-t pt-4 mt-1"><SelectField label={t('نوع فعالیت', 'Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[{value: 'APPROVAL', label: t('تایید/رد', 'Approval')}, {value: 'DATA_ENTRY', label: t('ورود اطلاعات', 'Data Entry')}]} isRtl={isRtl} /><TextField label={t('نقش‌های مجاز', 'Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder="e.g. Manager" /><TextField label={t('فیلدهای اجباری', 'Required')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder="e.g. amount" /></div>}
+                                    </>
                                 ) : selectedFlow ? (
-                                    <div className="flex flex-col gap-4">
-                                        <TextField label={t('عنوان دکمه / مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} />
-                                        
-                                        {(() => {
-                                            const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef);
-                                            if (sourceNode?.type === 'EXCLUSIVE_GATEWAY') {
-                                                return (
-                                                    <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
-                                                        <TextField label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
-                                                        <span className="text-[10px] text-slate-400 font-bold">{t('اگر شرط برقرار باشد، فرآیند این مسیر را طی می‌کند.', 'If true, process takes this path.')}</span>
-                                                    </div>
-                                                );
-                                            }
-                                            return null;
-                                        })()}
-                                    </div>
+                                    <>
+                                        <TextField label={t('عنوان مسیر', 'Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} />
+                                        {editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef)?.type === 'EXCLUSIVE_GATEWAY' && <div className="flex flex-col gap-2 border-t pt-4 mt-1"><TextField label={t('شرط (IF)', 'Condition')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder="e.g. amount > 5000" dir="ltr" /></div>}
+                                    </>
                                 ) : null}
                             </div>
                         </div>
                     )}
                 </div>
             )}
-        </div>
-
-        {/* Sticky Action Footer */}
-        <div className="px-6 py-4 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shrink-0 flex items-center justify-between z-30 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-            <span className="text-[11px] font-bold text-slate-500">
-                {activeTab === 'base' ? t('در حال ویرایش تنظیمات پایه', 'Editing Base Settings') : t('در حال طراحی بوم فرآیند', 'Designing Process Canvas')}
-            </span>
-            <div className="flex items-center gap-3">
-                <Button variant="outline" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)}>
-                    {t('انصراف و بازگشت', 'Cancel & Back')}
-                </Button>
-                <Button variant="primary" icon={Save} onClick={handleSaveDefinition} disabled={isSaving} className="px-8">
-                    {isSaving ? t('در حال ذخیره...', 'Saving...') : t('ذخیره تغییرات', 'Save Changes')}
-                </Button>
-            </div>
         </div>
 
         <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />
