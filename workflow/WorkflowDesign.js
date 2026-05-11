@@ -10,7 +10,7 @@
     PlayCircle = FallbackIcon, StopCircle = FallbackIcon, CheckSquare = FallbackIcon, Diamond = FallbackIcon,
     ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Database = FallbackIcon, Settings2 = FallbackIcon,
     Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon,
-    Info = FallbackIcon, HelpCircle = FallbackIcon, Check = FallbackIcon, XCircle = FallbackIcon, Split = FallbackIcon
+    Info = FallbackIcon, Split = FallbackIcon
   } = LucideIcons;
 
   const WorkflowDesign = ({ definition, systemEntities = [], onBack, language = 'fa' }) => {
@@ -168,6 +168,18 @@
         { id: 'base', label: t('تنظیمات پایه و شروط', 'Base Settings & Rules'), icon: Settings2 }
     ];
 
+    const updateElement = (elementType, id, field, value) => {
+        setEditingDef(prev => {
+            const newData = { ...prev.bpmn_data };
+            if (elementType === 'node') {
+                newData.nodes = newData.nodes.map(n => n.id === id ? { ...n, [field]: value } : n);
+            } else if (elementType === 'flow') {
+                newData.flows = newData.flows.map(f => f.id === id ? { ...f, [field]: value } : f);
+            }
+            return { ...prev, bpmn_data: newData };
+        });
+    };
+
     const addNodeToCanvas = (type, x, y) => {
         let name = '';
         if (type === 'USER_TASK') name = t('فعالیت جدید', 'New Task');
@@ -220,28 +232,6 @@
         setSelectedElement(null);
     };
 
-    const updateSelectedNodeName = (name) => {
-        if (!selectedElement || selectedElement.type !== 'node') return;
-        setEditingDef(prev => ({
-            ...prev,
-            bpmn_data: {
-                ...prev.bpmn_data,
-                nodes: prev.bpmn_data.nodes.map(n => n.id === selectedElement.id ? { ...n, name } : n)
-            }
-        }));
-    };
-
-    const updateSelectedFlowField = (field, value) => {
-        if (!selectedElement || selectedElement.type !== 'flow') return;
-        setEditingDef(prev => ({
-            ...prev,
-            bpmn_data: {
-                ...prev.bpmn_data,
-                flows: prev.bpmn_data.flows.map(f => f.id === selectedElement.id ? { ...f, [field]: value } : f)
-            }
-        }));
-    };
-
     const handleCanvasDragOver = (e) => e.preventDefault();
 
     const handleCanvasDrop = (e) => {
@@ -278,13 +268,12 @@
         setConnectingStart(null);
     };
 
-    // Calculate node bounding box for drawing connection lines properly
     const getNodeEdges = (node) => {
         if (!node) return { right: 0, left: 0, y: 0 };
         const { x, y } = node.position;
         if (node.type.includes('EVENT')) return { right: x + 24, left: x - 24, top: y - 24, bottom: y + 24, x, y };
         if (node.type.includes('GATEWAY')) return { right: x + 28, left: x - 28, top: y - 28, bottom: y + 28, x, y };
-        return { right: x + 64, left: x - 64, top: y - 32, bottom: y + 32, x, y }; // Task
+        return { right: x + 64, left: x - 64, top: y - 32, bottom: y + 32, x, y };
     };
 
     const getBezierPath = (startX, startY, endX, endY) => {
@@ -419,7 +408,7 @@
                                 onMouseUp={handleCanvasMouseUp}
                                 onMouseLeave={handleCanvasMouseUp}
                                 onClick={() => setSelectedElement(null)}
-                                dir="ltr" /* Force LTR for precise mouse math */
+                                dir="ltr" 
                             >
                                 {/* SVG Layer for edges */}
                                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
@@ -440,7 +429,6 @@
                                         const sourceEdges = getNodeEdges(sourceNode);
                                         const targetEdges = getNodeEdges(targetNode);
                                         
-                                        // Simple routing: Right edge to Left edge
                                         const startX = sourceEdges.right;
                                         const startY = sourceEdges.y;
                                         const endX = targetEdges.left;
@@ -475,7 +463,7 @@
                                     )}
                                 </svg>
 
-                                {/* Labels for Flows (rendered as HTML elements for better styling) */}
+                                {/* Labels for Flows */}
                                 {editingDef.bpmn_data.flows.map(flow => {
                                     const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
                                     const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
@@ -530,7 +518,7 @@
                                                     </div>
                                                 )}
                                                 
-                                                {/* Output Connection Handle (Right) */}
+                                                {/* Output Connection Handle */}
                                                 {node.type !== 'END_EVENT' && (
                                                     <div 
                                                         className="connector absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-indigo-500 rounded-full cursor-crosshair opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm"
@@ -541,7 +529,7 @@
                                                     </div>
                                                 )}
 
-                                                {/* Input Anchor (Left) - for visual feedback during drop */}
+                                                {/* Input Anchor */}
                                                 {node.type !== 'START_EVENT' && (
                                                     <div 
                                                         className={`input-anchor absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-100 border-2 border-emerald-500 rounded-full transition-opacity z-30 ${connectingStart && connectingStart !== node.id ? 'opacity-100 animate-pulse' : 'opacity-0'}`}
@@ -583,7 +571,7 @@
                                     <div className="p-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                         {selectedElement.type === 'node' && selectedNode ? (
                                             <>
-                                                <TextField label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateSelectedNodeName(e.target.value)} isRtl={isRtl} size="sm" />
+                                                <TextField label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} size="sm" />
                                                 
                                                 {selectedNode.type === 'USER_TASK' && (
                                                     <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
@@ -612,14 +600,14 @@
                                             </>
                                         ) : selectedFlow ? (
                                             <>
-                                                <TextField label={t('عنوان دکمه / مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateSelectedFlowField('name', e.target.value)} isRtl={isRtl} size="sm" />
+                                                <TextField label={t('عنوان دکمه / مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} size="sm" />
                                                 
                                                 {(() => {
                                                     const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef);
                                                     if (sourceNode?.type === 'EXCLUSIVE_GATEWAY') {
                                                         return (
                                                             <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
-                                                                <TextField label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateSelectedFlowField('condition', e.target.value)} isRtl={isRtl} size="sm" placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
+                                                                <TextField label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} size="sm" placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
                                                                 <span className="text-[10px] text-slate-400 font-bold">{t('اگر شرط برقرار باشد، فرآیند این مسیر را طی می‌کند.', 'If true, process takes this path.')}</span>
                                                             </div>
                                                         );
