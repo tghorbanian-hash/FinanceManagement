@@ -23,7 +23,7 @@
     const { DataGrid = FallbackComponent, AdvancedFilter = FallbackComponent } = Grid;
     
     const Feedback = window.DSFeedback || window.DesignSystem || {};
-    const { Modal = FallbackComponent, Toast = FallbackComponent } = Feedback;
+    const { Modal = FallbackComponent, Toast = FallbackComponent, LogTimeline = FallbackComponent } = Feedback;
 
     const formatGlobalDate = Core.formatGlobalDate || ((v) => v);
     const useCalendarMode = Core.useCalendarMode || (() => 'jalali');
@@ -49,7 +49,6 @@
 
     const [rates, setRates] = useState([]);
     
-    // وضعیت‌های اختصاصی برای ذخیره شدن در دیتابیس
     const [currencyFilters, setCurrencyFilters] = useState({});
     const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     
@@ -72,7 +71,10 @@
     const [currenciesGridState, setCurrenciesGridState] = useState(null);
     const [ratesGridState, setRatesGridState] = useState(null);
 
-    // همگام‌سازی تمامی وضعیت‌های فرم در دیتابیس
+    const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+    const [recordLogs, setRecordLogs] = useState([]);
+    const [isLogsLoading, setIsLogsLoading] = useState(false);
+
     const viewConfig = {
       pageId: 'currency_settings_main',
       currentState: () => ({ 
@@ -100,11 +102,49 @@
     };
 
     const supabase = window.supabase;
+    const currentUser = window.NavigationSystem?.currentUser?.name || 'مدیر سیستم';
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
     }, []);
+
+    const logAction = async (entityType, recordId, action, details = '') => {
+      try {
+        if (!supabase) return;
+        await supabase.from('fm_record_logs').insert([{
+          entity_type: entityType,
+          record_id: String(recordId),
+          action: action,
+          user_name: currentUser,
+          details: details
+        }]);
+      } catch (err) {
+        console.error('Failed to log action:', err);
+      }
+    };
+
+    const openLogModal = async (entityType, recordId) => {
+      setIsLogModalOpen(true);
+      setIsLogsLoading(true);
+      try {
+        if (!supabase) throw new Error("Supabase is not initialized");
+        const { data, error } = await supabase
+          .from('fm_record_logs')
+          .select('*')
+          .eq('entity_type', entityType)
+          .eq('record_id', String(recordId))
+          .order('timestamp', { ascending: false });
+          
+        if (error) throw error;
+        setRecordLogs(data || []);
+      } catch (err) {
+        console.error("Fetch logs error:", err);
+        showToast(t('خطا در دریافت تاریخچه تغییرات', 'Error fetching logs'), 'error');
+      } finally {
+        setIsLogsLoading(false);
+      }
+    };
 
     const isWithinOneWeek = useCallback((dateString) => {
       if (!dateString) return false;
@@ -152,6 +192,8 @@
           showToast(t('لطفاً فیلدهای اجباری را پر کنید', 'Please fill required fields'), 'error');
           return;
         }
+        
+        const nowStr = new Date().toISOString();
         const payload = {
           code: selectedCurrency.code.toUpperCase(),
           title: selectedCurrency.title,
@@ -159,16 +201,23 @@
           is_active: selectedCurrency.is_active ?? true,
           fetch_type: selectedCurrency.fetch_type || 'manual',
           decimal_places: parseInt(selectedCurrency.decimal_places) || 0,
-          targets: selectedCurrency.targets || []
+          targets: selectedCurrency.targets || [],
+          updated_by: currentUser,
+          updated_at: nowStr
         };
 
         if (selectedCurrency.id) {
           const { error } = await supabase.from('fm_currencies').update(payload).eq('id', selectedCurrency.id);
           if (error) throw error;
+          await logAction('fm_currencies', selectedCurrency.id, 'ویرایش', `بروزرسانی مشخصات ارز: ${payload.title}`);
           showToast(t('ارز با موفقیت بروزرسانی شد', 'Currency updated successfully'));
         } else {
-          const { error } = await supabase.from('fm_currencies').insert([payload]);
+          payload.created_by = currentUser;
+          const { data, error } = await supabase.from('fm_currencies').insert([payload]).select();
           if (error) throw error;
+          if (data && data.length > 0) {
+             await logAction('fm_currencies', data[0].id, 'ایجاد', `تعریف ارز جدید: ${payload.title} (${payload.code})`);
+          }
           showToast(t('ارز جدید با موفقیت تعریف شد', 'New currency added successfully'));
         }
         setIsCurrencyModalOpen(false);
@@ -182,14 +231,21 @@
     const handleBulkAction = async (actionType, selectedIds) => {
       if (!selectedIds || !selectedIds.length) return;
       try {
-        let updatePayload = {};
-        if (actionType === 'activate') updatePayload = { is_active: true };
-        if (actionType === 'deactivate') updatePayload = { is_active: false };
-        if (actionType === 'setAuto') updatePayload = { fetch_type: 'auto' };
-        if (actionType === 'setManual') updatePayload = { fetch_type: 'manual' };
+        const nowStr = new Date().toISOString();
+        let updatePayload = { updated_by: currentUser, updated_at: nowStr };
+        let actionDesc = '';
+
+        if (actionType === 'activate') { updatePayload.is_active = true; actionDesc = 'فعال‌سازی ارز'; }
+        if (actionType === 'deactivate') { updatePayload.is_active = false; actionDesc = 'غیرفعال‌سازی ارز'; }
+        if (actionType === 'setAuto') { updatePayload.fetch_type = 'auto'; actionDesc = 'تغییر به دریافت اتوماتیک'; }
+        if (actionType === 'setManual') { updatePayload.fetch_type = 'manual'; actionDesc = 'تغییر به دریافت دستی'; }
 
         const { error } = await supabase.from('fm_currencies').update(updatePayload).in('id', selectedIds);
         if (error) throw error;
+        
+        for (const id of selectedIds) {
+           await logAction('fm_currencies', id, 'ویرایش', `عملیات گروهی: ${actionDesc}`);
+        }
         
         showToast(t('عملیات گروهی با موفقیت انجام شد', 'Bulk action successful'));
         fetchCurrencies();
@@ -220,14 +276,24 @@
                  rate: parseFloat((Math.random() * 50000 + 10000).toFixed(2)),
                  rate_date: dateStr,
                  created_at: isoString,
-                 source: 'XE'
+                 source: 'XE',
+                 created_by: 'System XE API',
+                 updated_by: 'System XE API',
+                 updated_at: isoString
               });
            });
         });
 
         if (newRates.length > 0) {
-           const { error } = await supabase.from('fm_currency_rates').insert(newRates);
+           const { data, error } = await supabase.from('fm_currency_rates').insert(newRates).select();
            if (error) throw error;
+           
+           if (data) {
+             for (const rate of data) {
+               await logAction('fm_currency_rates', rate.id, 'ایجاد', `دریافت اتوماتیک نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`);
+             }
+           }
+           
            showToast(t('نرخ‌های روزانه با موفقیت از سرور XE دریافت شد.', 'Rates fetched successfully from XE.'));
            fetchRates();
         }
@@ -277,11 +343,20 @@
            rate: parseFloat(String(r.rate).replace(/,/g, '')),
            rate_date: formattedDate,
            created_at: dateTimeStr,
-           source: 'Manual'
+           source: 'Manual',
+           created_by: currentUser,
+           updated_by: currentUser,
+           updated_at: dateTimeStr
         }));
 
-        const { error } = await supabase.from('fm_currency_rates').insert(payloads);
+        const { data, error } = await supabase.from('fm_currency_rates').insert(payloads).select();
         if (error) throw error;
+
+        if (data) {
+           for (const rate of data) {
+              await logAction('fm_currency_rates', rate.id, 'ایجاد', `ثبت دستی نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`);
+           }
+        }
 
         showToast(t('نرخ‌های دستی با موفقیت ثبت شدند.', 'Manual rates saved successfully.'));
         setIsManualModalOpen(false);
@@ -300,8 +375,11 @@
         }
         
         const rateVal = parseFloat(String(editingRate.rate).replace(/,/g, ''));
-        const { error } = await supabase.from('fm_currency_rates').update({ rate: rateVal }).eq('id', editingRate.id);
+        const nowStr = new Date().toISOString();
+        const { error } = await supabase.from('fm_currency_rates').update({ rate: rateVal, updated_by: currentUser, updated_at: nowStr }).eq('id', editingRate.id);
         if (error) throw error;
+        
+        await logAction('fm_currency_rates', editingRate.id, 'ویرایش', `ویرایش نرخ به مبلغ جدید: ${rateVal}`);
         
         showToast(t('نرخ با موفقیت ویرایش شد.', 'Rate edited successfully.'));
         setIsEditRateModalOpen(false);
@@ -318,18 +396,26 @@
           if (deleteConfirm.type === 'single') {
             const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
             if (error) throw error;
+            await logAction('fm_currencies', deleteConfirm.data.id, 'حذف', `حذف ارز با کد: ${deleteConfirm.data.code}`);
           } else if (deleteConfirm.type === 'bulk') {
             const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
             if (error) throw error;
+            for (const id of deleteConfirm.data) {
+                await logAction('fm_currencies', id, 'حذف', `حذف گروهی ارز`);
+            }
           }
           fetchCurrencies();
         } else if (deleteConfirm.source === 'rate') {
           if (deleteConfirm.type === 'single') {
             const { error } = await supabase.from('fm_currency_rates').delete().eq('id', deleteConfirm.data.id);
             if (error) throw error;
+            await logAction('fm_currency_rates', deleteConfirm.data.id, 'حذف', `حذف تاریخچه نرخ: ${deleteConfirm.data.base_currency} -> ${deleteConfirm.data.target_currency}`);
           } else if (deleteConfirm.type === 'bulk') {
             const { error } = await supabase.from('fm_currency_rates').delete().in('id', deleteConfirm.data);
             if (error) throw error;
+            for (const id of deleteConfirm.data) {
+                await logAction('fm_currency_rates', id, 'حذف', `حذف گروهی تاریخچه نرخ‌ها`);
+            }
           }
           fetchRates();
         }
@@ -476,7 +562,6 @@
       },
     ];
 
-    // مکانیزم جدید فیلترها که با State هماهنگ است
     const filteredCurrencies = useMemo(() => {
       let result = [...currencies];
       if (currencyFilters.code) {
@@ -533,6 +618,7 @@
                   gridState={currenciesGridState}
                   onGridStateChange={setCurrenciesGridState}
                   actions={[
+                    { icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
                     { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
                     { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
                   ]}
@@ -571,6 +657,12 @@
                    onGridStateChange={setRatesGridState}
                    bulkActions={historyBulkActions}
                    actions={[
+                     { 
+                       icon: History, 
+                       tooltip: t('مشاهده لاگ سیستم', 'View System Log'), 
+                       onClick: (row) => openLogModal('fm_currency_rates', row.id), 
+                       className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' 
+                     },
                      { 
                        icon: Edit, 
                        tooltip: t('ویرایش سابقه', 'Edit Record'), 
@@ -800,6 +892,10 @@
               <Button variant="primary" size="sm" onClick={executeDelete} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500 shadow-lg shadow-red-100 dark:shadow-none">{t('تایید حذف', 'Delete Now')}</Button>
             </div>
           </div>
+        </Modal>
+
+        <Modal isOpen={isLogModalOpen} onClose={() => setIsLogModalOpen(false)} title={t('لاگ‌های سیستمی رکورد', 'System Logs')} language={language} width="max-w-xl">
+           <LogTimeline logs={recordLogs} isLoading={isLogsLoading} language={language} />
         </Modal>
 
         <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />

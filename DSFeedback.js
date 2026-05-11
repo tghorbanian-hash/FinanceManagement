@@ -3,7 +3,6 @@
   const React = window.React;
   const { useState, useEffect } = React;
   
-  // سیستم ضدگلوله برای جلوگیری از کرش در صورت لود نشدن آیکون‌ها
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
@@ -13,7 +12,13 @@
     CheckCircle2 = FallbackIcon, 
     AlertCircle = FallbackIcon, 
     Info = FallbackIcon, 
-    AlertTriangle = FallbackIcon 
+    AlertTriangle = FallbackIcon,
+    History = FallbackIcon,
+    Plus = FallbackIcon,
+    Edit = FallbackIcon,
+    Trash2 = FallbackIcon,
+    Clock = FallbackIcon,
+    Calendar = FallbackIcon
   } = LucideIcons;
   
   const { Button } = window.DSCore || {};
@@ -225,5 +230,79 @@
     );
   };
 
-  window.DSFeedback = { Modal, Tooltip, Alert, Toast, Banner, Dialog };
+  const LogTimeline = ({ logs = [], isLoading = false, language = 'fa' }) => {
+    const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
+    const globalMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
+    const formatDate = window.DSCore?.formatGlobalDate || ((v) => v);
+
+    if (isLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 gap-3 min-h-[200px]">
+          <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">{t('در حال دریافت لاگ‌ها...', 'Loading logs...')}</span>
+        </div>
+      );
+    }
+
+    if (!logs || logs.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center p-12 gap-3 text-slate-400 dark:text-slate-500 min-h-[200px]">
+          <History size={40} className="opacity-40" />
+          <span className="text-[12px] font-bold">{t('هیچ لاگی برای این رکورد ثبت نشده است.', 'No logs found for this record.')}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative px-4 py-6 font-sans min-h-[200px]" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className={`absolute top-6 bottom-6 w-px bg-slate-200 dark:bg-slate-700 ${isRtl ? 'right-[31px]' : 'left-[31px]'}`}></div>
+        <div className="flex flex-col gap-6">
+          {logs.map((log, index) => {
+            const isCreate = log.action === 'CREATE' || log.action === 'ایجاد';
+            const isDelete = log.action === 'DELETE' || log.action === 'حذف';
+            const isUpdate = log.action === 'UPDATE' || log.action === 'ویرایش';
+            
+            let ActionIcon = Info;
+            let iconColor = 'text-blue-500 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800';
+            
+            if (isCreate) { ActionIcon = Plus; iconColor = 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'; }
+            if (isUpdate) { ActionIcon = Edit; iconColor = 'text-amber-500 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800'; }
+            if (isDelete) { ActionIcon = Trash2; iconColor = 'text-rose-500 bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800'; }
+
+            const d = new Date(log.timestamp);
+            const dateStr = formatDate ? formatDate(log.timestamp, globalMode) : d.toISOString().split('T')[0];
+            const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+            return (
+              <div key={log.id || index} className="relative flex items-start gap-4 group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 relative z-10 ${iconColor} shadow-sm`}>
+                  <ActionIcon size={14} strokeWidth={2.5} />
+                </div>
+                <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 shadow-sm group-hover:shadow-md transition-all">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100">{log.action}</span>
+                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{log.user_name}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-[10.5px] font-mono font-medium" dir="ltr">
+                      <div className="flex items-center gap-1.5"><Calendar size={12} /> <span>{dateStr}</span></div>
+                      <div className="flex items-center gap-1.5"><Clock size={12} /> <span>{timeStr}</span></div>
+                    </div>
+                  </div>
+                  {log.details && (
+                    <div className="text-[11.5px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 leading-relaxed font-medium">
+                      {log.details}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  window.DSFeedback = { Modal, Tooltip, Alert, Toast, Banner, Dialog, LogTimeline };
 })();
