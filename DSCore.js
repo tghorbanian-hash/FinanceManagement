@@ -134,10 +134,10 @@
     const [collapsed, setCollapsed] = useState(defaultCollapsed);
     
     return (
-      <div className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden flex flex-col transition-all ${className}`}>
+      <div className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm flex flex-col transition-all ${className}`}>
         {(title || action) && (
           <div 
-            className={`h-10 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between px-3 bg-slate-50/50 dark:bg-slate-800/80 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50' : ''} ${headerClassName}`}
+            className={`h-10 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between px-3 bg-slate-50/50 dark:bg-slate-800/80 shrink-0 transition-colors ${isCollapsible ? 'cursor-pointer select-none hover:bg-slate-100/50 dark:hover:bg-slate-700/50' : ''} ${collapsed ? 'rounded-xl border-b-0' : 'rounded-t-xl'} ${headerClassName}`}
             onClick={() => isCollapsible && setCollapsed(!collapsed)}
           >
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -152,7 +152,7 @@
           </div>
         )}
         {!collapsed && (
-          <div className={`flex flex-col flex-1 min-h-0 ${noPadding ? '' : 'p-3'}`}>
+          <div className={`flex flex-col flex-1 min-h-0 rounded-b-xl ${noPadding ? '' : 'p-3'}`}>
             {children}
           </div>
         )}
@@ -383,7 +383,7 @@
           
           <div className="flex items-center gap-2 shrink-0">
             {viewConfig && (
-              <div className="relative" ref={dropdownRef}>
+              <div className={`relative ${isDropdownOpen ? 'z-[9999]' : 'z-10'}`} ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className={`flex items-center gap-2 px-3 h-8 rounded-lg border text-[11px] font-bold transition-all ${activeView ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
@@ -394,7 +394,7 @@
                 </button>
 
                 {isDropdownOpen && (
-                  <div className={`absolute top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl py-1.5 z-50 animate-in zoom-in-95 duration-100 ${isRtl ? 'left-0' : 'right-0'}`}>
+                  <div className={`absolute top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl py-1.5 z-[9999] animate-in zoom-in-95 duration-100 ${isRtl ? 'left-0' : 'right-0'}`}>
                     <button onClick={() => { 
                         setIsSaveModalOpen(true); 
                         setIsDropdownOpen(false); 
@@ -596,10 +596,10 @@
     }, []);
 
     return (
-      <div className="relative inline-block text-start" ref={ref} dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className={`relative inline-block text-start ${open ? 'z-[9999]' : 'z-10'}`} ref={ref} dir={isRtl ? 'rtl' : 'ltr'}>
         <div onClick={() => setOpen(!open)} className="cursor-pointer">{trigger}</div>
         {open && (
-          <div className={`absolute z-[150] mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl p-1 animate-in zoom-in-95 duration-150 ${isRtl ? 'left-0' : 'right-0'}`}>
+          <div className={`absolute mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl p-1 animate-in zoom-in-95 duration-150 z-[9999] ${isRtl ? 'left-0' : 'right-0'}`}>
             {items.map((item, i) => (
               item.divider ? <div key={i} className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-1"></div> :
               <button 

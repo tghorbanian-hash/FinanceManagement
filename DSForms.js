@@ -82,7 +82,7 @@
     const inputHeights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
 
     return (
-      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${wrapperClassName}`}>
+      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label htmlFor={selectId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div 
           className={`relative w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
@@ -106,7 +106,7 @@
         </div>
         
         {isOpen && (
-          <div className={`absolute top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-50 max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
+          <div className={`absolute top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-[9999] max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
             {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
               <div 
                 key={idx} 
@@ -357,7 +357,7 @@
     const todayStr = `${ti.y}/${ti.m < 10 ? '0'+ti.m : ti.m}/${ti.d < 10 ? '0'+ti.d : ti.d}`;
 
     return (
-      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${wrapperClassName}`}>
+      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label htmlFor={inputId} className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative group flex items-center">
           <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors pointer-events-none z-10`}>
@@ -382,7 +382,7 @@
         </div>
 
         {isOpen && !disabled && (
-          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} z-[200] w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl p-3 animate-in zoom-in-95 duration-150`}>
+          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} z-[9999] w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl p-3 animate-in zoom-in-95 duration-150`}>
             <div className="flex items-center justify-between mb-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
               <button type="button" onClick={() => { if(currentMonth===1){setCurrentMonth(12); setCurrentYear(currentYear-1)}else setCurrentMonth(currentMonth-1) }} className="p-1 rounded text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm transition-all"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
               <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-1">
@@ -561,7 +561,7 @@
     const heights = { sm: 'h-8 text-[11px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
 
     return (
-      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         
         <div ref={containerRef} className={`relative flex items-center w-full ${heights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border-slate-200 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500'}`} dir={isRtl ? 'rtl' : 'ltr'}>
@@ -601,7 +601,7 @@
           </div>
 
           {isOpen && (
-            <div className={`absolute top-full mt-1 ${isRtl ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-50 max-h-60 overflow-y-auto custom-scrollbar`}>
+            <div className={`absolute top-full mt-1 ${isRtl ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-[9999] max-h-60 overflow-y-auto custom-scrollbar`}>
               {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
                 <div 
                   key={idx} 
