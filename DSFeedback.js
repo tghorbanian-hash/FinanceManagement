@@ -19,7 +19,9 @@
     Trash2 = FallbackIcon,
     Clock = FallbackIcon,
     Calendar = FallbackIcon,
-    ArrowLeft = FallbackIcon
+    ArrowLeft = FallbackIcon,
+    ChevronDown = FallbackIcon,
+    ChevronUp = FallbackIcon
   } = LucideIcons;
   
   const { Button } = window.DSCore || {};
@@ -252,10 +254,16 @@
   };
 
   const LogTimeline = ({ logs = [], isLoading = false, language = 'fa' }) => {
+    const [expandedLogs, setExpandedLogs] = useState([]);
+    
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const globalMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     const formatDate = window.DSCore?.formatGlobalDate || ((v) => v);
+
+    const toggleExpand = (id) => {
+        setExpandedLogs(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
 
     if (isLoading) {
       return (
@@ -276,13 +284,15 @@
     }
 
     return (
-      <div className="relative px-4 py-6 font-sans min-h-[200px]" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="relative px-4 py-6 font-sans min-h-[200px] max-h-[65vh] overflow-y-auto custom-scrollbar" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className={`absolute top-6 bottom-6 w-px bg-slate-200 dark:bg-slate-700 ${isRtl ? 'right-[31px]' : 'left-[31px]'}`}></div>
         <div className="flex flex-col gap-6">
           {logs.map((log, index) => {
             const isCreate = log.action === 'CREATE' || log.action === 'ایجاد';
             const isDelete = log.action === 'DELETE' || log.action === 'حذف';
             const isUpdate = log.action === 'UPDATE' || log.action === 'ویرایش';
+            const logId = log.id || index;
+            const isExpanded = expandedLogs.includes(logId);
             
             let ActionIcon = Info;
             let iconColor = 'text-blue-500 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800';
@@ -344,27 +354,38 @@
             };
 
             return (
-              <div key={log.id || index} className="relative flex items-start gap-4 group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>
+              <div key={logId} className="relative flex items-start gap-4 group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>
                 <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 relative z-10 ${iconColor} shadow-sm`}>
                   <ActionIcon size={14} strokeWidth={2.5} />
                 </div>
-                <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 shadow-sm group-hover:shadow-md transition-all overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <div 
+                  className={`flex-1 bg-white dark:bg-slate-800 border ${isExpanded ? 'border-indigo-300 dark:border-indigo-600 shadow-md' : 'border-slate-200 dark:border-slate-700 shadow-sm'} rounded-xl p-3.5 hover:shadow-md transition-all cursor-pointer select-none overflow-hidden`}
+                  onClick={() => toggleExpand(logId)}
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
                       <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100">{log.action}</span>
                       <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{log.user_name}</span>
                     </div>
-                    <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 text-[10.5px] font-mono font-medium" dir="ltr">
+                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-[10.5px] font-mono font-medium" dir="ltr">
                       <div className="flex items-center gap-1.5"><Calendar size={12} /> <span>{dateStr}</span></div>
                       <div className="flex items-center gap-1.5"><Clock size={12} /> <span>{timeStr}</span></div>
+                      <div className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-indigo-500' : ''}`}>
+                         <ChevronDown size={14} />
+                      </div>
                     </div>
                   </div>
-                  {log.details && (
-                    <div className="text-[11.5px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 leading-relaxed font-medium">
-                      {log.details}
-                    </div>
+                  
+                  {isExpanded && (
+                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-200 cursor-auto" onClick={(e) => e.stopPropagation()}>
+                        {log.details && (
+                          <div className="text-[11.5px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 leading-relaxed font-medium">
+                            {log.details}
+                          </div>
+                        )}
+                        {renderDiffs()}
+                     </div>
                   )}
-                  {renderDiffs()}
                 </div>
               </div>
             );
