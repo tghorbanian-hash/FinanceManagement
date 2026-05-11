@@ -6,10 +6,11 @@
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
-    GitMerge = FallbackIcon, Save = FallbackIcon, 
+    GitMerge = FallbackIcon, Save = FallbackIcon, Plus = FallbackIcon, Trash2 = FallbackIcon,
     PlayCircle = FallbackIcon, StopCircle = FallbackIcon, CheckSquare = FallbackIcon, Diamond = FallbackIcon,
-    ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Settings2 = FallbackIcon, 
-    Trash2 = FallbackIcon, Layers = FallbackIcon
+    ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Database = FallbackIcon, Settings2 = FallbackIcon,
+    Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon,
+    Info = FallbackIcon
   } = LucideIcons;
 
   const WorkflowDesign = ({ definition, systemEntities = [], onBack, language = 'fa' }) => {
@@ -33,7 +34,7 @@
     const generateId = () => Math.random().toString(36).substr(2, 9);
 
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'info' });
-    const [activeTab, setActiveTab] = useState('process');
+    const [activeTab, setActiveTab] = useState('base');
     const [editingDef, setEditingDef] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
@@ -163,8 +164,8 @@
     ];
 
     const builderTabs = [
-        { id: 'process', label: t('طراحی فرآیند (Visual)', 'Process Designer'), icon: GitMerge },
-        { id: 'base', label: t('تنظیمات پایه و شروط', 'Base Settings & Rules'), icon: Settings2 }
+        { id: 'base', label: t('تنظیمات پایه و شروط', 'Base Settings & Rules'), icon: Settings2 },
+        { id: 'process', label: t('طراحی فرآیند (Visual)', 'Process Designer'), icon: GitMerge }
     ];
 
     const addNodeToCanvas = (type, x, y) => {
@@ -268,6 +269,7 @@
     if (!editingDef) return null;
 
     const selectedNode = selectedElement?.type === 'node' ? editingDef.bpmn_data.nodes.find(n => n.id === selectedElement.id) : null;
+    const selectedFlow = selectedElement?.type === 'flow' ? editingDef.bpmn_data.flows.find(f => f.id === selectedElement.id) : null;
 
     return (
       <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-900 font-sans animate-in fade-in zoom-in-95 duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -438,7 +440,8 @@
                                             }}
                                             onMouseUp={(e) => {
                                                 if (connectingStart && connectingStart !== node.id) {
-                                                    addFlow(connectingStart, node.id);
+                                                    // Add flow, but don't prevent selection
+                                                    // Flow handles setting selection internally
                                                 }
                                             }}
                                         >
@@ -457,6 +460,11 @@
                                                 <div 
                                                     className="connector absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 bg-indigo-500 rounded-full border-2 border-white cursor-crosshair opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-20"
                                                     onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }}
+                                                    onMouseUp={(e) => {
+                                                        if (connectingStart && connectingStart !== node.id) {
+                                                            addFlow(connectingStart, node.id);
+                                                        }
+                                                    }}
                                                     style={node.type === 'EXCLUSIVE_GATEWAY' ? { right: '-10px', top: '-10px', transform: 'none' } : {}}
                                                 />
                                             </div>
