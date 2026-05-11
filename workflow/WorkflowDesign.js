@@ -54,6 +54,7 @@
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
     }, []);
 
+    // Fetch existing workflows to use as Subprocesses
     useEffect(() => {
         const fetchWfs = async () => {
             try {
@@ -62,7 +63,7 @@
                     setWorkflowsList(data.map(w => ({ value: w.id, label: `${w.title} (v${w.version})` })));
                 }
             } catch (e) {
-                console.error("Error fetching workflows:", e);
+                console.error("Error fetching workflows for subprocess list:", e);
             }
         };
         fetchWfs();
@@ -195,6 +196,7 @@
     };
 
     const addNodeToCanvas = (type, x, y) => {
+        // Rule 1: Only one start event per workflow
         if (type === 'START_EVENT') {
             const hasStartEvent = editingDef.bpmn_data.nodes.some(n => n.type === 'START_EVENT');
             if (hasStartEvent) {
@@ -224,8 +226,9 @@
         const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === sourceRef);
         const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === targetRef);
 
+        // Rule 2: No direct connection from start to end
         if (sourceNode?.type === 'START_EVENT' && targetNode?.type === 'END_EVENT') {
-            showToast(t('اتصال مستقیم نقطه شروع به پایان مجاز نیست.', 'Direct connection from start to end is not allowed.'), 'error');
+            showToast(t('اتصال مستقیم نقطه شروع به پایان مجاز نیست. حداقل یک گام میانی تعریف کنید.', 'Direct connection from start to end is not allowed. Define at least one intermediate step.'), 'error');
             return;
         }
 
@@ -372,7 +375,8 @@
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 dark:bg-slate-900/50 min-h-0">
                     <div className="w-full flex flex-col gap-3 h-full">
                         
-                        <Card title={t('موجودیت هدف', 'Target Entity')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                        {/* Higher z-index for top cards to ensure selectors stay on top of lower cards */}
+                        <Card title={t('موجودیت هدف', 'Target Entity')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 relative z-[30]" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
                             <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white dark:bg-slate-800">
                                 <SelectField size="sm" label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} />
                                 <SelectField size="sm" label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} disabled={!domainFilter && uniqueModules.length === 0} />
@@ -380,7 +384,7 @@
                             </div>
                         </Card>
 
-                        <Card title={t('تنظیمات عمومی گردش کار', 'Workflow Config')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                        <Card title={t('تنظیمات عمومی گردش کار', 'Workflow Config')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 relative z-[20]" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
                             <div className="p-3 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-slate-800">
                                 <TextField size="sm" wrapperClassName="md:col-span-2" label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required />
                                 <TextField size="sm" label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled />
@@ -392,7 +396,7 @@
                             </div>
                         </Card>
 
-                        <Card title={t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                        <Card title={t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 relative z-[10]" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
                             <div className="p-3 flex flex-col gap-3 bg-white dark:bg-slate-800">
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 m-0 leading-relaxed">
                                     {t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}
@@ -619,7 +623,15 @@
 
                                         {selectedNode.type === 'SUB_PROCESS' && (
                                             <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
-                                                <SelectField size="sm" label={t('انتخاب زیرفرآیند', 'Select Subprocess')} value={selectedNode.subprocess_id || ''} onChange={(e) => updateElement('node', selectedNode.id, 'subprocess_id', e.target.value)} options={[{value: '', label: t('انتخاب کنید...', 'Select...')}, ...workflowsList]} isRtl={isRtl} />
+                                                <SelectField 
+                                                    size="sm" 
+                                                    label={t('انتخاب زیرفرآیند', 'Select Subprocess')} 
+                                                    value={selectedNode.subprocess_id || ''} 
+                                                    onChange={(e) => updateElement('node', selectedNode.id, 'subprocess_id', e.target.value)} 
+                                                    options={[{value: '', label: t('انتخاب کنید...', 'Select...')}, ...workflowsList]} 
+                                                    isRtl={isRtl} 
+                                                />
+                                                <p className="text-[10px] text-slate-400 font-bold">{t('در این گام، یک گردش کار طراحی شده دیگر اجرا خواهد شد.', 'In this step, another designed workflow will be executed.')}</p>
                                             </div>
                                         )}
 
