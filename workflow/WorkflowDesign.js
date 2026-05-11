@@ -42,6 +42,7 @@
 
     const [domainFilter, setDomainFilter] = useState('');
     const [moduleFilter, setModuleFilter] = useState('');
+    const [workflowsList, setWorkflowsList] = useState([]);
 
     const canvasRef = useRef(null);
     const [draggingNode, setDraggingNode] = useState(null);
@@ -51,6 +52,20 @@
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+    }, []);
+
+    useEffect(() => {
+        const fetchWfs = async () => {
+            try {
+                const { data } = await supabase.schema('wf').from('wf_definitions').select('id, title, version');
+                if (data) {
+                    setWorkflowsList(data.map(w => ({ value: w.id, label: `${w.title} (v${w.version})` })));
+                }
+            } catch (e) {
+                console.error("Error fetching workflows:", e);
+            }
+        };
+        fetchWfs();
     }, []);
 
     useEffect(() => {
@@ -180,8 +195,17 @@
     };
 
     const addNodeToCanvas = (type, x, y) => {
+        if (type === 'START_EVENT') {
+            const hasStartEvent = editingDef.bpmn_data.nodes.some(n => n.type === 'START_EVENT');
+            if (hasStartEvent) {
+                showToast(t('هر گردش کار فقط می‌تواند یک نقطه شروع داشته باشد.', 'A workflow can only have one start event.'), 'error');
+                return;
+            }
+        }
+
         let name = '';
         if (type === 'USER_TASK') name = t('فعالیت جدید', 'New Task');
+        if (type === 'SUB_PROCESS') name = t('زیرفرآیند', 'Subprocess');
         if (type === 'APPROVAL_GATEWAY') name = t('دروازه تایید/رد', 'Decision Gateway');
         if (type === 'EXCLUSIVE_GATEWAY') name = t('دروازه شرطی (چندگانه)', 'Condition Gateway');
         if (type === 'END_EVENT') name = t('پایان', 'End');
@@ -197,8 +221,15 @@
         const exists = editingDef.bpmn_data.flows.find(f => f.sourceRef === sourceRef && f.targetRef === targetRef);
         if (exists) return;
 
-        let defaultName = '';
         const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === sourceRef);
+        const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === targetRef);
+
+        if (sourceNode?.type === 'START_EVENT' && targetNode?.type === 'END_EVENT') {
+            showToast(t('اتصال مستقیم نقطه شروع به پایان مجاز نیست.', 'Direct connection from start to end is not allowed.'), 'error');
+            return;
+        }
+
+        let defaultName = '';
         if (sourceNode?.type === 'APPROVAL_GATEWAY') {
             const existingOutFlows = editingDef.bpmn_data.flows.filter(f => f.sourceRef === sourceRef).length;
             defaultName = existingOutFlows === 0 ? t('بله (تایید)', 'Yes (Approve)') : t('خیر (عدم تایید)', 'No (Reject)');
@@ -287,6 +318,7 @@
         if (type === 'END_EVENT') return 'w-12 h-12 rounded-full bg-rose-50 border-4 border-rose-400 text-rose-600';
         if (type === 'APPROVAL_GATEWAY') return 'w-14 h-14 bg-indigo-50 border-2 border-indigo-400 text-indigo-600 rotate-45';
         if (type === 'EXCLUSIVE_GATEWAY') return 'w-14 h-14 bg-amber-50 border-2 border-amber-400 text-amber-600 rotate-45';
+        if (type === 'SUB_PROCESS') return 'w-32 h-16 rounded-xl bg-teal-50 border-2 border-teal-400 text-teal-700 shadow-sm border-dashed';
         return 'w-32 h-16 rounded-xl bg-white border-2 border-indigo-400 text-indigo-700 shadow-sm';
     };
 
@@ -295,6 +327,7 @@
         if (type === 'END_EVENT') return <StopCircle size={18} />;
         if (type === 'APPROVAL_GATEWAY') return <Split size={18} className="-rotate-45" />;
         if (type === 'EXCLUSIVE_GATEWAY') return <Diamond size={18} className="-rotate-45" />;
+        if (type === 'SUB_PROCESS') return <Layers size={18} />;
         return <CheckSquare size={18} />;
     };
 
@@ -385,6 +418,9 @@
                         </div>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-10 h-10 rounded-lg border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500" title={t('فعالیت', 'Task')}>
                             {getNodePaletteIcon('USER_TASK')}
+                        </div>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'SUB_PROCESS')} className="w-10 h-10 rounded-lg border-2 border-dashed border-teal-400 bg-teal-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-teal-500" title={t('زیرفرآیند', 'Subprocess')}>
+                            {getNodePaletteIcon('SUB_PROCESS')}
                         </div>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'APPROVAL_GATEWAY')} className="w-10 h-10 border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500 rotate-45" title={t('تصمیم بله/خیر', 'Decision Gateway')}>
                             {getNodePaletteIcon('APPROVAL_GATEWAY')}
@@ -578,6 +614,12 @@
                                                 <TextField size="sm" label={t('نقش‌های مجاز (کاما جدا)', 'Assignee Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: مدیر مالی, کارشناس', 'e.g. Finance Manager')} />
                                                 
                                                 <TextField size="sm" label={t('فیلدهای اجباری برای تغییر', 'Required Fields')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount, description', 'e.g. amount, description')} />
+                                            </div>
+                                        )}
+
+                                        {selectedNode.type === 'SUB_PROCESS' && (
+                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                                <SelectField size="sm" label={t('انتخاب زیرفرآیند', 'Select Subprocess')} value={selectedNode.subprocess_id || ''} onChange={(e) => updateElement('node', selectedNode.id, 'subprocess_id', e.target.value)} options={[{value: '', label: t('انتخاب کنید...', 'Select...')}, ...workflowsList]} isRtl={isRtl} />
                                             </div>
                                         )}
 
