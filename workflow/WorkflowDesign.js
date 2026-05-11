@@ -70,6 +70,7 @@
                 is_active: false,
                 version: 1,
                 factor_field: '',
+                factor_operator: '=',
                 factor_value: '',
                 effective_start_date: '',
                 effective_end_date: '',
@@ -83,7 +84,7 @@
             setDomainFilter('');
             setModuleFilter('');
         }
-    }, [definition, systemEntities]);
+    }, [definition?.id, systemEntities.length]); 
 
     const handleSaveDefinition = async () => {
         try {
@@ -99,6 +100,7 @@
                 entity_type: editingDef.entity_type,
                 is_active: editingDef.is_active,
                 factor_field: editingDef.factor_field,
+                factor_operator: editingDef.factor_operator || '=',
                 factor_value: editingDef.factor_value,
                 effective_start_date: editingDef.effective_start_date || null,
                 effective_end_date: editingDef.effective_end_date || null,
@@ -201,6 +203,17 @@
         }));
     }, [systemEntities, domainFilter, moduleFilter, isRtl]);
 
+    const operatorOptions = [
+        {value: '=', label: '='},
+        {value: '!=', label: '!='},
+        {value: '>', label: '>'},
+        {value: '<', label: '<'},
+        {value: '>=', label: '>='},
+        {value: '<=', label: '<='},
+        {value: 'IN', label: 'IN (...)'},
+        {value: 'NOT IN', label: 'NOT IN (...)'}
+    ];
+
     const builderTabs = [
         { id: 'base', label: t('تنظیمات پایه', 'Base Settings'), icon: Settings2 },
         { id: 'process', label: t('طراحی فرآیند (BPMN)', 'Process Designer (BPMN)'), icon: GitMerge }
@@ -236,32 +249,39 @@
 
                 <div className="flex-1 overflow-hidden bg-slate-50/30 dark:bg-slate-900/20 flex flex-col relative">
                     {activeTab === 'base' && (
-                        <div className="p-6 overflow-y-auto custom-scrollbar w-full h-full">
-                            <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 h-full">
+                        <div className="p-4 w-full h-full overflow-y-auto custom-scrollbar">
+                            <div className="max-w-4xl mx-auto flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2">
                                 
-                                <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4">
-                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">{t('موجودیت هدف', 'Target Entity')}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="md" />
-                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="md" disabled={!domainFilter && uniqueModules.length === 0} />
-                                        <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="md" />
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="sm" wrapperClassName="md:col-span-1" />
+                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="sm" disabled={!domainFilter && uniqueModules.length === 0} wrapperClassName="md:col-span-1" />
+                                        <SelectField label={t('موجودیت هدف', 'Target Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="sm" wrapperClassName="md:col-span-2" />
                                     </div>
-                                </div>
 
-                                <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4">
-                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">{t('اطلاعات و تنظیمات گردش کار', 'Workflow Configuration')}</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <div className="lg:col-span-2">
-                                            <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="md" />
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                                        <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="sm" wrapperClassName="md:col-span-2" />
+                                        <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled size="sm" />
+                                        <div className="flex items-center pt-5">
+                                            <ToggleField label={t('وضعیت فعال بودن', 'Active Status')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
                                         </div>
-                                        <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled size="md" />
-                                        <div className="flex items-end pb-1"><ToggleField label={t('وضعیت فعال بودن', 'Active Status')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} /></div>
-                                        
-                                        <TextField label={t('فیلد فاکتور (شرط شروع)', 'Factor Field (Condition)')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="md" placeholder={t('مثلا: loan_type', 'e.g. loan_type')} />
-                                        <TextField label={t('مقدار فاکتور', 'Factor Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="md" placeholder={t('مثلا: فرزندآوری', 'e.g. Childbirth')} />
-                                        
-                                        <DatePicker label={t('تاریخ موثر شروع', 'Effective Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="md" />
-                                        <DatePicker label={t('تاریخ موثر پایان', 'Effective End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="md" />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                                        <DatePicker label={t('تاریخ موثر شروع', 'Effective Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="sm" wrapperClassName="md:col-span-1" />
+                                        <DatePicker label={t('تاریخ موثر پایان', 'Effective End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="sm" wrapperClassName="md:col-span-1" />
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">{t('شروط شروع گردش کار (فاکتورها)', 'Start Condition (Factor)')}</span>
+                                            <span className="text-[10px] text-slate-500 dark:text-slate-400">{t('در صورت پر شدن این فیلدها، گردش کار فقط برای رکوردهایی که این شرط را دارند اجرا می‌شود.', 'If set, the workflow only applies to records matching this condition.')}</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                                            <TextField label={t('نام فیلد دیتابیس', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="sm" placeholder={t('مثلا: loan_type', 'e.g. loan_type')} wrapperClassName="md:col-span-1" />
+                                            <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} size="sm" options={operatorOptions} wrapperClassName="md:col-span-1" />
+                                            <TextField label={t('مقدار', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="sm" placeholder={t('مثلا: 1,2,3', 'e.g. 1,2,3')} wrapperClassName="md:col-span-2" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -340,23 +360,23 @@
                                             )}
                                         </div>
                                         <div className="p-6 flex flex-col gap-5">
-                                            <TextField label={t('عنوان نمایشی گره', 'Node Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} required size="md" />
+                                            <TextField label={t('عنوان نمایشی گره', 'Node Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} required size="sm" />
                                             
                                             {selectedNode.type === 'USER_TASK' && (
                                                 <div className="flex flex-col gap-5 pt-5 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in">
                                                     <SelectField label={t('نوع فعالیت کاربر', 'User Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
                                                         {value: 'APPROVAL', label: t('بررسی و تایید/رد', 'Review & Approve/Reject')},
                                                         {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
-                                                    ]} isRtl={isRtl} size="md" />
+                                                    ]} isRtl={isRtl} size="sm" />
                                                     
                                                     <div className="flex flex-col gap-1.5">
                                                         <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><Users size={14} className="text-amber-500"/> {t('نقش‌ها/کاربران مجاز برای این کار', 'Assignee Roles/Users')}</span>
-                                                        <input type="text" value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400" placeholder={t('مثلا: مدیر مالی, کارشناس فروش', 'e.g. Finance Manager')} />
+                                                        <input type="text" value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} className="w-full h-8 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400" placeholder={t('مثلا: مدیر مالی, کارشناس فروش', 'e.g. Finance Manager')} />
                                                     </div>
 
                                                     <div className="flex flex-col gap-1.5">
                                                         <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><Database size={14} className="text-emerald-500"/> {t('فیلدهای فرم که در این مرحله باید تغییر کنند (اجباری)', 'Required Fields to Update')}</span>
-                                                        <input type="text" value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} className="w-full h-10 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg text-[12px] font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400" placeholder={t('شناسه فیلدها با کاما (مثلا: amount, description)', 'Field IDs (e.g. amount, description)')} />
+                                                        <input type="text" value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} className="w-full h-8 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400" placeholder={t('شناسه فیلدها با کاما (مثلا: amount, description)', 'Field IDs (e.g. amount, description)')} />
                                                         <span className="text-[9px] text-slate-400 font-bold px-1">{t('در صورتی که نوع فعالیت "تکمیل اطلاعات" باشد، کاربر مجبور به پر کردن این فیلدها خواهد بود.', 'If Data Entry, user must fill these fields.')}</span>
                                                     </div>
                                                 </div>
@@ -407,7 +427,7 @@
                                                 </div>
                                             </div>
 
-                                            <TextField label={t('عنوان دکمه/مسیر (جهت نمایش به کاربر)', 'Flow/Button Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} required size="md" />
+                                            <TextField label={t('عنوان دکمه/مسیر (جهت نمایش به کاربر)', 'Flow/Button Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} required size="sm" />
 
                                             {selectedFlow.sourceRef && editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef)?.type === 'EXCLUSIVE_GATEWAY' && (
                                                 <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in">
