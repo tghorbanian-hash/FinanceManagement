@@ -1,7 +1,7 @@
 /* Filename: workflow/WorkflowManagement.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useCallback } = React;
+  const { useState, useEffect, useMemo, useCallback } = React;
   
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
@@ -18,7 +18,7 @@
     } = Core;
     
     const Grid = window.DSGrid || window.DesignSystem || {};
-    const { DataGrid = FallbackComponent } = Grid;
+    const { DataGrid = FallbackComponent, AdvancedFilter = FallbackComponent } = Grid;
     
     const Feedback = window.DSFeedback || window.DesignSystem || {};
     const { Toast = FallbackComponent, Dialog = FallbackComponent } = Feedback;
@@ -28,9 +28,11 @@
 
     const supabase = window.supabase;
 
-    const [viewMode, setViewMode] = useState('list'); // 'list' | 'design'
+    const [viewMode, setViewMode] = useState('list');
     const [definitions, setDefinitions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [filters, setFilters] = useState({});
+    const [gridState, setGridState] = useState(null);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'info' });
     const [activeDef, setActiveDef] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -40,6 +42,20 @@
         { value: 'fm_payment_requests', label: t('درخواست‌های پرداخت', 'Payment Requests') },
         { value: 'fm_invoices', label: t('فاکتورهای فروش', 'Sales Invoices') }
     ];
+
+    const viewConfig = {
+      pageId: 'workflow_management_main',
+      currentState: () => ({ filters, gridState }),
+      onApplyState: (state) => {
+        if (state) {
+          if (state.filters) setFilters(state.filters);
+          if (state.gridState) setGridState(state.gridState);
+        } else {
+          setFilters({});
+          setGridState(null);
+        }
+      }
+    };
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
@@ -132,6 +148,21 @@
         )}
     ];
 
+    const filteredDefinitions = useMemo(() => {
+        let result = [...definitions];
+        if (filters.title) {
+            result = result.filter(d => d.title.toLowerCase().includes(filters.title.toLowerCase()));
+        }
+        if (filters.entity_type) {
+            result = result.filter(d => d.entity_type === filters.entity_type);
+        }
+        if (filters.is_active !== undefined && filters.is_active !== '') {
+            const isActive = filters.is_active === 'true';
+            result = result.filter(d => d.is_active === isActive);
+        }
+        return result;
+    }, [definitions, filters]);
+
     if (viewMode === 'design') {
         const Designer = window.WorkflowDesign;
         if (!Designer) {
@@ -150,35 +181,51 @@
           title={t('مدیریت گردش کارها (BPMS)', 'Workflow Management (BPMS)')}
           icon={GitMerge} language={language}
           breadcrumbs={[{ label: t('عملیات سیستم', 'System Operations') }, { label: t('گردش کارها', 'Workflows') }]}
+          viewConfig={viewConfig}
         >
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchDefinitions} className="shadow-sm bg-white dark:bg-slate-800">
-                    {t('بروزرسانی', 'Refresh')}
-                </Button>
-                <Button variant="primary" size="sm" icon={Plus} onClick={handleNewWorkflow} className="shadow-sm">
-                    {t('طراحی گردش کار جدید', 'Design New Workflow')}
-                </Button>
-            </div>
+            <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchDefinitions} className="shadow-sm bg-white dark:bg-slate-800">
+                {t('بروزرسانی', 'Refresh')}
+            </Button>
         </PageHeader>
 
-        <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col mt-4">
-            {isLoading ? (
-                <div className="flex-1 flex flex-col items-center justify-center p-12 h-full">
-                    <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin mb-4"></div>
-                    <span className="text-slate-500 dark:text-slate-400 font-bold text-[12px]">{t('در حال دریافت اطلاعات...', 'Loading data...')}</span>
-                </div>
-            ) : (
-                <DataGrid 
-                    data={definitions} 
-                    columns={columns} 
-                    language={language}
-                    selectable={false}
-                    actions={[
-                        { icon: Edit, tooltip: t('ویرایش و طراحی', 'Edit & Design'), onClick: (row) => handleEditWorkflow(row), className: 'text-slate-400 hover:text-indigo-600' },
-                        { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm(row.id), className: 'text-slate-400 hover:text-red-600' }
-                    ]}
-                />
-            )}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500 mt-2">
+            <AdvancedFilter 
+                fields={[
+                  { name: 'title', label: t('عنوان گردش کار', 'Workflow Title'), type: 'text' },
+                  { name: 'entity_type', label: t('موجودیت', 'Entity'), type: 'select', options: supportedEntities },
+                  { name: 'is_active', label: t('وضعیت', 'Status'), type: 'select', options: [
+                      {value: 'true', label: t('فعال', 'Active')},
+                      {value: 'false', label: t('غیرفعال', 'Inactive')}
+                  ]}
+                ]}
+                initialValues={filters}
+                onFilter={setFilters}
+                onClear={() => setFilters({})}
+                language={language}
+            />
+            
+            <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-b-2xl md:rounded-b-none md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col mt-4">
+                {isLoading ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 h-full">
+                        <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                        <span className="text-slate-500 dark:text-slate-400 font-bold text-[12px]">{t('در حال دریافت اطلاعات...', 'Loading data...')}</span>
+                    </div>
+                ) : (
+                    <DataGrid 
+                        data={filteredDefinitions} 
+                        columns={columns} 
+                        language={language}
+                        selectable={false}
+                        gridState={gridState}
+                        onGridStateChange={setGridState}
+                        onAdd={() => handleNewWorkflow()}
+                        actions={[
+                            { icon: Edit, tooltip: t('ویرایش و طراحی', 'Edit & Design'), onClick: (row) => handleEditWorkflow(row), className: 'text-slate-400 hover:text-indigo-600' },
+                            { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm(row.id), className: 'text-slate-400 hover:text-red-600' }
+                        ]}
+                    />
+                )}
+            </div>
         </div>
 
         <Dialog 
