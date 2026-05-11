@@ -9,7 +9,8 @@
     GitMerge = FallbackIcon, Plus = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon, 
     PlayCircle = FallbackIcon, StopCircle = FallbackIcon, CheckSquare = FallbackIcon, Diamond = FallbackIcon,
     ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Database = FallbackIcon, Settings2 = FallbackIcon, 
-    Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon
+    Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon,
+    Info = FallbackIcon
   } = LucideIcons;
 
   const WorkflowDesign = ({ definition, systemEntities = [], onBack, language = 'fa' }) => {
@@ -17,7 +18,8 @@
     const Core = window.DSCore || window.DesignSystem || {};
     const { 
       Button = FallbackComponent, PageHeader = FallbackComponent, TextField = FallbackComponent, 
-      SelectField = FallbackComponent, ToggleField = FallbackComponent, Tabs = FallbackComponent
+      SelectField = FallbackComponent, ToggleField = FallbackComponent, Tabs = FallbackComponent,
+      DatePicker = FallbackComponent
     } = Core;
     
     const Feedback = window.DSFeedback || window.DesignSystem || {};
@@ -38,12 +40,8 @@
     
     const [selectedElement, setSelectedElement] = useState(null);
 
-    const entityOptions = useMemo(() => {
-        return systemEntities.map(e => ({
-            value: e.entity_code,
-            label: isRtl ? `${e.name_fa} (${e.domain_name} - ${e.module_name})` : `${e.name_en} (${e.domain_name} - ${e.module_name})`
-        }));
-    }, [systemEntities, isRtl]);
+    const [domainFilter, setDomainFilter] = useState('');
+    const [moduleFilter, setModuleFilter] = useState('');
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
@@ -56,12 +54,25 @@
                 ...definition,
                 bpmn_data: definition.bpmn_data || { nodes: [], flows: [] }
             });
+            
+            if (definition.entity_type && systemEntities.length > 0) {
+                const ent = systemEntities.find(e => e.entity_code === definition.entity_type);
+                if (ent) {
+                    setDomainFilter(ent.domain_name || '');
+                    setModuleFilter(ent.module_name || '');
+                }
+            }
         } else {
             setEditingDef({
                 id: null,
                 title: '',
                 entity_type: '',
                 is_active: false,
+                version: 1,
+                factor_field: '',
+                factor_value: '',
+                effective_start_date: '',
+                effective_end_date: '',
                 bpmn_data: {
                     nodes: [
                         { id: `start_${generateId()}`, type: 'START_EVENT', name: t('شروع فرآیند', 'Process Start') }
@@ -69,8 +80,10 @@
                     flows: []
                 }
             });
+            setDomainFilter('');
+            setModuleFilter('');
         }
-    }, [definition, t]);
+    }, [definition, systemEntities]);
 
     const handleSaveDefinition = async () => {
         try {
@@ -85,6 +98,10 @@
                 title: editingDef.title,
                 entity_type: editingDef.entity_type,
                 is_active: editingDef.is_active,
+                factor_field: editingDef.factor_field,
+                factor_value: editingDef.factor_value,
+                effective_start_date: editingDef.effective_start_date || null,
+                effective_end_date: editingDef.effective_end_date || null,
                 bpmn_data: editingDef.bpmn_data,
                 updated_at: new Date().toISOString()
             };
@@ -159,9 +176,30 @@
     };
 
     const getNodeName = (id) => {
-        const node = editingDef.bpmn_data.nodes.find(n => n.id === id);
+        const node = editingDef?.bpmn_data.nodes.find(n => n.id === id);
         return node ? node.name : t('نامشخص', 'Unknown');
     };
+
+    const uniqueDomains = useMemo(() => {
+        const domains = [...new Set(systemEntities.map(e => e.domain_name).filter(Boolean))];
+        return domains.map(d => ({ value: d, label: d }));
+    }, [systemEntities]);
+
+    const uniqueModules = useMemo(() => {
+        if (!domainFilter) return [];
+        const modules = [...new Set(systemEntities.filter(e => e.domain_name === domainFilter).map(e => e.module_name).filter(Boolean))];
+        return modules.map(m => ({ value: m, label: m }));
+    }, [systemEntities, domainFilter]);
+
+    const filteredEntities = useMemo(() => {
+        let list = systemEntities;
+        if (domainFilter) list = list.filter(e => e.domain_name === domainFilter);
+        if (moduleFilter) list = list.filter(e => e.module_name === moduleFilter);
+        return list.map(e => ({
+            value: e.entity_code,
+            label: isRtl ? e.name_fa : e.name_en
+        }));
+    }, [systemEntities, domainFilter, moduleFilter, isRtl]);
 
     const builderTabs = [
         { id: 'base', label: t('تنظیمات پایه', 'Base Settings'), icon: Settings2 },
@@ -198,17 +236,32 @@
 
                 <div className="flex-1 overflow-hidden bg-slate-50/30 dark:bg-slate-900/20 flex flex-col relative">
                     {activeTab === 'base' && (
-                        <div className="p-6 overflow-y-auto w-full">
-                            <div className="max-w-3xl mx-auto flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2">
-                                <div className="flex flex-col gap-1 mb-2">
-                                    <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100">{t('مشخصات پایه گردش کار', 'Basic Workflow Details')}</h3>
-                                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{t('اطلاعات کلی و موجودیت هدف این گردش کار را تعریف کنید.', 'Define general info and target entity for this workflow.')}</p>
+                        <div className="p-6 overflow-y-auto custom-scrollbar w-full h-full">
+                            <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 h-full">
+                                
+                                <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4">
+                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">{t('موجودیت هدف', 'Target Entity')}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="md" />
+                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="md" disabled={!domainFilter && uniqueModules.length === 0} />
+                                        <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="md" />
+                                    </div>
                                 </div>
-                                <div className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-5">
-                                    <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="md" />
-                                    <SelectField label={t('موجودیت هدف (فرم متصل)', 'Target Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={entityOptions} isRtl={isRtl} required size="md" />
-                                    <div className="pt-3 mt-1 border-t border-slate-100 dark:border-slate-700/50">
-                                        <ToggleField label={t('فعال‌سازی بلافاصله پس از ذخیره', 'Activate immediately after save')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
+
+                                <div className="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-4">
+                                    <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-2">{t('اطلاعات و تنظیمات گردش کار', 'Workflow Configuration')}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="lg:col-span-2">
+                                            <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="md" />
+                                        </div>
+                                        <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled size="md" />
+                                        <div className="flex items-end pb-1"><ToggleField label={t('وضعیت فعال بودن', 'Active Status')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} /></div>
+                                        
+                                        <TextField label={t('فیلد فاکتور (شرط شروع)', 'Factor Field (Condition)')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="md" placeholder={t('مثلا: loan_type', 'e.g. loan_type')} />
+                                        <TextField label={t('مقدار فاکتور', 'Factor Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="md" placeholder={t('مثلا: فرزندآوری', 'e.g. Childbirth')} />
+                                        
+                                        <DatePicker label={t('تاریخ موثر شروع', 'Effective Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="md" />
+                                        <DatePicker label={t('تاریخ موثر پایان', 'Effective End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="md" />
                                     </div>
                                 </div>
                             </div>

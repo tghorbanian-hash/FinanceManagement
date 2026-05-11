@@ -197,12 +197,17 @@
           breadcrumbs={[{ label: t('عملیات سیستم', 'System Operations') }, { label: t('گردش کارها', 'Workflows') }]}
           viewConfig={viewConfig}
         >
-            <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchInitialData} className="shadow-sm bg-white dark:bg-slate-800">
-                {t('بروزرسانی', 'Refresh')}
-            </Button>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" icon={RefreshCw} onClick={fetchInitialData} className="shadow-sm bg-white dark:bg-slate-800">
+                    {t('بروزرسانی', 'Refresh')}
+                </Button>
+                <Button variant="primary" size="sm" icon={Plus} onClick={handleNewWorkflow} className="shadow-sm">
+                    {t('طراحی گردش کار جدید', 'Design New Workflow')}
+                </Button>
+            </div>
         </PageHeader>
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500 mt-2">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500">
             <AdvancedFilter 
                 fields={[
                   { name: 'title', label: t('عنوان گردش کار', 'Workflow Title'), type: 'text' },
