@@ -561,18 +561,14 @@
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <button onClick={toggleTheme} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t('تغییر تم', 'Change Theme')}>
-                  {theme === 'dark' ? (
-                     <><Sun size={12} className="text-amber-500" /><span>{isRtl ? 'روشن' : 'Light'}</span></>
-                  ) : (
-                     <><Moon size={12} className="text-indigo-500" /><span>{isRtl ? 'تاریک' : 'Dark'}</span></>
-                  )}
+                <button onClick={toggleTheme} className="flex items-center justify-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" title={t('تغییر تم', 'Change Theme')}>
+                  {theme === 'dark' ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-500" />}
                 </button>
-                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t('تغییر تقویم', 'Change Calendar')}>
-                  <Calendar size={12} className="text-indigo-500 dark:text-indigo-400" /><span>{calendarMode === 'jalali' ? (isRtl ? 'میلادی' : 'Gregorian') : (isRtl ? 'شمسی' : 'Jalali')}</span>
+                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر تقویم', 'Change Calendar')}>
+                  <Calendar size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{calendarMode === 'jalali' ? 'Ja' : 'Gre'}</span>
                 </button>
-                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t('تغییر زبان', 'Change Language')}>
-                  <Globe size={12} className="text-indigo-500 dark:text-indigo-400" /><span>{isRtl ? 'EN' : 'فا'}</span>
+                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر زبان', 'Change Language')}>
+                  <Globe size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{isRtl ? 'FA' : 'EN'}</span>
                 </button>
               </div>
               <div className="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
