@@ -1,16 +1,15 @@
 /* Filename: workflow/WorkflowDesign.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useCallback, useMemo } = React;
+  const { useState, useEffect, useCallback, useMemo, useRef } = React;
   
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
-    GitMerge = FallbackIcon, Plus = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon, 
+    GitMerge = FallbackIcon, Save = FallbackIcon, 
     PlayCircle = FallbackIcon, StopCircle = FallbackIcon, CheckSquare = FallbackIcon, Diamond = FallbackIcon,
-    ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Database = FallbackIcon, Settings2 = FallbackIcon, 
-    Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon,
-    Info = FallbackIcon
+    ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Settings2 = FallbackIcon, 
+    Trash2 = FallbackIcon, Layers = FallbackIcon
   } = LucideIcons;
 
   const WorkflowDesign = ({ definition, systemEntities = [], onBack, language = 'fa' }) => {
@@ -34,7 +33,7 @@
     const generateId = () => Math.random().toString(36).substr(2, 9);
 
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'info' });
-    const [activeTab, setActiveTab] = useState('base');
+    const [activeTab, setActiveTab] = useState('process');
     const [editingDef, setEditingDef] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
@@ -42,6 +41,11 @@
 
     const [domainFilter, setDomainFilter] = useState('');
     const [moduleFilter, setModuleFilter] = useState('');
+
+    const canvasRef = useRef(null);
+    const [draggingNode, setDraggingNode] = useState(null);
+    const [connectingStart, setConnectingStart] = useState(null);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
@@ -76,7 +80,7 @@
                 effective_end_date: '',
                 bpmn_data: {
                     nodes: [
-                        { id: `start_${generateId()}`, type: 'START_EVENT', name: t('شروع فرآیند', 'Process Start') }
+                        { id: `start_${generateId()}`, type: 'START_EVENT', name: t('شروع', 'Start'), position: { x: 100, y: 300 } }
                     ],
                     flows: []
                 }
@@ -90,7 +94,7 @@
         try {
             setIsSaving(true);
             if (!editingDef.title || !editingDef.entity_type) {
-                showToast(t('لطفاً عنوان و موجودیت را مشخص کنید.', 'Please provide title and entity type.'), 'error');
+                showToast(t('لطفاً در تب تنظیمات پایه، عنوان و موجودیت را مشخص کنید.', 'Please provide title and entity type in base settings.'), 'error');
                 setIsSaving(false);
                 return;
             }
@@ -131,57 +135,6 @@
         }
     };
 
-    const addNode = (type) => {
-        let name = '';
-        if (type === 'USER_TASK') name = t('فعالیت کاربر جدید', 'New User Task');
-        if (type === 'EXCLUSIVE_GATEWAY') name = t('دروازه شرطی', 'Exclusive Gateway');
-        if (type === 'END_EVENT') name = t('پایان فرآیند', 'Process End');
-        
-        const newNode = { id: `node_${generateId()}`, type, name, task_type: 'APPROVAL', assignee_roles: '', required_fields: '' };
-        setEditingDef({ ...editingDef, bpmn_data: { ...editingDef.bpmn_data, nodes: [...editingDef.bpmn_data.nodes, newNode] } });
-        setSelectedElement({ type: 'node', id: newNode.id });
-    };
-
-    const addFlow = () => {
-        const newFlow = { id: `flow_${generateId()}`, sourceRef: '', targetRef: '', name: t('مسیر جدید', 'New Flow'), condition: '' };
-        setEditingDef({ ...editingDef, bpmn_data: { ...editingDef.bpmn_data, flows: [...editingDef.bpmn_data.flows, newFlow] } });
-        setSelectedElement({ type: 'flow', id: newFlow.id });
-    };
-
-    const updateElement = (elementType, id, field, value) => {
-        if (elementType === 'node') {
-            const newNodes = editingDef.bpmn_data.nodes.map(n => n.id === id ? { ...n, [field]: value } : n);
-            setEditingDef({ ...editingDef, bpmn_data: { ...editingDef.bpmn_data, nodes: newNodes } });
-        } else {
-            const newFlows = editingDef.bpmn_data.flows.map(f => f.id === id ? { ...f, [field]: value } : f);
-            setEditingDef({ ...editingDef, bpmn_data: { ...editingDef.bpmn_data, flows: newFlows } });
-        }
-    };
-
-    const deleteElement = (elementType, id) => {
-        if (elementType === 'node') {
-            const newNodes = editingDef.bpmn_data.nodes.filter(n => n.id !== id);
-            const newFlows = editingDef.bpmn_data.flows.filter(f => f.sourceRef !== id && f.targetRef !== id);
-            setEditingDef({ ...editingDef, bpmn_data: { ...editingDef.bpmn_data, nodes: newNodes, flows: newFlows } });
-        } else {
-            const newFlows = editingDef.bpmn_data.flows.filter(f => f.id !== id);
-            setEditingDef({ ...editingDef, bpmn_data: { ...editingDef.bpmn_data, flows: newFlows } });
-        }
-        setSelectedElement(null);
-    };
-
-    const getNodeIcon = (type) => {
-        if (type === 'START_EVENT') return <PlayCircle size={16} className="text-emerald-500" />;
-        if (type === 'END_EVENT') return <StopCircle size={16} className="text-rose-500" />;
-        if (type === 'EXCLUSIVE_GATEWAY') return <Diamond size={16} className="text-amber-500" />;
-        return <CheckSquare size={16} className="text-indigo-500" />;
-    };
-
-    const getNodeName = (id) => {
-        const node = editingDef?.bpmn_data.nodes.find(n => n.id === id);
-        return node ? node.name : t('نامشخص', 'Unknown');
-    };
-
     const uniqueDomains = useMemo(() => {
         const domains = [...new Set(systemEntities.map(e => e.domain_name).filter(Boolean))];
         return domains.map(d => ({ value: d, label: d }));
@@ -204,25 +157,117 @@
     }, [systemEntities, domainFilter, moduleFilter, isRtl]);
 
     const operatorOptions = [
-        {value: '=', label: '='},
-        {value: '!=', label: '!='},
-        {value: '>', label: '>'},
-        {value: '<', label: '<'},
-        {value: '>=', label: '>='},
-        {value: '<=', label: '<='},
-        {value: 'IN', label: 'IN (...)'},
-        {value: 'NOT IN', label: 'NOT IN (...)'}
+        {value: '=', label: '='}, {value: '!=', label: '!='}, {value: '>', label: '>'},
+        {value: '<', label: '<'}, {value: '>=', label: '>='}, {value: '<=', label: '<='},
+        {value: 'IN', label: 'IN (...)'}, {value: 'NOT IN', label: 'NOT IN (...)'}
     ];
 
     const builderTabs = [
-        { id: 'base', label: t('تنظیمات پایه', 'Base Settings'), icon: Settings2 },
-        { id: 'process', label: t('طراحی فرآیند (BPMN)', 'Process Designer (BPMN)'), icon: GitMerge }
+        { id: 'process', label: t('طراحی فرآیند (Visual)', 'Process Designer'), icon: GitMerge },
+        { id: 'base', label: t('تنظیمات پایه و شروط', 'Base Settings & Rules'), icon: Settings2 }
     ];
+
+    const addNodeToCanvas = (type, x, y) => {
+        let name = '';
+        if (type === 'USER_TASK') name = t('فعالیت جدید', 'New Task');
+        if (type === 'EXCLUSIVE_GATEWAY') name = t('دروازه شرطی', 'Gateway');
+        if (type === 'END_EVENT') name = t('پایان', 'End');
+        if (type === 'START_EVENT') name = t('شروع', 'Start');
+        
+        const newNode = { id: `node_${generateId()}`, type, name, position: { x, y } };
+        setEditingDef(prev => ({ ...prev, bpmn_data: { ...prev.bpmn_data, nodes: [...prev.bpmn_data.nodes, newNode] } }));
+        setSelectedElement({ type: 'node', id: newNode.id });
+    };
+
+    const addFlow = (sourceRef, targetRef) => {
+        if (sourceRef === targetRef) return;
+        const exists = editingDef.bpmn_data.flows.find(f => f.sourceRef === sourceRef && f.targetRef === targetRef);
+        if (exists) return;
+
+        const newFlow = { id: `flow_${generateId()}`, sourceRef, targetRef, name: '', condition: '', action_label: '' };
+        setEditingDef(prev => ({ ...prev, bpmn_data: { ...prev.bpmn_data, flows: [...prev.bpmn_data.flows, newFlow] } }));
+        setSelectedElement({ type: 'flow', id: newFlow.id });
+    };
+
+    const deleteSelected = () => {
+        if (!selectedElement) return;
+        if (selectedElement.type === 'node') {
+            setEditingDef(prev => ({
+                ...prev,
+                bpmn_data: {
+                    nodes: prev.bpmn_data.nodes.filter(n => n.id !== selectedElement.id),
+                    flows: prev.bpmn_data.flows.filter(f => f.sourceRef !== selectedElement.id && f.targetRef !== selectedElement.id)
+                }
+            }));
+        } else {
+            setEditingDef(prev => ({
+                ...prev,
+                bpmn_data: {
+                    ...prev.bpmn_data,
+                    flows: prev.bpmn_data.flows.filter(f => f.id !== selectedElement.id)
+                }
+            }));
+        }
+        setSelectedElement(null);
+    };
+
+    const updateSelectedNodeName = (name) => {
+        if (!selectedElement || selectedElement.type !== 'node') return;
+        setEditingDef(prev => ({
+            ...prev,
+            bpmn_data: {
+                ...prev.bpmn_data,
+                nodes: prev.bpmn_data.nodes.map(n => n.id === selectedElement.id ? { ...n, name } : n)
+            }
+        }));
+    };
+
+    const handleCanvasDragOver = (e) => e.preventDefault();
+
+    const handleCanvasDrop = (e) => {
+        e.preventDefault();
+        const type = e.dataTransfer.getData('nodeType');
+        if (!type || !canvasRef.current) return;
+
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        addNodeToCanvas(type, x, y);
+    };
+
+    const handleCanvasMouseMove = (e) => {
+        if (!canvasRef.current) return;
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        setMousePos({ x, y });
+
+        if (draggingNode) {
+            setEditingDef(prev => ({
+                ...prev,
+                bpmn_data: {
+                    ...prev.bpmn_data,
+                    nodes: prev.bpmn_data.nodes.map(n => n.id === draggingNode ? { ...n, position: { x, y } } : n)
+                }
+            }));
+        }
+    };
+
+    const handleCanvasMouseUp = () => {
+        setDraggingNode(null);
+        setConnectingStart(null);
+    };
+
+    const getNodeStyle = (type) => {
+        if (type === 'START_EVENT') return 'w-12 h-12 rounded-full bg-emerald-50 border-2 border-emerald-400 text-emerald-600';
+        if (type === 'END_EVENT') return 'w-12 h-12 rounded-full bg-rose-50 border-4 border-rose-400 text-rose-600';
+        if (type === 'EXCLUSIVE_GATEWAY') return 'w-14 h-14 bg-amber-50 border-2 border-amber-400 text-amber-600 rotate-45';
+        return 'w-32 h-16 rounded-xl bg-white border-2 border-indigo-400 text-indigo-700 shadow-sm';
+    };
 
     if (!editingDef) return null;
 
     const selectedNode = selectedElement?.type === 'node' ? editingDef.bpmn_data.nodes.find(n => n.id === selectedElement.id) : null;
-    const selectedFlow = selectedElement?.type === 'flow' ? editingDef.bpmn_data.flows.find(f => f.id === selectedElement.id) : null;
 
     return (
       <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-900 font-sans animate-in fade-in zoom-in-95 duration-300" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -233,7 +278,7 @@
         >
             <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)} className="shadow-sm bg-white dark:bg-slate-800">
-                    {t('بازگشت به فهرست', 'Back to List')}
+                    {t('بازگشت', 'Back')}
                 </Button>
                 <Button variant="primary" size="sm" icon={Save} onClick={handleSaveDefinition} disabled={isSaving} className="shadow-sm px-6">
                     {isSaving ? t('در حال ذخیره...', 'Saving...') : t('ذخیره گردش کار', 'Save Workflow')}
@@ -243,44 +288,53 @@
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 pb-4 mt-2">
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col h-full overflow-hidden">
-                <div className="px-6 pt-4 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/80 shrink-0">
+                <div className="px-4 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/80 shrink-0">
                     <Tabs tabs={builderTabs} activeTab={activeTab} onChange={setActiveTab} />
                 </div>
 
-                <div className="flex-1 overflow-hidden bg-slate-50/30 dark:bg-slate-900/20 flex flex-col relative">
+                <div className="flex-1 overflow-hidden bg-slate-50 dark:bg-slate-900 flex relative">
+                    
                     {activeTab === 'base' && (
-                        <div className="p-4 w-full h-full overflow-y-auto custom-scrollbar">
-                            <div className="max-w-4xl mx-auto flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2">
-                                
-                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-3">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="sm" wrapperClassName="md:col-span-1" />
-                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="sm" disabled={!domainFilter && uniqueModules.length === 0} wrapperClassName="md:col-span-1" />
-                                        <SelectField label={t('موجودیت هدف', 'Target Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="sm" wrapperClassName="md:col-span-2" />
+                        <div className="w-full h-full p-4 overflow-y-auto custom-scrollbar">
+                            <div className="w-full flex flex-col gap-4 animate-in fade-in">
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-3 w-full">
+                                    <h3 className="text-[12px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2">{t('موجودیت هدف', 'Target Entity')}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                        <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} size="sm" />
+                                        <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} size="sm" disabled={!domainFilter && uniqueModules.length === 0} />
+                                        <div className="lg:col-span-2">
+                                            <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required size="sm" />
+                                        </div>
                                     </div>
+                                </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-3">
-                                        <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="sm" wrapperClassName="md:col-span-2" />
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-3 w-full">
+                                    <h3 className="text-[12px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2">{t('تنظیمات گردش کار', 'Workflow Config')}</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                                        <div className="lg:col-span-2">
+                                            <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required size="sm" />
+                                        </div>
                                         <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled size="sm" />
-                                        <div className="flex items-center pt-5">
-                                            <ToggleField label={t('وضعیت فعال بودن', 'Active Status')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
+                                        <DatePicker label={t('تاریخ شروع', 'Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="sm" />
+                                        <DatePicker label={t('تاریخ پایان', 'End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="sm" />
+                                        <div className="flex items-center mt-6 px-2">
+                                            <ToggleField label={t('فعال در سیستم', 'Active in System')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
                                         </div>
                                     </div>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-3">
-                                        <DatePicker label={t('تاریخ موثر شروع', 'Effective Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} size="sm" wrapperClassName="md:col-span-1" />
-                                        <DatePicker label={t('تاریخ موثر پایان', 'Effective End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} size="sm" wrapperClassName="md:col-span-1" />
-                                    </div>
+                                </div>
 
-                                    <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">{t('شروط شروع گردش کار (فاکتورها)', 'Start Condition (Factor)')}</span>
-                                            <span className="text-[10px] text-slate-500 dark:text-slate-400">{t('در صورت پر شدن این فیلدها، گردش کار فقط برای رکوردهایی که این شرط را دارند اجرا می‌شود.', 'If set, the workflow only applies to records matching this condition.')}</span>
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col gap-3 w-full">
+                                    <div className="flex flex-col border-b border-slate-100 dark:border-slate-700/50 pb-2">
+                                        <h3 className="text-[12px] font-black text-slate-700 dark:text-slate-200">{t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')}</h3>
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                        <div className="lg:col-span-2">
+                                            <TextField label={t('نام فیلد (مثلا: loan_type)', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="sm" />
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                                            <TextField label={t('نام فیلد دیتابیس', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} size="sm" placeholder={t('مثلا: loan_type', 'e.g. loan_type')} wrapperClassName="md:col-span-1" />
-                                            <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} size="sm" options={operatorOptions} wrapperClassName="md:col-span-1" />
-                                            <TextField label={t('مقدار', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="sm" placeholder={t('مثلا: 1,2,3', 'e.g. 1,2,3')} wrapperClassName="md:col-span-2" />
+                                        <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} size="sm" options={operatorOptions} />
+                                        <div className="lg:col-span-2">
+                                            <TextField label={t('مقدار', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} size="sm" />
                                         </div>
                                     </div>
                                 </div>
@@ -289,158 +343,160 @@
                     )}
 
                     {activeTab === 'process' && (
-                        <div className="flex flex-1 min-h-0 animate-in fade-in">
-                            <div className={`w-80 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col shadow-[2px_0_10px_rgba(0,0,0,0.02)] z-10`}>
-                                <div className="p-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/50 flex flex-col gap-2">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">{t('ابزارهای طراحی', 'Design Tools')}</span>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <Button variant="outline" size="sm" icon={CheckSquare} onClick={() => addNode('USER_TASK')} className="!text-[10px] justify-start bg-white">{t('فعالیت', 'Task')}</Button>
-                                        <Button variant="outline" size="sm" icon={Diamond} onClick={() => addNode('EXCLUSIVE_GATEWAY')} className="!text-[10px] justify-start bg-white">{t('دروازه', 'Gateway')}</Button>
-                                        <Button variant="outline" size="sm" icon={StopCircle} onClick={() => addNode('END_EVENT')} className="!text-[10px] justify-start bg-white">{t('پایان', 'End')}</Button>
-                                        <Button variant="outline" size="sm" icon={ArrowRightLeft} onClick={addFlow} className="!text-[10px] justify-start bg-white text-indigo-600 border-indigo-200">{t('مسیر انتقال', 'Flow')}</Button>
-                                    </div>
+                        <>
+                            {/* Palette Sidebar */}
+                            <div className={`w-16 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col items-center py-4 gap-4 z-20 shadow-sm`}>
+                                <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 [writing-mode:vertical-rl] rotate-180 mb-2">{t('ابزارها', 'Tools')}</div>
+                                
+                                <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
+                                    <PlayCircle size={20} />
                                 </div>
-                                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-4">
-                                    <div className="flex flex-col gap-1.5">
-                                        <div className="flex items-center gap-1.5 px-1 mb-1">
-                                            <Layers size={14} className="text-slate-400" />
-                                            <span className="text-[11px] font-black text-slate-600 dark:text-slate-300">{t('گره‌های فرآیند', 'Process Nodes')}</span>
-                                        </div>
-                                        {editingDef.bpmn_data.nodes.map(node => (
-                                            <div key={node.id} onClick={() => setSelectedElement({ type: 'node', id: node.id })} className={`flex items-center gap-2.5 p-2 rounded-lg border cursor-pointer transition-all ${selectedElement?.id === node.id ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-slate-600 hover:shadow-sm'}`}>
-                                                <div className="w-6 h-6 rounded bg-slate-50 dark:bg-slate-900 flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-700">{getNodeIcon(node.type)}</div>
-                                                <span className={`text-[11px] truncate flex-1 ${selectedElement?.id === node.id ? 'font-black text-indigo-700 dark:text-indigo-400' : 'font-bold text-slate-700 dark:text-slate-200'}`}>{node.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex flex-col gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                                        <div className="flex items-center gap-1.5 px-1 mb-1">
-                                            <GitMerge size={14} className="text-slate-400" />
-                                            <span className="text-[11px] font-black text-slate-600 dark:text-slate-300">{t('مسیرهای انتقال', 'Sequence Flows')}</span>
-                                        </div>
-                                        {editingDef.bpmn_data.flows.length === 0 && <span className="text-[10px] text-slate-400 px-2 italic">{t('مسیری تعریف نشده', 'No flows defined')}</span>}
-                                        {editingDef.bpmn_data.flows.map(flow => (
-                                            <div key={flow.id} onClick={() => setSelectedElement({ type: 'flow', id: flow.id })} className={`flex flex-col gap-1 p-2.5 rounded-lg border cursor-pointer transition-all ${selectedElement?.id === flow.id ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-600 shadow-sm' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-slate-600 hover:shadow-sm'}`}>
-                                                <span className={`text-[11px] truncate ${selectedElement?.id === flow.id ? 'font-black text-indigo-700 dark:text-indigo-400' : 'font-bold text-slate-700 dark:text-slate-200'}`}>{flow.name || t('بدون نام', 'Unnamed')}</span>
-                                                <div className="flex items-center gap-1.5 text-[9px] font-mono text-slate-500">
-                                                    <span className="truncate max-w-[80px]">{getNodeName(flow.sourceRef) || '?'}</span>
-                                                    {isRtl ? <ArrowLeft size={10} className="text-slate-300"/> : <ArrowRight size={10} className="text-slate-300"/>}
-                                                    <span className="truncate max-w-[80px]">{getNodeName(flow.targetRef) || '?'}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-10 h-10 rounded-xl border-2 border-indigo-400 bg-white flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500" title={t('فعالیت', 'Task')}>
+                                    <CheckSquare size={18} />
+                                </div>
+                                <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'EXCLUSIVE_GATEWAY')} className="w-10 h-10 border-2 border-amber-400 bg-amber-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-amber-500 rotate-45" title={t('دروازه شرطی', 'Gateway')}>
+                                    <Diamond size={18} className="-rotate-45" />
+                                </div>
+                                <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-10 h-10 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-rose-500" title={t('گره پایان', 'End Event')}>
+                                    <StopCircle size={18} />
                                 </div>
                             </div>
 
-                            <div className="flex-1 bg-slate-50/50 dark:bg-slate-900/50 p-6 overflow-y-auto custom-scrollbar flex items-start justify-center">
-                                {!selectedElement ? (
-                                    <div className="flex flex-col items-center justify-center text-center max-w-sm mt-20 p-8 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-800/50">
-                                        <ListTree size={40} className="text-slate-300 dark:text-slate-600 mb-4" strokeWidth={1.5} />
-                                        <h4 className="text-[14px] font-black text-slate-700 dark:text-slate-200">{t('تنظیمات اجزای فرآیند', 'Process Element Settings')}</h4>
-                                        <p className="text-[12px] text-slate-500 mt-2 leading-relaxed">{t('برای مشاهده و ویرایش جزئیات، یکی از گره‌ها یا مسیرها را از منوی سمت راست انتخاب کنید.', 'Select a node or flow from the sidebar to view and edit its details.')}</p>
-                                    </div>
-                                ) : selectedNode ? (
-                                    <div className="w-full max-w-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/20 border-b border-slate-100 dark:border-slate-700 p-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
-                                                    {getNodeIcon(selectedNode.type)}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[14px] font-black text-slate-800 dark:text-slate-100">{t('تنظیمات گره', 'Node Settings')}</span>
-                                                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">{selectedNode.type}</span>
-                                                </div>
+                            {/* Canvas Area */}
+                            <div 
+                                className="flex-1 relative overflow-hidden outline-none bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px]"
+                                ref={canvasRef}
+                                onDragOver={handleCanvasDragOver}
+                                onDrop={handleCanvasDrop}
+                                onMouseMove={handleCanvasMouseMove}
+                                onMouseUp={handleCanvasMouseUp}
+                                onMouseLeave={handleCanvasMouseUp}
+                                onClick={() => setSelectedElement(null)}
+                                dir="ltr" /* Force LTR for precise mouse math */
+                            >
+                                {/* SVG Layer for edges */}
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                                    <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+                                        </marker>
+                                        <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                                            <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1" />
+                                        </marker>
+                                    </defs>
+                                    
+                                    {editingDef.bpmn_data.flows.map(flow => {
+                                        const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
+                                        const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
+                                        if (!sourceNode || !targetNode) return null;
+                                        
+                                        const isSelected = selectedElement?.id === flow.id;
+                                        const d = `M ${sourceNode.position.x} ${sourceNode.position.y} L ${targetNode.position.x} ${targetNode.position.y}`;
+                                        
+                                        return (
+                                            <g key={flow.id} className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}>
+                                                <path d={d} stroke="transparent" strokeWidth="15" fill="none" />
+                                                <path 
+                                                    d={d} 
+                                                    stroke={isSelected ? '#6366f1' : '#64748b'} 
+                                                    strokeWidth={isSelected ? "3" : "2"} 
+                                                    fill="none" 
+                                                    markerEnd={`url(#${isSelected ? 'arrowhead-selected' : 'arrowhead'})`}
+                                                    className="transition-all"
+                                                />
+                                            </g>
+                                        );
+                                    })}
+                                    
+                                    {connectingStart && (
+                                        <path 
+                                            d={`M ${editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)?.position.x} ${editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)?.position.y} L ${mousePos.x} ${mousePos.y}`} 
+                                            stroke="#94a3b8" 
+                                            strokeWidth="2" 
+                                            strokeDasharray="5,5" 
+                                            fill="none" 
+                                        />
+                                    )}
+                                </svg>
+
+                                {/* Nodes Layer */}
+                                {editingDef.bpmn_data.nodes.map(node => {
+                                    const isSelected = selectedElement?.id === node.id;
+                                    const styleClass = getNodeStyle(node.type);
+                                    
+                                    return (
+                                        <div 
+                                            key={node.id}
+                                            className={`absolute flex items-center justify-center flex-col z-10 transition-shadow ${isSelected ? 'ring-4 ring-indigo-500/30' : 'hover:ring-2 ring-slate-300'}`}
+                                            style={{ left: node.position.x, top: node.position.y, transform: 'translate(-50%, -50%)' }}
+                                            onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'node', id: node.id }); }}
+                                            onMouseDown={(e) => {
+                                                if (e.target.classList.contains('connector')) return;
+                                                e.stopPropagation();
+                                                setDraggingNode(node.id);
+                                                setSelectedElement({ type: 'node', id: node.id });
+                                            }}
+                                            onMouseUp={(e) => {
+                                                if (connectingStart && connectingStart !== node.id) {
+                                                    addFlow(connectingStart, node.id);
+                                                }
+                                            }}
+                                        >
+                                            <div className={`${styleClass} flex items-center justify-center relative cursor-move bg-white shadow-sm`}>
+                                                {node.type === 'EXCLUSIVE_GATEWAY' ? (
+                                                    <div className="absolute inset-0 flex items-center justify-center -rotate-45">
+                                                        <Diamond size={20} />
+                                                    </div>
+                                                ) : (
+                                                    <div className="px-2 text-center text-[10px] font-black leading-tight break-words max-w-full overflow-hidden select-none" dir={isRtl ? 'rtl' : 'ltr'}>
+                                                        {node.name}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Connection Handle */}
+                                                <div 
+                                                    className="connector absolute -right-3 top-1/2 -translate-y-1/2 w-4 h-4 bg-indigo-500 rounded-full border-2 border-white cursor-crosshair opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-20"
+                                                    onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }}
+                                                    style={node.type === 'EXCLUSIVE_GATEWAY' ? { right: '-10px', top: '-10px', transform: 'none' } : {}}
+                                                />
                                             </div>
-                                            {selectedNode.type !== 'START_EVENT' && (
-                                                <button onClick={() => deleteElement('node', selectedNode.id)} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors border border-transparent hover:border-rose-200">
-                                                    <Trash2 size={16} strokeWidth={2.5}/>
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="p-6 flex flex-col gap-5">
-                                            <TextField label={t('عنوان نمایشی گره', 'Node Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} required size="sm" />
                                             
-                                            {selectedNode.type === 'USER_TASK' && (
-                                                <div className="flex flex-col gap-5 pt-5 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in">
-                                                    <SelectField label={t('نوع فعالیت کاربر', 'User Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
-                                                        {value: 'APPROVAL', label: t('بررسی و تایید/رد', 'Review & Approve/Reject')},
-                                                        {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
-                                                    ]} isRtl={isRtl} size="sm" />
-                                                    
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><Users size={14} className="text-amber-500"/> {t('نقش‌ها/کاربران مجاز برای این کار', 'Assignee Roles/Users')}</span>
-                                                        <input type="text" value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} className="w-full h-8 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400" placeholder={t('مثلا: مدیر مالی, کارشناس فروش', 'e.g. Finance Manager')} />
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-1.5">
-                                                        <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><Database size={14} className="text-emerald-500"/> {t('فیلدهای فرم که در این مرحله باید تغییر کنند (اجباری)', 'Required Fields to Update')}</span>
-                                                        <input type="text" value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} className="w-full h-8 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400" placeholder={t('شناسه فیلدها با کاما (مثلا: amount, description)', 'Field IDs (e.g. amount, description)')} />
-                                                        <span className="text-[9px] text-slate-400 font-bold px-1">{t('در صورتی که نوع فعالیت "تکمیل اطلاعات" باشد، کاربر مجبور به پر کردن این فیلدها خواهد بود.', 'If Data Entry, user must fill these fields.')}</span>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {selectedNode.type === 'EXCLUSIVE_GATEWAY' && (
-                                                <div className="p-4 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl flex items-start gap-3 mt-2">
-                                                    <Info size={16} className="text-amber-500 mt-0.5 shrink-0" />
-                                                    <span className="text-[11px] text-amber-800 dark:text-amber-400 leading-relaxed font-bold">
-                                                        {t('دروازه شرطی (Gateway) برای انشعاب مسیرها بر اساس شروط خاص استفاده می‌شود. برای تعریف شروط، مسیرهای خروجی از این گره را انتخاب کرده و شرط آنها را بنویسید.', 'Exclusive Gateway branches paths based on conditions. Select the outgoing flows from this node to define the conditions.')}
-                                                    </span>
+                                            {node.type === 'EXCLUSIVE_GATEWAY' && (
+                                                <div className="absolute top-full mt-2 text-[10px] font-black bg-white/80 px-2 py-0.5 rounded shadow-sm border border-slate-200" dir={isRtl ? 'rtl' : 'ltr'}>
+                                                    {node.name}
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
-                                ) : selectedFlow ? (
-                                    <div className="w-full max-w-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-                                        <div className="bg-indigo-50/50 dark:bg-indigo-900/20 border-b border-slate-100 dark:border-slate-700 p-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm text-indigo-500">
-                                                    <ArrowRightLeft size={18} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-[14px] font-black text-slate-800 dark:text-slate-100">{t('تنظیمات مسیر انتقال', 'Sequence Flow Settings')}</span>
-                                                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">SEQUENCE_FLOW</span>
-                                                </div>
-                                            </div>
-                                            <button onClick={() => deleteElement('flow', selectedFlow.id)} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors border border-transparent hover:border-rose-200">
-                                                <Trash2 size={16} strokeWidth={2.5}/>
-                                            </button>
-                                        </div>
-                                        <div className="p-6 flex flex-col gap-6">
-                                            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-700/50 shadow-inner">
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('گره مبدا', 'Source Node')}</span>
-                                                    <select value={selectedFlow.sourceRef} onChange={(e) => updateElement('flow', selectedFlow.id, 'sourceRef', e.target.value)} className="w-full text-[12px] font-black bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg h-10 px-2 outline-none text-slate-700 dark:text-slate-200 focus:border-indigo-400 shadow-sm">
-                                                        <option value="">{t('انتخاب گره مبدا...', 'Select Source...')}</option>
-                                                        {editingDef.bpmn_data.nodes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div className="text-slate-300 dark:text-slate-600 mt-5">{isRtl ? <ArrowLeft size={20} strokeWidth={2.5}/> : <ArrowRight size={20} strokeWidth={2.5}/>}</div>
-                                                <div className="flex flex-col gap-1.5">
-                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{t('گره مقصد', 'Target Node')}</span>
-                                                    <select value={selectedFlow.targetRef} onChange={(e) => updateElement('flow', selectedFlow.id, 'targetRef', e.target.value)} className="w-full text-[12px] font-black bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg h-10 px-2 outline-none text-slate-700 dark:text-slate-200 focus:border-indigo-400 shadow-sm">
-                                                        <option value="">{t('انتخاب گره مقصد...', 'Select Target...')}</option>
-                                                        {editingDef.bpmn_data.nodes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            <TextField label={t('عنوان دکمه/مسیر (جهت نمایش به کاربر)', 'Flow/Button Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} required size="sm" />
-
-                                            {selectedFlow.sourceRef && editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef)?.type === 'EXCLUSIVE_GATEWAY' && (
-                                                <div className="flex flex-col gap-1.5 pt-4 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in">
-                                                    <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5"><Diamond size={14}/> {t('شرط عبور از دروازه (Expression)', 'Gateway Condition')}</span>
-                                                    <input type="text" value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} className="w-full h-10 px-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-lg text-[12px] font-mono text-slate-800 dark:text-slate-100 outline-none focus:border-amber-400" placeholder={t('مثلا: amount > 50000', 'e.g. amount > 50000')} dir="ltr" />
-                                                    <span className="text-[9px] text-slate-400 font-bold px-1">{t('در صورتی که این شرط برقرار باشد، سیستم این مسیر را انتخاب می‌کند.', 'If this condition evaluates to true, this path is taken.')}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : null}
+                                    );
+                                })}
                             </div>
-                        </div>
+
+                            {/* Mini Settings Panel overlay */}
+                            {selectedElement && (
+                                <div className={`absolute top-4 ${isRtl ? 'left-4' : 'right-4'} w-64 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-30 flex flex-col overflow-hidden animate-in slide-in-from-right-4`}>
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-3 flex items-center justify-between border-b border-slate-100 dark:border-slate-700">
+                                        <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                                            <Layers size={14} className="text-indigo-500"/>
+                                            {selectedElement.type === 'node' ? t('تنظیمات گره', 'Node Settings') : t('تنظیمات مسیر', 'Flow Settings')}
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={deleteSelected} className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"><Trash2 size={14}/></button>
+                                            <button onClick={() => setSelectedElement(null)} className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors"><X size={14}/></button>
+                                        </div>
+                                    </div>
+                                    <div className="p-4 flex flex-col gap-4">
+                                        {selectedElement.type === 'node' && selectedNode ? (
+                                            <>
+                                                <TextField label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateSelectedNodeName(e.target.value)} isRtl={isRtl} size="sm" />
+                                                <div className="text-[10px] text-slate-400 border-t border-slate-100 pt-2">{t('تنظیمات پیشرفته (قوانین، فیلدها و فرم‌ها) در مراحل بعدی توسعه اضافه خواهد شد.', 'Advanced settings (rules, fields, forms) will be added in next phases.')}</div>
+                                            </>
+                                        ) : selectedFlow ? (
+                                            <div className="text-[11px] text-slate-500 text-center py-4">{t('مسیر انتقال انتخاب شد.', 'Sequence Flow selected.')}</div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
