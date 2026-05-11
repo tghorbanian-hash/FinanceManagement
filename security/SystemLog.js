@@ -7,9 +7,9 @@
   const LucideIcons = window.LucideIcons || {};
   const { 
     History = FallbackIcon, Clock = FallbackIcon, Calendar = FallbackIcon, User = FallbackIcon, 
-    Database = FallbackIcon, Activity = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon,
-    Eye = FallbackIcon, RefreshCw = FallbackIcon, AlertCircle = FallbackIcon, Info = FallbackIcon,
-    Plus = FallbackIcon, Edit = FallbackIcon, Trash2 = FallbackIcon, Box = FallbackIcon, Search = FallbackIcon
+    Database = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon,
+    Eye = FallbackIcon, RefreshCw = FallbackIcon, Info = FallbackIcon,
+    Plus = FallbackIcon, Edit = FallbackIcon, Trash2 = FallbackIcon, Box = FallbackIcon, Hash = FallbackIcon
   } = LucideIcons;
 
   const SystemLog = ({ language = 'fa' }) => {
@@ -96,13 +96,40 @@
         const type = getActionType(action);
         if (type === 'CREATE') return <Badge variant="emerald" size="sm" className="w-16 justify-center shadow-sm">{t('ایجاد', 'CREATE')}</Badge>;
         if (type === 'UPDATE') return <Badge variant="slate" size="sm" className="w-16 justify-center shadow-sm">{t('ویرایش', 'UPDATE')}</Badge>;
-        if (type === 'DELETE') return <Badge variant="rose" size="sm" className="w-16 justify-center shadow-sm">{t('حذف', 'DELETE')}</Badge>;
+        if (type === 'DELETE') return <Badge variant="danger" size="sm" className="w-16 justify-center shadow-sm">{t('حذف', 'DELETE')}</Badge>;
         return <Badge variant="slate" size="sm" className="w-16 justify-center shadow-sm">{action}</Badge>;
+    }, [t]);
+
+    const getFieldLabel = useCallback((key) => {
+        const labels = {
+          code: t('کد ارز', 'Currency Code'),
+          title: t('عنوان', 'Title'),
+          symbol: t('نماد', 'Symbol'),
+          is_active: t('وضعیت فعالیت', 'Status'),
+          fetch_type: t('نحوه دریافت', 'Fetch Type'),
+          decimal_places: t('اعشار', 'Decimals'),
+          targets: t('ارزهای هدف', 'Targets'),
+          rate: t('نرخ تبدیل', 'Exchange Rate'),
+          rate_date: t('تاریخ نرخ', 'Rate Date'),
+          source: t('منبع اطلاعات', 'Source'),
+          base_currency: t('ارز پایه', 'Base Currency'),
+          target_currency: t('ارز هدف', 'Target Currency'),
+          created_by: t('ایجاد کننده', 'Created By'),
+          updated_by: t('ویرایش کننده', 'Updated By'),
+          created_at: t('تاریخ ایجاد', 'Created At'),
+          updated_at: t('تاریخ ویرایش', 'Updated At'),
+          id: t('شناسه رکورد', 'Record ID')
+        };
+        return labels[key] || key;
     }, [t]);
 
     const filteredLogs = useMemo(() => {
         let result = [...logs];
         
+        if (filters.record_id) {
+            const term = filters.record_id.toLowerCase();
+            result = result.filter(r => (r.record_id || '').toLowerCase().includes(term));
+        }
         if (filters.user_name) {
             const term = filters.user_name.toLowerCase();
             result = result.filter(r => (r.user_name || '').toLowerCase().includes(term));
@@ -113,9 +140,22 @@
         if (filters.action) {
             result = result.filter(r => getActionType(r.action) === filters.action);
         }
-        if (filters.details) {
-            const term = filters.details.toLowerCase();
-            result = result.filter(r => (r.details || '').toLowerCase().includes(term));
+        if (filters.changed_field) {
+            const term = filters.changed_field.toLowerCase();
+            result = result.filter(r => {
+                if ((r.details || '').toLowerCase().includes(term)) return true;
+                
+                const checkObject = (obj) => {
+                    if (!obj) return false;
+                    for (const [key, val] of Object.entries(obj)) {
+                        if (getFieldLabel(key).toLowerCase().includes(term) || key.toLowerCase().includes(term)) return true;
+                        if (val !== null && val !== undefined && String(val).toLowerCase().includes(term)) return true;
+                    }
+                    return false;
+                };
+                
+                return checkObject(r.old_data) || checkObject(r.new_data);
+            });
         }
         if (filters.fromDate) {
             const fromDateHyphen = filters.fromDate.replace(/\//g, '-');
@@ -133,7 +173,7 @@
         }
         
         return result;
-    }, [logs, filters]);
+    }, [logs, filters, getFieldLabel]);
 
     const uniqueEntities = useMemo(() => {
         const entities = new Set(logs.map(l => l.entity_type).filter(Boolean));
@@ -174,7 +214,11 @@
         }
       },
       { 
-        field: 'user_name', header_fa: 'کاربر', header_en: 'User', width: '140px', 
+        field: 'action', header_fa: 'عملیات', header_en: 'Action', width: '90px', 
+        render: (v) => getActionBadge(v) 
+      },
+      { 
+        field: 'user_name', header_fa: 'کاربر', header_en: 'User', width: '130px', 
         render: (v) => (
             <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
@@ -185,11 +229,7 @@
         )
       },
       { 
-        field: 'action', header_fa: 'عملیات', header_en: 'Action', width: '100px', 
-        render: (v) => getActionBadge(v) 
-      },
-      { 
-        field: 'entity_type', header_fa: 'موجودیت (بخش)', header_en: 'Entity Module', width: '150px', 
+        field: 'entity_type', header_fa: 'موجودیت (بخش)', header_en: 'Entity Module', width: '140px', 
         render: (v) => (
             <div className="flex items-center gap-1.5">
                 <Database size={12} className="text-slate-400 dark:text-slate-500" />
@@ -198,33 +238,19 @@
         )
       },
       { 
+        field: 'record_id', header_fa: 'شناسه رکورد', header_en: 'Record ID', width: '110px', 
+        render: (v) => (
+            <div className="flex items-center gap-1">
+               <Hash size={10} className="text-slate-400" />
+               <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">{v}</span>
+            </div>
+        )
+      },
+      { 
         field: 'details', header_fa: 'شرح جزئیات', header_en: 'Details', width: 'auto', minWidth: '250px',
         render: (v) => <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block w-full">{v || '-'}</span> 
       }
     ];
-
-    const getFieldLabel = (key) => {
-        const labels = {
-          code: t('کد ارز', 'Currency Code'),
-          title: t('عنوان', 'Title'),
-          symbol: t('نماد', 'Symbol'),
-          is_active: t('وضعیت فعالیت', 'Status'),
-          fetch_type: t('نحوه دریافت', 'Fetch Type'),
-          decimal_places: t('اعشار', 'Decimals'),
-          targets: t('ارزهای هدف', 'Targets'),
-          rate: t('نرخ تبدیل', 'Exchange Rate'),
-          rate_date: t('تاریخ نرخ', 'Rate Date'),
-          source: t('منبع اطلاعات', 'Source'),
-          base_currency: t('ارز پایه', 'Base Currency'),
-          target_currency: t('ارز هدف', 'Target Currency'),
-          created_by: t('ایجاد کننده', 'Created By'),
-          updated_by: t('ویرایش کننده', 'Updated By'),
-          created_at: t('تاریخ ایجاد', 'Created At'),
-          updated_at: t('تاریخ ویرایش', 'Updated At'),
-          id: t('شناسه رکورد', 'Record ID')
-        };
-        return labels[key] || key;
-    };
 
     const formatValue = (val) => {
         if (val === null || val === undefined || val === '') return t('خالی', 'Empty');
@@ -329,47 +355,29 @@
         };
 
         return (
-            <div className="flex flex-col h-full font-sans">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800 shadow-sm">
-                            <Activity size={24} strokeWidth={2} />
-                        </div>
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-2">
-                                <span className="font-black text-[14px] text-slate-800 dark:text-slate-100">{getActionBadge(selectedLog.action)}</span>
-                                <span className="text-slate-300 dark:text-slate-600">|</span>
-                                <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"><Database size={12}/> {getEntityLabel(selectedLog.entity_type)}</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-widest">{t('شناسه رکورد:', 'Record ID:')} {selectedLog.record_id}</span>
-                        </div>
+            <div className="flex flex-col p-4 font-sans gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                        {getActionBadge(selectedLog.action)}
+                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{selectedLog.user_name}</span>
+                        <span className="text-slate-300 dark:text-slate-600">|</span>
+                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"><Database size={12}/> {getEntityLabel(selectedLog.entity_type)}</span>
                     </div>
-                    
-                    <div className="flex flex-col items-end gap-1.5 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm w-full sm:w-auto">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200">
-                            <User size={12} className="text-slate-400" />
-                            {selectedLog.user_name}
-                        </div>
-                        <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400" dir="ltr">
-                            <span className="flex items-center gap-1"><Calendar size={10} /> {formattedDate}</span>
-                            <span className="flex items-center gap-1"><Clock size={10} /> {timeStr}</span>
-                        </div>
+                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-[10.5px] font-mono font-medium" dir="ltr">
+                        <div className="flex items-center gap-1.5"><Calendar size={12} /> <span>{formattedDate}</span></div>
+                        <div className="flex items-center gap-1.5"><Clock size={12} /> <span>{timeStr}</span></div>
                     </div>
                 </div>
 
-                <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
-                    {selectedLog.details && (
-                        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl p-3.5 flex items-start gap-3">
-                            <Info size={16} className="text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-black text-blue-800 dark:text-blue-300 uppercase tracking-wider mb-1">{t('شرح عملیات', 'Operation Details')}</span>
-                                <span className="text-[12px] text-blue-900 dark:text-blue-200 leading-relaxed font-medium">{selectedLog.details}</span>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {renderDiffs()}
-                </div>
+                <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('شناسه رکورد:', 'Record ID:')} {selectedLog.record_id}</div>
+
+                {selectedLog.details && (
+                    <div className="text-[11.5px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 leading-relaxed font-medium">
+                        {selectedLog.details}
+                    </div>
+                )}
+                
+                {renderDiffs()}
             </div>
         );
     };
@@ -387,9 +395,11 @@
             </Button>
         </PageHeader>
 
-        <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500 mt-4">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500">
             <AdvancedFilter 
                 fields={[
+                  { name: 'record_id', label: t('شناسه رکورد', 'Record ID'), type: 'text' },
+                  { name: 'changed_field', label: t('فیلد/مقدار تغییر یافته', 'Changed Field/Value'), type: 'text' },
                   { name: 'user_name', label: t('کاربر تغییر دهنده', 'User'), type: 'text' },
                   { name: 'entity_type', label: t('موجودیت', 'Entity'), type: 'select', options: uniqueEntities },
                   { name: 'action', label: t('نوع عملیات', 'Action'), type: 'select', options: [
@@ -397,7 +407,6 @@
                       {value: 'UPDATE', label: t('ویرایش', 'Update')},
                       {value: 'DELETE', label: t('حذف', 'Delete')}
                   ]},
-                  { name: 'details', label: t('شرح جزئیات', 'Details Text'), type: 'text' },
                   { name: 'fromDate', label: t('از تاریخ', 'From Date'), type: 'date' },
                   { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' }
                 ]}
@@ -407,9 +416,9 @@
                 language={language}
             />
             
-            <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col mt-4">
+            <div className="flex-1 min-h-0">
                 {isLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-12">
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 h-full bg-white dark:bg-slate-800 rounded-b-2xl md:rounded-b-none md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin mb-4"></div>
                         <span className="text-slate-500 dark:text-slate-400 font-bold text-[12px]">{t('در حال دریافت اطلاعات لاگ...', 'Loading logs data...')}</span>
                     </div>
