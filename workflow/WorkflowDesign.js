@@ -19,7 +19,7 @@
     const { 
       Button = FallbackComponent, PageHeader = FallbackComponent, TextField = FallbackComponent, 
       SelectField = FallbackComponent, ToggleField = FallbackComponent, Tabs = FallbackComponent,
-      DatePicker = FallbackComponent
+      DatePicker = FallbackComponent, Card = FallbackComponent
     } = Core;
     
     const Feedback = window.DSFeedback || window.DesignSystem || {};
@@ -310,80 +310,67 @@
     const selectedFlow = selectedElement?.type === 'flow' ? editingDef.bpmn_data.flows.find(f => f.id === selectedElement.id) : null;
 
     return (
-      <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-900 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
-          title={editingDef.id ? t('ویرایش و طراحی گردش کار', 'Edit Workflow Design') : t('طراحی گردش کار جدید', 'Design New Workflow')}
+          title={t('محیط طراح گردش کار', 'Workflow Designer')}
           icon={GitMerge} language={language}
           breadcrumbs={[{ label: t('مدیریت گردش کارها', 'Workflow Management') }, { label: t('محیط طراح', 'Designer') }]}
           viewConfig={viewConfig}
-        >
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)} className="shadow-sm bg-white dark:bg-slate-800">
-                    {t('بازگشت', 'Back')}
-                </Button>
-                <Button variant="primary" size="sm" icon={Save} onClick={handleSaveDefinition} disabled={isSaving} className="shadow-sm">
+        />
+
+        <Tabs tabs={builderTabs} activeTab={activeTab} onChange={setActiveTab} className="mb-4 px-0" />
+
+        <Card
+          title={editingDef.id ? t('ویرایش و طراحی گردش کار', 'Edit Workflow Design') : t('طراحی گردش کار جدید', 'Design New Workflow')}
+          noPadding={true}
+          className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 shadow-sm min-h-0"
+          headerClassName="bg-white dark:bg-slate-800 border-b-2 border-indigo-100 dark:border-indigo-800/50 h-14"
+          action={
+            <div className="flex items-center gap-1.5">
+                <Button size="sm" variant="outline" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)}>{t('بازگشت', 'Back')}</Button>
+                <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+                <Button size="sm" variant="primary" icon={Save} onClick={handleSaveDefinition} disabled={isSaving}>
                     {isSaving ? t('در حال ذخیره...', 'Saving...') : t('ذخیره تغییرات', 'Save Changes')}
                 </Button>
             </div>
-        </PageHeader>
-
-        <div className="px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0 pt-2 relative z-20">
-            <Tabs tabs={builderTabs} activeTab={activeTab} onChange={setActiveTab} />
-        </div>
-
-        <div className="flex-1 overflow-hidden flex flex-col relative z-10 animate-in fade-in duration-300">
-            
+          }
+        >
             {activeTab === 'base' && (
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50/50 dark:bg-slate-900/50">
-                    <div className="w-full flex flex-col gap-6 max-w-5xl mx-auto">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 dark:bg-slate-900/50 min-h-0">
+                    <div className="w-full flex flex-col gap-3 h-full">
                         
-                        <section className="flex flex-col gap-3">
-                            <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2">
-                                {t('موجودیت هدف', 'Target Entity')}
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <SelectField label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} />
-                                <SelectField label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} disabled={!domainFilter && uniqueModules.length === 0} />
-                                <div className="md:col-span-2">
-                                    <SelectField label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required />
-                                </div>
+                        <Card title={t('موجودیت هدف', 'Target Entity')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                            <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white dark:bg-slate-800">
+                                <SelectField size="sm" label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} />
+                                <SelectField size="sm" label={t('ماژول', 'Module')} value={moduleFilter} onChange={(e) => { setModuleFilter(e.target.value); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه ماژول‌ها...', 'All Modules...')}, ...uniqueModules]} isRtl={isRtl} disabled={!domainFilter && uniqueModules.length === 0} />
+                                <SelectField size="sm" wrapperClassName="md:col-span-2" label={t('موجودیت سیستمی', 'Entity')} value={editingDef.entity_type} onChange={(e) => setEditingDef({...editingDef, entity_type: e.target.value})} options={[{value: '', label: t('انتخاب موجودیت...', 'Select Entity...')}, ...filteredEntities]} isRtl={isRtl} required />
                             </div>
-                        </section>
+                        </Card>
 
-                        <section className="flex flex-col gap-3">
-                            <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-700 pb-2">
-                                {t('تنظیمات عمومی گردش کار', 'Workflow Config')}
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                                <div className="md:col-span-2">
-                                    <TextField label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required />
-                                </div>
-                                <TextField label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled />
-                                <DatePicker label={t('تاریخ شروع', 'Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} />
-                                <DatePicker label={t('تاریخ پایان', 'End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} />
-                                <div className="flex items-center pt-6 px-1">
-                                    <ToggleField label={t('فعال در سیستم', 'Active in System')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
+                        <Card title={t('تنظیمات عمومی گردش کار', 'Workflow Config')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                            <div className="p-3 grid grid-cols-1 md:grid-cols-6 gap-3 bg-white dark:bg-slate-800">
+                                <TextField size="sm" wrapperClassName="md:col-span-2" label={t('عنوان گردش کار', 'Workflow Title')} value={editingDef.title} onChange={(e) => setEditingDef({...editingDef, title: e.target.value})} isRtl={isRtl} required />
+                                <TextField size="sm" label={t('ورژن', 'Version')} value={`v${editingDef.version || 1}.0`} isRtl={isRtl} disabled />
+                                <DatePicker size="sm" label={t('تاریخ شروع', 'Start Date')} value={editingDef.effective_start_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_start_date: val})} isRtl={isRtl} language={language} />
+                                <DatePicker size="sm" label={t('تاریخ پایان', 'End Date')} value={editingDef.effective_end_date || ''} onChange={(val) => setEditingDef({...editingDef, effective_end_date: val})} isRtl={isRtl} language={language} />
+                                <div className="flex items-center pt-5 px-1">
+                                    <ToggleField size="sm" label={t('فعال در سیستم', 'Active in System')} checked={editingDef.is_active} onChange={(val) => setEditingDef({...editingDef, is_active: val})} isRtl={isRtl} />
                                 </div>
                             </div>
-                        </section>
+                        </Card>
 
-                        <section className="flex flex-col gap-3">
-                            <div className="flex flex-col border-b border-slate-200 dark:border-slate-700 pb-2">
-                                <h3 className="text-[13px] font-black text-slate-700 dark:text-slate-200">
-                                    {t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')}
-                                </h3>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}</p>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                                <div className="md:col-span-2">
-                                    <TextField label={t('نام فیلد دیتابیس (مثلا: loan_type)', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} />
-                                </div>
-                                <SelectField label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} options={operatorOptions} />
-                                <div className="md:col-span-2">
-                                    <TextField label={t('مقدار مورد نظر', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} />
+                        <Card title={t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
+                            <div className="p-3 flex flex-col gap-3 bg-white dark:bg-slate-800">
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 m-0 leading-relaxed">
+                                    {t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}
+                                </p>
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                    <TextField size="sm" wrapperClassName="md:col-span-2" label={t('نام فیلد دیتابیس (مثلا: loan_type)', 'Field Name')} value={editingDef.factor_field || ''} onChange={(e) => setEditingDef({...editingDef, factor_field: e.target.value})} isRtl={isRtl} />
+                                    <SelectField size="sm" label={t('عملگر', 'Operator')} value={editingDef.factor_operator || '='} onChange={(e) => setEditingDef({...editingDef, factor_operator: e.target.value})} isRtl={isRtl} options={operatorOptions} />
+                                    <TextField size="sm" wrapperClassName="md:col-span-2" label={t('مقدار مورد نظر', 'Value')} value={editingDef.factor_value || ''} onChange={(e) => setEditingDef({...editingDef, factor_value: e.target.value})} isRtl={isRtl} />
                                 </div>
                             </div>
-                        </section>
+                        </Card>
 
                     </div>
                 </div>
@@ -579,18 +566,18 @@
                             <div className="p-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 {selectedElement.type === 'node' && selectedNode ? (
                                     <div className="flex flex-col gap-4">
-                                        <TextField label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} />
+                                        <TextField size="sm" label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} />
                                         
                                         {selectedNode.type === 'USER_TASK' && (
                                             <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
-                                                <SelectField label={t('نوع فعالیت', 'Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
+                                                <SelectField size="sm" label={t('نوع فعالیت', 'Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
                                                     {value: 'APPROVAL', label: t('بررسی و تایید/رد', 'Review & Approve/Reject')},
                                                     {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
                                                 ]} isRtl={isRtl} />
                                                 
-                                                <TextField label={t('نقش‌های مجاز (کاما جدا)', 'Assignee Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: مدیر مالی, کارشناس', 'e.g. Finance Manager')} />
+                                                <TextField size="sm" label={t('نقش‌های مجاز (کاما جدا)', 'Assignee Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: مدیر مالی, کارشناس', 'e.g. Finance Manager')} />
                                                 
-                                                <TextField label={t('فیلدهای اجباری برای تغییر', 'Required Fields')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount, description', 'e.g. amount, description')} />
+                                                <TextField size="sm" label={t('فیلدهای اجباری برای تغییر', 'Required Fields')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount, description', 'e.g. amount, description')} />
                                             </div>
                                         )}
 
@@ -608,14 +595,14 @@
                                     </div>
                                 ) : selectedFlow ? (
                                     <div className="flex flex-col gap-4">
-                                        <TextField label={t('عنوان مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} />
+                                        <TextField size="sm" label={t('عنوان مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} />
                                         
                                         {(() => {
                                             const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef);
                                             if (sourceNode?.type === 'EXCLUSIVE_GATEWAY') {
                                                 return (
                                                     <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
-                                                        <TextField label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
+                                                        <TextField size="sm" label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
                                                         <span className="text-[10px] text-slate-400 font-bold">{t('اگر شرط برقرار باشد، فرآیند این مسیر را طی می‌کند.', 'If true, process takes this path.')}</span>
                                                     </div>
                                                 );
@@ -629,7 +616,7 @@
                     )}
                 </div>
             )}
-        </div>
+        </Card>
 
         <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />
       </div>
