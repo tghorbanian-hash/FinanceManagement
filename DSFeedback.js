@@ -20,6 +20,7 @@
     Clock = FallbackIcon,
     Calendar = FallbackIcon,
     ArrowLeft = FallbackIcon,
+    ArrowRight = FallbackIcon,
     ChevronDown = FallbackIcon,
     ChevronUp = FallbackIcon
   } = LucideIcons;
@@ -233,26 +234,6 @@
     );
   };
 
-  const getFieldLabel = (key) => {
-    const labels = {
-      code: 'کد ارز', title: 'عنوان', symbol: 'نماد', is_active: 'وضعیت فعالیت', 
-      fetch_type: 'نحوه دریافت', decimal_places: 'اعشار', targets: 'ارزهای هدف', 
-      rate: 'نرخ تبدیل', rate_date: 'تاریخ نرخ', source: 'منبع اطلاعات',
-      base_currency: 'ارز پایه', target_currency: 'ارز هدف',
-      created_by: 'ایجاد کننده', updated_by: 'ویرایش کننده',
-      created_at: 'تاریخ ایجاد', updated_at: 'تاریخ ویرایش', id: 'شناسه رکورد'
-    };
-    return labels[key] || key;
-  };
-
-  const formatValue = (val) => {
-    if (val === null || val === undefined || val === '') return 'خالی';
-    if (typeof val === 'boolean') return val ? 'بله (فعال)' : 'خیر (غیرفعال)';
-    if (Array.isArray(val)) return val.length ? val.join('، ') : 'بدون مقدار';
-    if (typeof val === 'object') return JSON.stringify(val);
-    return String(val);
-  };
-
   const LogTimeline = ({ logs = [], isLoading = false, language = 'fa' }) => {
     const [expandedLogs, setExpandedLogs] = useState([]);
     
@@ -263,6 +244,46 @@
 
     const toggleExpand = (id) => {
         setExpandedLogs(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const getFieldLabel = (key) => {
+      const labels = {
+        code: t('کد ارز', 'Currency Code'),
+        title: t('عنوان', 'Title'),
+        symbol: t('نماد', 'Symbol'),
+        is_active: t('وضعیت فعالیت', 'Status'),
+        fetch_type: t('نحوه دریافت', 'Fetch Type'),
+        decimal_places: t('اعشار', 'Decimals'),
+        targets: t('ارزهای هدف', 'Targets'),
+        rate: t('نرخ تبدیل', 'Exchange Rate'),
+        rate_date: t('تاریخ نرخ', 'Rate Date'),
+        source: t('منبع اطلاعات', 'Source'),
+        base_currency: t('ارز پایه', 'Base Currency'),
+        target_currency: t('ارز هدف', 'Target Currency'),
+        created_by: t('ایجاد کننده', 'Created By'),
+        updated_by: t('ویرایش کننده', 'Updated By'),
+        created_at: t('تاریخ ایجاد', 'Created At'),
+        updated_at: t('تاریخ ویرایش', 'Updated At'),
+        id: t('شناسه رکورد', 'Record ID')
+      };
+      return labels[key] || key;
+    };
+
+    const formatValue = (val) => {
+      if (val === null || val === undefined || val === '') return t('خالی', 'Empty');
+      if (typeof val === 'boolean') return val ? t('بله (فعال)', 'Yes (Active)') : t('خیر (غیرفعال)', 'No (Inactive)');
+      if (Array.isArray(val)) return val.length ? val.join('، ') : t('بدون مقدار', 'No Value');
+      if (typeof val === 'object') return JSON.stringify(val);
+      return String(val);
+    };
+
+    const getActionLabel = (action) => {
+      if (!action) return '';
+      const act = action.toUpperCase();
+      if (act === 'CREATE' || act === 'ایجاد') return t('ایجاد', 'Create');
+      if (act === 'UPDATE' || act === 'ویرایش') return t('ویرایش', 'Update');
+      if (act === 'DELETE' || act === 'حذف') return t('حذف', 'Delete');
+      return action;
     };
 
     if (isLoading) {
@@ -304,6 +325,7 @@
             const d = new Date(log.timestamp);
             const dateStr = formatDate ? formatDate(log.timestamp, globalMode) : d.toISOString().split('T')[0];
             const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const actionDisplay = getActionLabel(log.action);
 
             const renderDiffs = () => {
               if (!log.old_data && !log.new_data) return null;
@@ -327,7 +349,7 @@
                           <div key={c.key} className="flex items-center flex-wrap gap-2 text-[11px] bg-slate-100/50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-200/50 dark:border-slate-700/50">
                              <span className="font-bold text-slate-600 dark:text-slate-300 min-w-[80px]">{getFieldLabel(c.key)}:</span>
                              <span className="text-rose-500 dark:text-rose-400 line-through decoration-rose-300/50 truncate max-w-[150px]" title={formatValue(c.oldVal)}>{formatValue(c.oldVal)}</span>
-                             <ArrowLeft size={10} className="text-slate-400 shrink-0" />
+                             {isRtl ? <ArrowLeft size={10} className="text-slate-400 shrink-0" /> : <ArrowRight size={10} className="text-slate-400 shrink-0" />}
                              <span className="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[150px]" title={formatValue(c.newVal)}>{formatValue(c.newVal)}</span>
                           </div>
                        ))}
@@ -364,7 +386,7 @@
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100">{log.action}</span>
+                      <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100">{actionDisplay}</span>
                       <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{log.user_name}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-[10.5px] font-mono font-medium" dir="ltr">
