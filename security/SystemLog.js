@@ -83,14 +83,14 @@
         return labels[entity] || entity;
     }, [t]);
 
-    const getActionType = (actionStr) => {
+    const getActionType = useCallback((actionStr) => {
         if (!actionStr) return 'OTHER';
         const act = String(actionStr).toUpperCase().trim();
         if (act.includes('CREATE') || act.includes('ایجاد')) return 'CREATE';
         if (act.includes('UPDATE') || act.includes('ویرایش')) return 'UPDATE';
         if (act.includes('DELETE') || act.includes('حذف')) return 'DELETE';
         return 'OTHER';
-    };
+    }, []);
 
     const getActionBadge = useCallback((action) => {
         const type = getActionType(action);
@@ -98,7 +98,7 @@
         if (type === 'UPDATE') return <Badge variant="slate" size="sm" className="w-16 justify-center shadow-sm">{t('ویرایش', 'UPDATE')}</Badge>;
         if (type === 'DELETE') return <Badge variant="danger" size="sm" className="w-16 justify-center shadow-sm">{t('حذف', 'DELETE')}</Badge>;
         return <Badge variant="slate" size="sm" className="w-16 justify-center shadow-sm">{action}</Badge>;
-    }, [t]);
+    }, [t, getActionType]);
 
     const getFieldLabel = useCallback((key) => {
         const labels = {
@@ -126,36 +126,8 @@
     const filteredLogs = useMemo(() => {
         let result = [...logs];
         
-        if (filters.record_id) {
-            const term = filters.record_id.toLowerCase();
-            result = result.filter(r => (r.record_id || '').toLowerCase().includes(term));
-        }
-        if (filters.user_name) {
-            const term = filters.user_name.toLowerCase();
-            result = result.filter(r => (r.user_name || '').toLowerCase().includes(term));
-        }
         if (filters.entity_type) {
             result = result.filter(r => r.entity_type === filters.entity_type);
-        }
-        if (filters.action) {
-            result = result.filter(r => getActionType(r.action) === filters.action);
-        }
-        if (filters.changed_field) {
-            const term = filters.changed_field.toLowerCase();
-            result = result.filter(r => {
-                if ((r.details || '').toLowerCase().includes(term)) return true;
-                
-                const checkObject = (obj) => {
-                    if (!obj) return false;
-                    for (const [key, val] of Object.entries(obj)) {
-                        if (getFieldLabel(key).toLowerCase().includes(term) || key.toLowerCase().includes(term)) return true;
-                        if (val !== null && val !== undefined && String(val).toLowerCase().includes(term)) return true;
-                    }
-                    return false;
-                };
-                
-                return checkObject(r.old_data) || checkObject(r.new_data);
-            });
         }
         if (filters.fromDate) {
             const fromDateHyphen = filters.fromDate.replace(/\//g, '-');
@@ -171,9 +143,45 @@
                 return dateStr <= toDateHyphen;
             });
         }
+        if (filters.changed_field) {
+            const term = filters.changed_field.toLowerCase();
+            result = result.filter(r => {
+                if ((r.details || '').toLowerCase().includes(term)) return true;
+                
+                const type = getActionType(r.action);
+                
+                if (type === 'UPDATE' && r.old_data && r.new_data) {
+                    for (const key of Object.keys(r.new_data)) {
+                        if (['updated_at', 'updated_by', 'created_at', 'created_by'].includes(key)) continue;
+                        const oldVal = r.old_data[key];
+                        const newVal = r.new_data[key];
+                        
+                        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                            if (getFieldLabel(key).toLowerCase().includes(term) || key.toLowerCase().includes(term)) return true;
+                            if (oldVal !== null && oldVal !== undefined && String(oldVal).toLowerCase().includes(term)) return true;
+                            if (newVal !== null && newVal !== undefined && String(newVal).toLowerCase().includes(term)) return true;
+                        }
+                    }
+                } else if (type === 'CREATE' && r.new_data) {
+                    for (const [key, val] of Object.entries(r.new_data)) {
+                        if (['updated_at', 'updated_by', 'created_at', 'created_by'].includes(key)) continue;
+                        if (getFieldLabel(key).toLowerCase().includes(term) || key.toLowerCase().includes(term)) return true;
+                        if (val !== null && val !== undefined && String(val).toLowerCase().includes(term)) return true;
+                    }
+                } else if (type === 'DELETE' && r.old_data) {
+                    for (const [key, val] of Object.entries(r.old_data)) {
+                        if (['updated_at', 'updated_by', 'created_at', 'created_by'].includes(key)) continue;
+                        if (getFieldLabel(key).toLowerCase().includes(term) || key.toLowerCase().includes(term)) return true;
+                        if (val !== null && val !== undefined && String(val).toLowerCase().includes(term)) return true;
+                    }
+                }
+                
+                return false;
+            });
+        }
         
         return result;
-    }, [logs, filters, getFieldLabel]);
+    }, [logs, filters, getFieldLabel, getActionType]);
 
     const uniqueEntities = useMemo(() => {
         const entities = new Set(logs.map(l => l.entity_type).filter(Boolean));
@@ -398,17 +406,10 @@
         <div className="flex-1 min-h-0 overflow-hidden flex flex-col animate-in fade-in duration-500">
             <AdvancedFilter 
                 fields={[
-                  { name: 'record_id', label: t('شناسه رکورد', 'Record ID'), type: 'text' },
-                  { name: 'changed_field', label: t('فیلد/مقدار تغییر یافته', 'Changed Field/Value'), type: 'text' },
-                  { name: 'user_name', label: t('کاربر تغییر دهنده', 'User'), type: 'text' },
                   { name: 'entity_type', label: t('موجودیت', 'Entity'), type: 'select', options: uniqueEntities },
-                  { name: 'action', label: t('نوع عملیات', 'Action'), type: 'select', options: [
-                      {value: 'CREATE', label: t('ایجاد', 'Create')},
-                      {value: 'UPDATE', label: t('ویرایش', 'Update')},
-                      {value: 'DELETE', label: t('حذف', 'Delete')}
-                  ]},
                   { name: 'fromDate', label: t('از تاریخ', 'From Date'), type: 'date' },
-                  { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' }
+                  { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' },
+                  { name: 'changed_field', label: t('فیلد/مقدار تغییر یافته', 'Changed Field/Value'), type: 'text' }
                 ]}
                 initialValues={filters}
                 onFilter={setFilters}
@@ -416,9 +417,9 @@
                 language={language}
             />
             
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-b-2xl md:rounded-b-none md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
                 {isLoading ? (
-                    <div className="flex-1 flex flex-col items-center justify-center p-12 h-full bg-white dark:bg-slate-800 rounded-b-2xl md:rounded-b-none md:rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 h-full">
                         <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin mb-4"></div>
                         <span className="text-slate-500 dark:text-slate-400 font-bold text-[12px]">{t('در حال دریافت اطلاعات لاگ...', 'Loading logs data...')}</span>
                     </div>
