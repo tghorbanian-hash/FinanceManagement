@@ -183,6 +183,14 @@
         { id: 'process', label: t('طراحی فرآیند (Visual)', 'Process Designer'), icon: GitMerge }
     ];
 
+    const handleTabChange = (tabId) => {
+        if (tabId === 'process' && !editingDef.entity_type) {
+            showToast(t('ابتدا باید در تنظیمات پایه، موجودیت هدف را انتخاب کنید.', 'Please select target entity in base settings first.'), 'warning');
+            return;
+        }
+        setActiveTab(tabId);
+    };
+
     const updateElement = (elementType, id, field, value) => {
         setEditingDef(prev => {
             const newData = { ...prev.bpmn_data };
@@ -405,22 +413,25 @@
           viewConfig={viewConfig}
         />
 
-        <Tabs tabs={builderTabs} activeTab={activeTab} onChange={setActiveTab} className="mb-4 px-0" />
-
-        <Card
-          title={editingDef.id ? t('ویرایش و طراحی گردش کار', 'Edit Workflow Design') : t('طراحی گردش کار جدید', 'Design New Workflow')}
-          noPadding={true}
-          className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 shadow-sm min-h-0"
-          headerClassName="bg-white dark:bg-slate-800 border-b-2 border-indigo-100 dark:border-indigo-800/50 h-14"
-          action={
-            <div className="flex items-center gap-1.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-200 dark:border-slate-700">
+            <Tabs 
+                tabs={builderTabs} 
+                activeTab={activeTab} 
+                onChange={handleTabChange} 
+                className="!mb-0 !border-b-0" 
+            />
+            <div className="flex items-center gap-1.5 pb-2">
                 <Button size="sm" variant="outline" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)}>{t('بازگشت', 'Back')}</Button>
                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
                 <Button size="sm" variant="primary" icon={Save} onClick={handleSaveDefinition} disabled={isSaving}>
                     {isSaving ? t('در حال ذخیره...', 'Saving...') : t('ذخیره تغییرات', 'Save Changes')}
                 </Button>
             </div>
-          }
+        </div>
+
+        <Card
+          noPadding={true}
+          className="flex-1 flex flex-col border border-slate-200 dark:border-slate-700 shadow-sm min-h-0"
         >
             {activeTab === 'base' && (
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 dark:bg-slate-900/50 min-h-0">
@@ -675,29 +686,30 @@
                                         <TextField size="sm" label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} />
                                         
                                         {selectedNode.type === 'USER_TASK' && (
-                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                            <div className="flex flex-col gap-4">
                                                 <SelectField size="sm" label={t('نوع فعالیت', 'Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
                                                     {value: 'APPROVAL', label: t('بررسی و تایید/رد', 'Review & Approve/Reject')},
                                                     {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
                                                 ]} isRtl={isRtl} />
                                                 
-                                                <TextField size="sm" label={t('فرم متصل (Component Path)', 'Connected Form')} value={selectedNode.form_binding || ''} onChange={(e) => updateElement('node', selectedNode.id, 'form_binding', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: financial/VoucherForm', 'e.g. financial/VoucherForm')} dir="ltr" />
+                                                {selectedNode.task_type === 'DATA_ENTRY' && (
+                                                    <TextField size="sm" label={t('فرم متصل (Component Path)', 'Connected Form')} value={selectedNode.form_binding || ''} onChange={(e) => updateElement('node', selectedNode.id, 'form_binding', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: financial/VoucherForm', 'e.g. financial/VoucherForm')} dir="ltr" />
+                                                )}
+                                                
                                                 <TextField size="sm" label={t('نقش‌های مجاز (کاما جدا)', 'Assignee Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: مدیر مالی, کارشناس', 'e.g. Finance Manager')} />
                                                 <TextField size="sm" label={t('فیلدهای اجباری برای تغییر', 'Required Fields')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount, description', 'e.g. amount, description')} />
                                                 
-                                                <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-1">
-                                                    <TextField size="sm" type="number" label={t('مهلت انجام (SLA - ساعت)', 'SLA (Hours)')} value={selectedNode.sla_hours || ''} onChange={(e) => updateElement('node', selectedNode.id, 'sla_hours', e.target.value)} isRtl={isRtl} placeholder="24" dir="ltr" />
-                                                    <SelectField size="sm" label={t('قانون ارجاع در صورت تاخیر', 'Escalation Rule')} value={selectedNode.escalation_rule || ''} onChange={(e) => updateElement('node', selectedNode.id, 'escalation_rule', e.target.value)} options={[
-                                                        {value: '', label: t('بدون اقدام', 'None')},
-                                                        {value: 'NOTIFY_MANAGER', label: t('اطلاع به مدیر', 'Notify Manager')},
-                                                        {value: 'AUTO_FORWARD', label: t('ارجاع خودکار به مرحله بعد', 'Auto Forward')}
-                                                    ]} isRtl={isRtl} />
-                                                </div>
+                                                <TextField size="sm" type="number" label={t('مهلت انجام (SLA - ساعت)', 'SLA (Hours)')} value={selectedNode.sla_hours || ''} onChange={(e) => updateElement('node', selectedNode.id, 'sla_hours', e.target.value)} isRtl={isRtl} placeholder="24" dir="ltr" />
+                                                <SelectField size="sm" label={t('قانون ارجاع در صورت تاخیر', 'Escalation Rule')} value={selectedNode.escalation_rule || ''} onChange={(e) => updateElement('node', selectedNode.id, 'escalation_rule', e.target.value)} options={[
+                                                    {value: '', label: t('بدون اقدام', 'None')},
+                                                    {value: 'NOTIFY_MANAGER', label: t('اطلاع به مدیر', 'Notify Manager')},
+                                                    {value: 'AUTO_FORWARD', label: t('ارجاع خودکار به مرحله بعد', 'Auto Forward')}
+                                                ]} isRtl={isRtl} />
                                             </div>
                                         )}
 
                                         {selectedNode.type === 'SERVICE_TASK' && (
-                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                            <div className="flex flex-col gap-4">
                                                 <SelectField size="sm" label={t('نوع عملیات', 'Action Type')} value={selectedNode.service_type || 'API_CALL'} onChange={(e) => updateElement('node', selectedNode.id, 'service_type', e.target.value)} options={[
                                                     {value: 'API_CALL', label: t('فراخوانی وب‌سرویس (API)', 'Call API')},
                                                     {value: 'DB_UPDATE', label: t('بروزرسانی وضعیت دیتابیس', 'Update Database')}
@@ -707,7 +719,7 @@
                                         )}
 
                                         {selectedNode.type === 'SEND_TASK' && (
-                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                            <div className="flex flex-col gap-4">
                                                 <SelectField size="sm" label={t('کانال ارتباطی', 'Channel')} value={selectedNode.channel || 'SYSTEM'} onChange={(e) => updateElement('node', selectedNode.id, 'channel', e.target.value)} options={[
                                                     {value: 'SYSTEM', label: t('نوتیفیکیشن سیستمی', 'System Notification')},
                                                     {value: 'SMS', label: t('پیامک', 'SMS')},
@@ -719,14 +731,14 @@
                                         )}
 
                                         {selectedNode.type === 'TIMER_EVENT' && (
-                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                            <div className="flex flex-col gap-4">
                                                 <TextField size="sm" type="number" label={t('مدت تاخیر (ساعت)', 'Delay (Hours)')} value={selectedNode.delay_hours || ''} onChange={(e) => updateElement('node', selectedNode.id, 'delay_hours', e.target.value)} isRtl={isRtl} dir="ltr" placeholder="48" />
                                                 <p className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('فرآیند پس از رسیدن به این گره، تا زمان تعیین شده متوقف می‌ماند.', 'Process will pause here for the specified duration.')}</p>
                                             </div>
                                         )}
 
                                         {selectedNode.type === 'SUB_PROCESS' && (
-                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                            <div className="flex flex-col gap-4">
                                                 <SelectField 
                                                     size="sm" 
                                                     label={t('انتخاب زیرفرآیند', 'Select Subprocess')} 
@@ -766,15 +778,15 @@
                                             const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef);
                                             if (sourceNode?.type === 'EXCLUSIVE_GATEWAY') {
                                                 return (
-                                                    <div className="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
+                                                    <>
                                                         <ToggleField size="sm" label={t('مسیر پیش‌فرض', 'Default Flow')} checked={selectedFlow.is_default || false} onChange={(v) => {
                                                             updateElement('flow', selectedFlow.id, 'is_default', v);
                                                             if (v) updateElement('flow', selectedFlow.id, 'condition', '');
                                                         }} isRtl={isRtl} />
                                                         
                                                         <TextField size="sm" label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" disabled={selectedFlow.is_default} />
-                                                        <span className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('در صورت انتخاب به عنوان مسیر پیش‌فرض، نیازی به درج شرط عبور نیست.', 'If selected as default, condition expression is ignored.')}</span>
-                                                    </div>
+                                                        <span className="text-[10px] text-slate-400 font-bold leading-relaxed -mt-2">{t('در صورت انتخاب به عنوان مسیر پیش‌فرض، نیازی به درج شرط عبور نیست.', 'If selected as default, condition expression is ignored.')}</span>
+                                                    </>
                                                 );
                                             }
                                             return null;
