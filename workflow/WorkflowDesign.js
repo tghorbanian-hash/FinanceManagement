@@ -54,7 +54,6 @@
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
     }, []);
 
-    // Fetch existing workflows to use as Subprocesses
     useEffect(() => {
         const fetchWfs = async () => {
             try {
@@ -196,7 +195,6 @@
     };
 
     const addNodeToCanvas = (type, x, y) => {
-        // Rule 1: Only one start event per workflow
         if (type === 'START_EVENT') {
             const hasStartEvent = editingDef.bpmn_data.nodes.some(n => n.type === 'START_EVENT');
             if (hasStartEvent) {
@@ -226,7 +224,6 @@
         const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === sourceRef);
         const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === targetRef);
 
-        // Rule 2: No direct connection from start to end
         if (sourceNode?.type === 'START_EVENT' && targetNode?.type === 'END_EVENT') {
             showToast(t('اتصال مستقیم نقطه شروع به پایان مجاز نیست. حداقل یک گام میانی تعریف کنید.', 'Direct connection from start to end is not allowed. Define at least one intermediate step.'), 'error');
             return;
@@ -375,7 +372,6 @@
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 bg-slate-50/50 dark:bg-slate-900/50 min-h-0">
                     <div className="w-full flex flex-col gap-3 h-full">
                         
-                        {/* Higher z-index for top cards to ensure selectors stay on top of lower cards */}
                         <Card title={t('موجودیت هدف', 'Target Entity')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 relative z-[30]" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
                             <div className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 bg-white dark:bg-slate-800">
                                 <SelectField size="sm" label={t('حوزه سیستمی', 'Domain')} value={domainFilter} onChange={(e) => { setDomainFilter(e.target.value); setModuleFilter(''); setEditingDef({...editingDef, entity_type: ''}); }} options={[{value: '', label: t('همه حوزه‌ها...', 'All Domains...')}, ...uniqueDomains]} isRtl={isRtl} />
@@ -615,9 +611,18 @@
                                                     {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
                                                 ]} isRtl={isRtl} />
                                                 
+                                                <TextField size="sm" label={t('فرم متصل (Component Path)', 'Connected Form')} value={selectedNode.form_binding || ''} onChange={(e) => updateElement('node', selectedNode.id, 'form_binding', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: financial/VoucherForm', 'e.g. financial/VoucherForm')} dir="ltr" />
                                                 <TextField size="sm" label={t('نقش‌های مجاز (کاما جدا)', 'Assignee Roles')} value={selectedNode.assignee_roles || ''} onChange={(e) => updateElement('node', selectedNode.id, 'assignee_roles', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: مدیر مالی, کارشناس', 'e.g. Finance Manager')} />
-                                                
                                                 <TextField size="sm" label={t('فیلدهای اجباری برای تغییر', 'Required Fields')} value={selectedNode.required_fields || ''} onChange={(e) => updateElement('node', selectedNode.id, 'required_fields', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount, description', 'e.g. amount, description')} />
+                                                
+                                                <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-1">
+                                                    <TextField size="sm" type="number" label={t('مهلت انجام (SLA - ساعت)', 'SLA (Hours)')} value={selectedNode.sla_hours || ''} onChange={(e) => updateElement('node', selectedNode.id, 'sla_hours', e.target.value)} isRtl={isRtl} placeholder="24" dir="ltr" />
+                                                    <SelectField size="sm" label={t('قانون ارجاع در صورت تاخیر', 'Escalation Rule')} value={selectedNode.escalation_rule || ''} onChange={(e) => updateElement('node', selectedNode.id, 'escalation_rule', e.target.value)} options={[
+                                                        {value: '', label: t('بدون اقدام', 'None')},
+                                                        {value: 'NOTIFY_MANAGER', label: t('اطلاع به مدیر', 'Notify Manager')},
+                                                        {value: 'AUTO_FORWARD', label: t('ارجاع خودکار به مرحله بعد', 'Auto Forward')}
+                                                    ]} isRtl={isRtl} />
+                                                </div>
                                             </div>
                                         )}
 
@@ -650,14 +655,20 @@
                                 ) : selectedFlow ? (
                                     <div className="flex flex-col gap-4">
                                         <TextField size="sm" label={t('عنوان مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} />
+                                        <TextField size="sm" label={t('عنوان دکمه در کارتابل', 'Action Button Label')} value={selectedFlow.action_label || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'action_label', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: تایید و ارسال', 'e.g. Approve & Send')} />
                                         
                                         {(() => {
                                             const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === selectedFlow.sourceRef);
                                             if (sourceNode?.type === 'EXCLUSIVE_GATEWAY') {
                                                 return (
-                                                    <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
-                                                        <TextField size="sm" label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" />
-                                                        <span className="text-[10px] text-slate-400 font-bold">{t('اگر شرط برقرار باشد، فرآیند این مسیر را طی می‌کند.', 'If true, process takes this path.')}</span>
+                                                    <div className="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
+                                                        <ToggleField size="sm" label={t('مسیر پیش‌فرض', 'Default Flow')} checked={selectedFlow.is_default || false} onChange={(v) => {
+                                                            updateElement('flow', selectedFlow.id, 'is_default', v);
+                                                            if (v) updateElement('flow', selectedFlow.id, 'condition', '');
+                                                        }} isRtl={isRtl} />
+                                                        
+                                                        <TextField size="sm" label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" disabled={selectedFlow.is_default} />
+                                                        <span className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('در صورت انتخاب به عنوان مسیر پیش‌فرض، نیازی به درج شرط عبور نیست.', 'If selected as default, condition expression is ignored.')}</span>
                                                     </div>
                                                 );
                                             }
