@@ -1,4 +1,4 @@
-/* Filename: DSGrid.js */
+/* * Filename: DSGrid.js  */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useRef } = React;
@@ -210,8 +210,12 @@
       Object.keys(filters).forEach(key => {
         const filterVal = filters[key]?.toString().toLowerCase();
         if (!filterVal) return;
+        const colDef = columns.find(c => c.field === key);
         result = result.filter(row => {
-          const val = row[key];
+          let val = row[key];
+          if (colDef && colDef.searchAccessor) {
+             val = colDef.searchAccessor(val, row);
+          }
           if (val === null || val === undefined) return false;
           return val.toString().toLowerCase().includes(filterVal);
         });
@@ -249,7 +253,7 @@
       };
       if (groupCols.length > 0) return buildGroupedData(result, groupCols);
       return result;
-    }, [gridData, filters, sortConfig, groupCols, collapsedGroups, t]);
+    }, [gridData, filters, sortConfig, groupCols, collapsedGroups, columns, t]);
 
     const totalRecords = processedData.length;
     const totalPages = Math.ceil(totalRecords / pageSize);

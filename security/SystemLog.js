@@ -223,6 +223,13 @@
       },
       { 
         field: 'action', header_fa: 'عملیات', header_en: 'Action', width: '90px', 
+        searchAccessor: (v) => {
+            const type = getActionType(v);
+            if (type === 'CREATE') return t('ایجاد', 'CREATE');
+            if (type === 'UPDATE') return t('ویرایش', 'UPDATE');
+            if (type === 'DELETE') return t('حذف', 'DELETE');
+            return v;
+        },
         render: (v) => getActionBadge(v) 
       },
       { 
@@ -238,6 +245,7 @@
       },
       { 
         field: 'entity_type', header_fa: 'موجودیت (بخش)', header_en: 'Entity Module', width: '140px', 
+        searchAccessor: (v) => getEntityLabel(v),
         render: (v) => (
             <div className="flex items-center gap-1.5">
                 <Database size={12} className="text-slate-400 dark:text-slate-500" />
