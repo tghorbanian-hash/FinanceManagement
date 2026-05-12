@@ -107,7 +107,6 @@
         }
     }, [definition?.id, systemEntities.length]); 
 
-    // رفع مشکل درگ و اتصال (رهاسازی دکمه موس خارج از کانواس)
     useEffect(() => {
         const handleGlobalMouseUp = () => {
             if (draggingNode) setDraggingNode(null);
@@ -498,12 +497,6 @@
         return <CheckSquare size={18} />;
     };
 
-    const viewConfig = {
-      pageId: 'workflow_designer',
-      currentState: () => ({}),
-      onApplyState: () => {}
-    };
-
     if (!editingDef) return null;
 
     const selectedNode = selectedElement?.type === 'node' ? editingDef.bpmn_data.nodes.find(n => n.id === selectedElement.id) : null;
@@ -515,7 +508,6 @@
           title={t('محیط طراح گردش کار', 'Workflow Designer')}
           icon={GitMerge} language={language}
           breadcrumbs={[{ label: t('مدیریت گردش کارها', 'Workflow Management') }, { label: t('محیط طراح', 'Designer') }]}
-          viewConfig={viewConfig}
         />
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-200 dark:border-slate-700">
