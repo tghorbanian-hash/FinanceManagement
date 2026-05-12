@@ -11,7 +11,7 @@
     ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Database = FallbackIcon, Settings2 = FallbackIcon,
     Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon,
     Info = FallbackIcon, Split = FallbackIcon, Settings = FallbackIcon, Clock = FallbackIcon, 
-    Send = FallbackIcon, Cpu = FallbackIcon, Mail = FallbackIcon
+    Send = FallbackIcon, Cpu = FallbackIcon, Mail = FallbackIcon, AlignCenter = FallbackIcon
   } = LucideIcons;
 
   const WorkflowDesign = ({ definition, systemEntities = [], onBack, language = 'fa' }) => {
@@ -107,6 +107,22 @@
         }
     }, [definition?.id, systemEntities.length]); 
 
+    // رفع مشکل درگ و اتصال (رهاسازی دکمه موس خارج از کانواس)
+    useEffect(() => {
+        const handleGlobalMouseUp = () => {
+            if (draggingNode) setDraggingNode(null);
+            if (connectingStart) setConnectingStart(null);
+        };
+        
+        if (draggingNode || connectingStart) {
+            window.addEventListener('mouseup', handleGlobalMouseUp);
+        }
+        
+        return () => {
+            window.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+    }, [draggingNode, connectingStart]);
+
     const handleSaveDefinition = async () => {
         try {
             setIsSaving(true);
@@ -149,6 +165,51 @@
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleAutoLayout = () => {
+        const nodes = [...editingDef.bpmn_data.nodes];
+        const flows = editingDef.bpmn_data.flows;
+        
+        const startNodes = nodes.filter(n => n.type === 'START_EVENT');
+        if (startNodes.length === 0) {
+            showToast(t('برای مرتب‌سازی، حداقل یک گره شروع نیاز است.', 'Need a start event to auto layout.'), 'warning');
+            return;
+        }
+
+        const nodeLevels = new Map();
+        const queue = startNodes.map(n => ({ id: n.id, level: 0 }));
+        const visited = new Set();
+
+        while (queue.length > 0) {
+            const curr = queue.shift();
+            
+            const currentLevel = nodeLevels.get(curr.id) || 0;
+            nodeLevels.set(curr.id, Math.max(currentLevel, curr.level));
+
+            if (visited.has(curr.id)) continue;
+            visited.add(curr.id);
+
+            const outgoing = flows.filter(f => f.sourceRef === curr.id);
+            outgoing.forEach(f => {
+                queue.push({ id: f.targetRef, level: nodeLevels.get(curr.id) + 1 });
+            });
+        }
+
+        const levelCounts = {};
+        const newNodes = nodes.map(n => {
+            if (!nodeLevels.has(n.id)) return n;
+            const level = nodeLevels.get(n.id);
+            levelCounts[level] = (levelCounts[level] || 0) + 1;
+            
+            const x = 120 + (level * 220); 
+            const y = 150 + ((levelCounts[level] - 1) * 140); 
+            
+            return { ...n, position: { x, y } };
+        });
+
+        setEditingDef(prev => ({ ...prev, bpmn_data: { ...prev.bpmn_data, nodes: newNodes } }));
+        showToast(t('المان‌ها با موفقیت مرتب شدند.', 'Elements auto-aligned successfully.'), 'success');
     };
 
     const uniqueDomains = useMemo(() => {
@@ -345,20 +406,64 @@
 
     const handleCanvasMouseUp = () => {
         setDraggingNode(null);
-        setConnectingStart(null);
     };
 
     const getNodeEdges = (node) => {
-        if (!node) return { right: 0, left: 0, y: 0 };
+        if (!node) return { right: 0, left: 0, top: 0, bottom: 0, x: 0, y: 0 };
         const { x, y } = node.position;
-        if (node.type.includes('EVENT')) return { right: x + 24, left: x - 24, top: y - 24, bottom: y + 24, x, y };
-        if (node.type.includes('GATEWAY')) return { right: x + 28, left: x - 28, top: y - 28, bottom: y + 28, x, y };
-        return { right: x + 64, left: x - 64, top: y - 32, bottom: y + 32, x, y };
+        let width = 128, height = 64; 
+        if (node.type.includes('EVENT')) { width = 48; height = 48; } 
+        else if (node.type.includes('GATEWAY')) { width = 56; height = 56; }
+        
+        return { 
+            right: x + width / 2, 
+            left: x - width / 2, 
+            top: y - height / 2, 
+            bottom: y + height / 2, 
+            x, y 
+        };
     };
 
-    const getBezierPath = (startX, startY, endX, endY) => {
-        const dx = Math.max(Math.abs(endX - startX) * 0.5, 40);
-        return `M ${startX} ${startY} C ${startX + dx} ${startY}, ${endX - dx} ${endY}, ${endX} ${endY}`;
+    const getDynamicPath = (sourceNode, targetNode) => {
+        if (!sourceNode || !targetNode) return '';
+        const sRect = getNodeEdges(sourceNode);
+        const tRect = getNodeEdges(targetNode);
+        
+        const sPoints = [
+            { x: sRect.x, y: sRect.top, dir: 'up' },
+            { x: sRect.right, y: sRect.y, dir: 'right' },
+            { x: sRect.x, y: sRect.bottom, dir: 'down' },
+            { x: sRect.left, y: sRect.y, dir: 'left' }
+        ];
+        
+        const tPoints = [
+            { x: tRect.x, y: tRect.top, dir: 'up' },
+            { x: tRect.right, y: tRect.y, dir: 'right' },
+            { x: tRect.x, y: tRect.bottom, dir: 'down' },
+            { x: tRect.left, y: tRect.y, dir: 'left' }
+        ];
+        
+        let minD = Infinity;
+        let bestS = sPoints[1], bestT = tPoints[3]; 
+        
+        sPoints.forEach(sp => {
+            tPoints.forEach(tp => {
+                const d = Math.pow(sp.x - tp.x, 2) + Math.pow(sp.y - tp.y, 2);
+                if(d < minD) {
+                    minD = d;
+                    bestS = sp; bestT = tp;
+                }
+            });
+        });
+        
+        const curvature = 50;
+        const c1x = bestS.x + (bestS.dir === 'right' ? curvature : bestS.dir === 'left' ? -curvature : 0);
+        const c1y = bestS.y + (bestS.dir === 'down' ? curvature : bestS.dir === 'up' ? -curvature : 0);
+        
+        const c2x = bestT.x + (bestT.dir === 'right' ? curvature : bestT.dir === 'left' ? -curvature : 0);
+        const c2y = bestT.y + (bestT.dir === 'down' ? curvature : bestT.dir === 'up' ? -curvature : 0);
+        
+        return `M ${bestS.x} ${bestS.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${bestT.x} ${bestT.y}`;
     };
 
     const getNodeStyle = (type) => {
@@ -421,8 +526,11 @@
                 className="!mb-0 !border-b-0" 
             />
             <div className="flex items-center gap-1.5 pb-2">
-                <Button size="sm" variant="outline" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)}>{t('بازگشت', 'Back')}</Button>
+                {activeTab === 'process' && (
+                    <Button size="sm" variant="ghost" icon={AlignCenter} onClick={handleAutoLayout}>{t('مرتب‌سازی خودکار', 'Auto Layout')}</Button>
+                )}
                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+                <Button size="sm" variant="outline" icon={isRtl ? ArrowRight : ArrowLeft} onClick={() => onBack(false)}>{t('بازگشت', 'Back')}</Button>
                 <Button size="sm" variant="primary" icon={Save} onClick={handleSaveDefinition} disabled={isSaving}>
                     {isSaving ? t('در حال ذخیره...', 'Saving...') : t('ذخیره تغییرات', 'Save Changes')}
                 </Button>
@@ -477,7 +585,7 @@
             {activeTab === 'process' && (
                 <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900/50">
                     {/* Palette Sidebar - 2 Column Grid */}
-                    <div className={`w-[110px] shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-2 p-3 content-start justify-items-center shadow-sm z-20 overflow-y-auto custom-scrollbar`}>
+                    <div className={`w-[130px] shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-y-6 gap-x-4 p-4 content-start justify-items-center shadow-sm z-20 overflow-y-auto custom-scrollbar`}>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
                             {getNodePaletteIcon('START_EVENT')}
                         </div>
@@ -524,11 +632,11 @@
                     >
                         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                             <defs>
-                                <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                    <polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" />
+                                <marker id="arrowhead" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto">
+                                    <polygon points="0 0, 6 2.5, 0 5" fill="#94a3b8" />
                                 </marker>
-                                <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                    <polygon points="0 0, 10 3.5, 0 7" fill="#6366f1" />
+                                <marker id="arrowhead-selected" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto">
+                                    <polygon points="0 0, 6 2.5, 0 5" fill="#6366f1" />
                                 </marker>
                             </defs>
                             
@@ -537,14 +645,8 @@
                                 const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
                                 if (!sourceNode || !targetNode) return null;
                                 
-                                const sourceEdges = getNodeEdges(sourceNode);
-                                const targetEdges = getNodeEdges(targetNode);
-                                const startX = sourceEdges.right;
-                                const startY = sourceEdges.y;
-                                const endX = targetEdges.left;
-                                const endY = targetEdges.y;
                                 const isSelected = selectedElement?.id === flow.id;
-                                const d = getBezierPath(startX, startY, endX, endY);
+                                const d = getDynamicPath(sourceNode, targetNode);
                                 
                                 return (
                                     <g key={flow.id} className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}>
@@ -563,7 +665,10 @@
                             
                             {connectingStart && (
                                 <path 
-                                    d={getBezierPath(getNodeEdges(editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)).right, getNodeEdges(editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart)).y, mousePos.x, mousePos.y)} 
+                                    d={getDynamicPath(
+                                        editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart), 
+                                        { position: mousePos, type: 'USER_TASK' }
+                                    )} 
                                     stroke="#94a3b8" 
                                     strokeWidth="2" 
                                     strokeDasharray="5,5" 
@@ -580,7 +685,7 @@
                             
                             const sourceEdges = getNodeEdges(sourceNode);
                             const targetEdges = getNodeEdges(targetNode);
-                            const midX = (sourceEdges.right + targetEdges.left) / 2;
+                            const midX = (sourceEdges.x + targetEdges.x) / 2;
                             const midY = (sourceEdges.y + targetEdges.y) / 2;
                             const isSelected = selectedElement?.id === flow.id;
 
@@ -605,56 +710,48 @@
                             return (
                                 <div 
                                     key={node.id}
-                                    className={`absolute flex items-center justify-center flex-col z-20 transition-shadow ${isSelected ? 'ring-4 ring-indigo-500/30 rounded-xl' : 'hover:ring-2 ring-slate-300 rounded-xl'}`}
+                                    className={`absolute flex items-center justify-center flex-col z-20 transition-shadow group ${isSelected ? 'ring-4 ring-indigo-500/30 rounded-xl' : 'hover:ring-2 ring-slate-300 rounded-xl'}`}
                                     style={{ left: node.position.x, top: node.position.y, transform: 'translate(-50%, -50%)' }}
                                     onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'node', id: node.id }); }}
                                     onMouseDown={(e) => {
-                                        if (e.target.closest('.connector') || e.target.closest('.input-anchor')) return;
+                                        if (e.target.closest('.connector')) return;
                                         e.stopPropagation();
                                         setDraggingNode(node.id);
                                         setSelectedElement({ type: 'node', id: node.id });
                                     }}
+                                    onMouseUp={(e) => {
+                                        e.stopPropagation();
+                                        if (connectingStart && connectingStart !== node.id) {
+                                            addFlow(connectingStart, node.id);
+                                            setConnectingStart(null);
+                                        }
+                                    }}
                                 >
                                     <div className={`${styleClass} flex items-center justify-center relative cursor-move bg-white shadow-md`}>
                                         {node.type.includes('GATEWAY') ? (
-                                            <div className="absolute inset-0 flex items-center justify-center -rotate-45">
+                                            <div className="absolute inset-0 flex items-center justify-center -rotate-45 pointer-events-none">
                                                 {node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : node.type === 'PARALLEL_GATEWAY' ? <Plus size={24} /> : <Diamond size={24} />}
                                             </div>
                                         ) : node.type === 'TIMER_EVENT' ? (
-                                            <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                 <Clock size={20} />
                                             </div>
                                         ) : (
-                                            <div className="px-3 text-center text-[11px] font-black leading-tight select-none break-words max-w-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
+                                            <div className="px-3 text-center text-[11px] font-black leading-tight select-none break-words max-w-full overflow-hidden pointer-events-none" dir={isRtl ? 'rtl' : 'ltr'}>
                                                 {node.name}
                                             </div>
                                         )}
                                         
-                                        {/* Output Connection Handle */}
-                                        {node.type !== 'END_EVENT' && (
+                                        {/* 4 Connection Points */}
+                                        {node.type !== 'END_EVENT' && ['top', 'right', 'bottom', 'left'].map(pos => (
                                             <div 
-                                                className="connector absolute -right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-indigo-500 rounded-full cursor-crosshair opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm"
+                                                key={pos}
+                                                className={`connector absolute ${pos==='top'?'-top-3 left-1/2 -translate-x-1/2':pos==='bottom'?'-bottom-3 left-1/2 -translate-x-1/2':pos==='left'?'-left-3 top-1/2 -translate-y-1/2':'-right-3 top-1/2 -translate-y-1/2'} w-4 h-4 bg-white border border-indigo-500 rounded-full cursor-crosshair opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm`}
                                                 onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }}
-                                                style={node.type.includes('GATEWAY') ? { right: '-12px', top: '-12px', transform: 'none' } : {}}
                                             >
-                                                <Plus size={12} className="text-indigo-500"/>
+                                                <Plus size={10} className="text-indigo-500 pointer-events-none"/>
                                             </div>
-                                        )}
-
-                                        {/* Input Anchor */}
-                                        {node.type !== 'START_EVENT' && (
-                                            <div 
-                                                className={`input-anchor absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-emerald-100 border-2 border-emerald-500 rounded-full transition-opacity z-30 ${connectingStart && connectingStart !== node.id ? 'opacity-100 animate-pulse' : 'opacity-0'}`}
-                                                onMouseUp={(e) => {
-                                                    e.stopPropagation();
-                                                    if (connectingStart && connectingStart !== node.id) {
-                                                        addFlow(connectingStart, node.id);
-                                                        setConnectingStart(null);
-                                                    }
-                                                }}
-                                                style={node.type.includes('GATEWAY') ? { left: 'auto', bottom: '-10px', right: 'auto', transform: 'none' } : {}}
-                                            />
-                                        )}
+                                        ))}
                                     </div>
                                     
                                     {(node.type.includes('GATEWAY') || node.type === 'TIMER_EVENT') && (
@@ -680,13 +777,13 @@
                                     <button onClick={() => setSelectedElement(null)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"><X size={16}/></button>
                                 </div>
                             </div>
-                            <div className="p-5 flex flex-col gap-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                            <div className="p-5 flex flex-col gap-4 max-h-[70vh] overflow-y-auto custom-scrollbar">
                                 {selectedElement.type === 'node' && selectedNode ? (
-                                    <div className="flex flex-col gap-4">
+                                    <>
                                         <TextField size="sm" label={t('عنوان نمایشی', 'Display Name')} value={selectedNode.name} onChange={(e) => updateElement('node', selectedNode.id, 'name', e.target.value)} isRtl={isRtl} />
                                         
                                         {selectedNode.type === 'USER_TASK' && (
-                                            <div className="flex flex-col gap-4">
+                                            <>
                                                 <SelectField size="sm" label={t('نوع فعالیت', 'Task Type')} value={selectedNode.task_type || 'APPROVAL'} onChange={(e) => updateElement('node', selectedNode.id, 'task_type', e.target.value)} options={[
                                                     {value: 'APPROVAL', label: t('بررسی و تایید/رد', 'Review & Approve/Reject')},
                                                     {value: 'DATA_ENTRY', label: t('تکمیل اطلاعات فرم', 'Form Data Entry')}
@@ -705,21 +802,21 @@
                                                     {value: 'NOTIFY_MANAGER', label: t('اطلاع به مدیر', 'Notify Manager')},
                                                     {value: 'AUTO_FORWARD', label: t('ارجاع خودکار به مرحله بعد', 'Auto Forward')}
                                                 ]} isRtl={isRtl} />
-                                            </div>
+                                            </>
                                         )}
 
                                         {selectedNode.type === 'SERVICE_TASK' && (
-                                            <div className="flex flex-col gap-4">
+                                            <>
                                                 <SelectField size="sm" label={t('نوع عملیات', 'Action Type')} value={selectedNode.service_type || 'API_CALL'} onChange={(e) => updateElement('node', selectedNode.id, 'service_type', e.target.value)} options={[
                                                     {value: 'API_CALL', label: t('فراخوانی وب‌سرویس (API)', 'Call API')},
                                                     {value: 'DB_UPDATE', label: t('بروزرسانی وضعیت دیتابیس', 'Update Database')}
                                                 ]} isRtl={isRtl} />
                                                 <TextField size="sm" label={t('آدرس / متد هدف', 'Target Endpoint / Method')} value={selectedNode.target_endpoint || ''} onChange={(e) => updateElement('node', selectedNode.id, 'target_endpoint', e.target.value)} isRtl={isRtl} dir="ltr" placeholder="api/finance/approve" />
-                                            </div>
+                                            </>
                                         )}
 
                                         {selectedNode.type === 'SEND_TASK' && (
-                                            <div className="flex flex-col gap-4">
+                                            <>
                                                 <SelectField size="sm" label={t('کانال ارتباطی', 'Channel')} value={selectedNode.channel || 'SYSTEM'} onChange={(e) => updateElement('node', selectedNode.id, 'channel', e.target.value)} options={[
                                                     {value: 'SYSTEM', label: t('نوتیفیکیشن سیستمی', 'System Notification')},
                                                     {value: 'SMS', label: t('پیامک', 'SMS')},
@@ -727,18 +824,18 @@
                                                 ]} isRtl={isRtl} />
                                                 <TextField size="sm" label={t('گیرنده (نقش / شخص)', 'Recipient')} value={selectedNode.recipient || ''} onChange={(e) => updateElement('node', selectedNode.id, 'recipient', e.target.value)} isRtl={isRtl} placeholder={t('ایجاد کننده سند', 'Document Creator')} />
                                                 <TextField size="sm" label={t('متن پیام', 'Message Template')} value={selectedNode.message_template || ''} onChange={(e) => updateElement('node', selectedNode.id, 'message_template', e.target.value)} isRtl={isRtl} placeholder={t('سند شما تایید شد.', 'Your doc is approved.')} />
-                                            </div>
+                                            </>
                                         )}
 
                                         {selectedNode.type === 'TIMER_EVENT' && (
-                                            <div className="flex flex-col gap-4">
+                                            <>
                                                 <TextField size="sm" type="number" label={t('مدت تاخیر (ساعت)', 'Delay (Hours)')} value={selectedNode.delay_hours || ''} onChange={(e) => updateElement('node', selectedNode.id, 'delay_hours', e.target.value)} isRtl={isRtl} dir="ltr" placeholder="48" />
                                                 <p className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('فرآیند پس از رسیدن به این گره، تا زمان تعیین شده متوقف می‌ماند.', 'Process will pause here for the specified duration.')}</p>
-                                            </div>
+                                            </>
                                         )}
 
                                         {selectedNode.type === 'SUB_PROCESS' && (
-                                            <div className="flex flex-col gap-4">
+                                            <>
                                                 <SelectField 
                                                     size="sm" 
                                                     label={t('انتخاب زیرفرآیند', 'Select Subprocess')} 
@@ -748,7 +845,7 @@
                                                     isRtl={isRtl} 
                                                 />
                                                 <p className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('در این گام، یک گردش کار طراحی شده دیگر اجرا خواهد شد.', 'In this step, another designed workflow will be executed.')}</p>
-                                            </div>
+                                            </>
                                         )}
 
                                         {selectedNode.type === 'APPROVAL_GATEWAY' && (
@@ -768,9 +865,9 @@
                                                 {t('این دروازه فرآیند را به صورت همزمان (موازی) به چند مسیر تقسیم می‌کند، یا منتظر می‌ماند تا تمام مسیرهای ورودی به آن برسند تا ادامه دهد (AND).', 'This gateway splits the process into parallel paths, or waits for all incoming paths to merge (AND).')}
                                             </div>
                                         )}
-                                    </div>
+                                    </>
                                 ) : selectedFlow ? (
-                                    <div className="flex flex-col gap-4">
+                                    <>
                                         <TextField size="sm" label={t('عنوان مسیر', 'Flow Label')} value={selectedFlow.name} onChange={(e) => updateElement('flow', selectedFlow.id, 'name', e.target.value)} isRtl={isRtl} />
                                         <TextField size="sm" label={t('عنوان دکمه در کارتابل', 'Action Button Label')} value={selectedFlow.action_label || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'action_label', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: تایید و ارسال', 'e.g. Approve & Send')} />
                                         
@@ -785,13 +882,13 @@
                                                         }} isRtl={isRtl} />
                                                         
                                                         <TextField size="sm" label={t('شرط عبور (Condition)', 'Condition Expression')} value={selectedFlow.condition || ''} onChange={(e) => updateElement('flow', selectedFlow.id, 'condition', e.target.value)} isRtl={isRtl} placeholder={t('مثلا: amount > 5000', 'e.g. amount > 5000')} dir="ltr" disabled={selectedFlow.is_default} />
-                                                        <span className="text-[10px] text-slate-400 font-bold leading-relaxed -mt-2">{t('در صورت انتخاب به عنوان مسیر پیش‌فرض، نیازی به درج شرط عبور نیست.', 'If selected as default, condition expression is ignored.')}</span>
+                                                        <span className="text-[10px] text-slate-400 font-bold leading-relaxed -mt-1">{t('در صورت انتخاب به عنوان مسیر پیش‌فرض، نیازی به درج شرط عبور نیست.', 'If selected as default, condition expression is ignored.')}</span>
                                                     </>
                                                 );
                                             }
                                             return null;
                                         })()}
-                                    </div>
+                                    </>
                                 ) : null}
                             </div>
                         </div>
