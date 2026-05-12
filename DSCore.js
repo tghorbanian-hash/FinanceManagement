@@ -328,7 +328,9 @@
       try {
         if (window.supabase) {
           await window.supabase.from('fm_user_views').update({ is_default: false }).eq('page_id', viewConfig.pageId).eq('user_id', MOCK_USER_ID);
-          await window.supabase.from('fm_user_views').update({ is_default: true }).eq('id', id);
+          if (id !== 'system') {
+            await window.supabase.from('fm_user_views').update({ is_default: true }).eq('id', id);
+          }
         } else {
           let local = JSON.parse(localStorage.getItem(`fm_views_${viewConfig.pageId}`) || '[]');
           local = local.map(v => ({ ...v, is_default: v.id === id }));
@@ -352,10 +354,13 @@
     const handleResetView = () => {
       setActiveView(null);
       setIsDropdownOpen(false);
+      setIsManageModalOpen(false);
       if (viewConfig && viewConfig.onApplyState) {
         viewConfig.onApplyState(null); 
       }
     };
+
+    const isSystemDefault = !views.some(v => v.is_default);
 
     return (
       <div className="flex flex-col mb-3 shrink-0">
@@ -456,25 +461,39 @@
 
             <window.DSFeedback.Modal isOpen={isManageModalOpen} onClose={() => setIsManageModalOpen(false)} title={t('مدیریت نماهای صفحه', 'Manage Page Views')} width="max-w-lg" language={language}>
                <div className="p-4 flex flex-col max-h-[400px] overflow-y-auto custom-scrollbar gap-2">
-                  {views.length === 0 ? (
-                    <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-[11px] font-bold bg-slate-50 dark:bg-slate-900/50 rounded-lg">{t('هیچ نمایی ذخیره نشده است.', 'No saved views.')}</div>
-                  ) : (
-                    views.map(v => (
-                      <div key={v.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{v.view_name}</span>
-                          {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => handleSetDefaultView(v.id)} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${v.is_default ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
-                            {t('پیش‌فرض', 'Default')}
-                          </button>
-                          <Button size="sm" variant="ghost" onClick={() => handleApplyView(v)} className="!h-7 !px-2 !text-[10px] text-indigo-600 dark:text-indigo-400">{t('اعمال', 'Apply')}</Button>
-                          <button onClick={() => handleDeleteView(v.id)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
-                        </div>
+                  
+                  {/* System Default View - Always present at the top */}
+                  <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/80">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{t('پیش‌فرض سیستم', 'System Default')}</span>
+                      {isSystemDefault && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => handleSetDefaultView('system')} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${isSystemDefault ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                        {t('پیش‌فرض', 'Default')}
+                      </button>
+                      <Button size="sm" variant="ghost" onClick={handleResetView} className="!h-7 !px-2 !text-[10px] text-indigo-600 dark:text-indigo-400">{t('اعمال', 'Apply')}</Button>
+                      <div className="w-[28px]"></div> {/* Spacer to align with items that have trash icon */}
+                    </div>
+                  </div>
+
+                  {/* Saved User Views */}
+                  {views.map(v => (
+                    <div key={v.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{v.view_name}</span>
+                        {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
                       </div>
-                    ))
-                  )}
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => handleSetDefaultView(v.id)} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${v.is_default ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                          {t('پیش‌فرض', 'Default')}
+                        </button>
+                        <Button size="sm" variant="ghost" onClick={() => handleApplyView(v)} className="!h-7 !px-2 !text-[10px] text-indigo-600 dark:text-indigo-400">{t('اعمال', 'Apply')}</Button>
+                        <button onClick={() => handleDeleteView(v.id)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
+                      </div>
+                    </div>
+                  ))}
+
                </div>
             </window.DSFeedback.Modal>
           </>
