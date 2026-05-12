@@ -10,7 +10,8 @@
     PlayCircle = FallbackIcon, StopCircle = FallbackIcon, CheckSquare = FallbackIcon, Diamond = FallbackIcon,
     ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Database = FallbackIcon, Settings2 = FallbackIcon,
     Layers = FallbackIcon, Users = FallbackIcon, X = FallbackIcon, ListTree = FallbackIcon, ArrowRightLeft = FallbackIcon,
-    Info = FallbackIcon, Split = FallbackIcon
+    Info = FallbackIcon, Split = FallbackIcon, Settings = FallbackIcon, Clock = FallbackIcon, 
+    Send = FallbackIcon, Cpu = FallbackIcon, Mail = FallbackIcon
   } = LucideIcons;
 
   const WorkflowDesign = ({ definition, systemEntities = [], onBack, language = 'fa' }) => {
@@ -205,9 +206,13 @@
 
         let name = '';
         if (type === 'USER_TASK') name = t('فعالیت جدید', 'New Task');
+        if (type === 'SERVICE_TASK') name = t('عملیات سیستمی', 'System Task');
+        if (type === 'SEND_TASK') name = t('ارسال اعلان', 'Send Task');
         if (type === 'SUB_PROCESS') name = t('زیرفرآیند', 'Subprocess');
         if (type === 'APPROVAL_GATEWAY') name = t('دروازه تایید/رد', 'Decision Gateway');
         if (type === 'EXCLUSIVE_GATEWAY') name = t('دروازه شرطی (چندگانه)', 'Condition Gateway');
+        if (type === 'PARALLEL_GATEWAY') name = t('دروازه موازی (همزمان)', 'Parallel Gateway');
+        if (type === 'TIMER_EVENT') name = t('رویداد زمانی', 'Timer Event');
         if (type === 'END_EVENT') name = t('پایان', 'End');
         if (type === 'START_EVENT') name = t('شروع', 'Start');
         
@@ -316,18 +321,32 @@
     const getNodeStyle = (type) => {
         if (type === 'START_EVENT') return 'w-12 h-12 rounded-full bg-emerald-50 border-2 border-emerald-400 text-emerald-600';
         if (type === 'END_EVENT') return 'w-12 h-12 rounded-full bg-rose-50 border-4 border-rose-400 text-rose-600';
+        if (type === 'TIMER_EVENT') return 'w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-400 text-orange-600';
+        
         if (type === 'APPROVAL_GATEWAY') return 'w-14 h-14 bg-indigo-50 border-2 border-indigo-400 text-indigo-600 rotate-45';
         if (type === 'EXCLUSIVE_GATEWAY') return 'w-14 h-14 bg-amber-50 border-2 border-amber-400 text-amber-600 rotate-45';
+        if (type === 'PARALLEL_GATEWAY') return 'w-14 h-14 bg-emerald-50 border-2 border-emerald-400 text-emerald-600 rotate-45';
+        
+        if (type === 'SERVICE_TASK') return 'w-32 h-16 rounded-xl bg-slate-50 border-2 border-slate-400 text-slate-700 shadow-sm';
+        if (type === 'SEND_TASK') return 'w-32 h-16 rounded-xl bg-blue-50 border-2 border-blue-400 text-blue-700 shadow-sm';
         if (type === 'SUB_PROCESS') return 'w-32 h-16 rounded-xl bg-teal-50 border-2 border-teal-400 text-teal-700 shadow-sm border-dashed';
+        
         return 'w-32 h-16 rounded-xl bg-white border-2 border-indigo-400 text-indigo-700 shadow-sm';
     };
 
     const getNodePaletteIcon = (type) => {
         if (type === 'START_EVENT') return <PlayCircle size={20} />;
         if (type === 'END_EVENT') return <StopCircle size={18} />;
+        if (type === 'TIMER_EVENT') return <Clock size={20} />;
+        
         if (type === 'APPROVAL_GATEWAY') return <Split size={18} className="-rotate-45" />;
         if (type === 'EXCLUSIVE_GATEWAY') return <Diamond size={18} className="-rotate-45" />;
+        if (type === 'PARALLEL_GATEWAY') return <Plus size={24} className="-rotate-45" />;
+        
+        if (type === 'SERVICE_TASK') return <Settings size={18} />;
+        if (type === 'SEND_TASK') return <Mail size={18} />;
         if (type === 'SUB_PROCESS') return <Layers size={18} />;
+        
         return <CheckSquare size={18} />;
     };
 
@@ -412,23 +431,35 @@
             {activeTab === 'process' && (
                 <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900/50">
                     {/* Palette Sidebar */}
-                    <div className={`w-16 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col items-center py-4 gap-4 shadow-sm z-20`}>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
+                    <div className={`w-16 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col items-center py-4 gap-3 shadow-sm z-20 overflow-y-auto custom-scrollbar`}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
                             {getNodePaletteIcon('START_EVENT')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-10 h-10 rounded-lg border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500" title={t('فعالیت', 'Task')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-10 h-10 shrink-0 rounded-lg border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500" title={t('فعالیت کاربری', 'User Task')}>
                             {getNodePaletteIcon('USER_TASK')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'SUB_PROCESS')} className="w-10 h-10 rounded-lg border-2 border-dashed border-teal-400 bg-teal-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-teal-500" title={t('زیرفرآیند', 'Subprocess')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'SERVICE_TASK')} className="w-10 h-10 shrink-0 rounded-lg border-2 border-slate-400 bg-slate-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-slate-500" title={t('عملیات سیستمی', 'System Task')}>
+                            {getNodePaletteIcon('SERVICE_TASK')}
+                        </div>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'SEND_TASK')} className="w-10 h-10 shrink-0 rounded-lg border-2 border-blue-400 bg-blue-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-blue-500" title={t('ارسال اعلان / پیام', 'Send Task')}>
+                            {getNodePaletteIcon('SEND_TASK')}
+                        </div>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'SUB_PROCESS')} className="w-10 h-10 shrink-0 rounded-lg border-2 border-dashed border-teal-400 bg-teal-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-teal-500" title={t('زیرفرآیند', 'Subprocess')}>
                             {getNodePaletteIcon('SUB_PROCESS')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'APPROVAL_GATEWAY')} className="w-10 h-10 border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500 rotate-45" title={t('تصمیم بله/خیر', 'Decision Gateway')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'TIMER_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-orange-400 bg-orange-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-orange-500" title={t('رویداد زمانی', 'Timer Event')}>
+                            {getNodePaletteIcon('TIMER_EVENT')}
+                        </div>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'APPROVAL_GATEWAY')} className="w-10 h-10 shrink-0 border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500 rotate-45" title={t('تصمیم بله/خیر', 'Decision Gateway')}>
                             {getNodePaletteIcon('APPROVAL_GATEWAY')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'EXCLUSIVE_GATEWAY')} className="w-10 h-10 border-2 border-amber-400 bg-amber-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-amber-500 rotate-45" title={t('شرط چندگانه', 'Conditional Gateway')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'EXCLUSIVE_GATEWAY')} className="w-10 h-10 shrink-0 border-2 border-amber-400 bg-amber-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-amber-500 rotate-45" title={t('شرط چندگانه', 'Conditional Gateway')}>
                             {getNodePaletteIcon('EXCLUSIVE_GATEWAY')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-10 h-10 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-rose-500 mt-2" title={t('گره پایان', 'End Event')}>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'PARALLEL_GATEWAY')} className="w-10 h-10 shrink-0 border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500 rotate-45" title={t('دروازه موازی (AND)', 'Parallel Gateway')}>
+                            {getNodePaletteIcon('PARALLEL_GATEWAY')}
+                        </div>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-rose-500 mt-1" title={t('گره پایان', 'End Event')}>
                             {getNodePaletteIcon('END_EVENT')}
                         </div>
                     </div>
@@ -541,7 +572,11 @@
                                     <div className={`${styleClass} flex items-center justify-center relative cursor-move bg-white shadow-md`}>
                                         {node.type.includes('GATEWAY') ? (
                                             <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                                                {node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : <Diamond size={24} />}
+                                                {node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : node.type === 'PARALLEL_GATEWAY' ? <Plus size={24} /> : <Diamond size={24} />}
+                                            </div>
+                                        ) : node.type === 'TIMER_EVENT' ? (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <Clock size={20} />
                                             </div>
                                         ) : (
                                             <div className="px-3 text-center text-[11px] font-black leading-tight select-none break-words max-w-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -576,7 +611,7 @@
                                         )}
                                     </div>
                                     
-                                    {node.type.includes('GATEWAY') && (
+                                    {(node.type.includes('GATEWAY') || node.type === 'TIMER_EVENT') && (
                                         <div className="absolute top-full mt-2 text-[10px] font-black text-slate-700 bg-white/90 px-2 py-0.5 rounded shadow-sm border border-slate-200 whitespace-nowrap" dir={isRtl ? 'rtl' : 'ltr'}>
                                             {node.name}
                                         </div>
@@ -626,6 +661,35 @@
                                             </div>
                                         )}
 
+                                        {selectedNode.type === 'SERVICE_TASK' && (
+                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                                <SelectField size="sm" label={t('نوع عملیات', 'Action Type')} value={selectedNode.service_type || 'API_CALL'} onChange={(e) => updateElement('node', selectedNode.id, 'service_type', e.target.value)} options={[
+                                                    {value: 'API_CALL', label: t('فراخوانی وب‌سرویس (API)', 'Call API')},
+                                                    {value: 'DB_UPDATE', label: t('بروزرسانی وضعیت دیتابیس', 'Update Database')}
+                                                ]} isRtl={isRtl} />
+                                                <TextField size="sm" label={t('آدرس / متد هدف', 'Target Endpoint / Method')} value={selectedNode.target_endpoint || ''} onChange={(e) => updateElement('node', selectedNode.id, 'target_endpoint', e.target.value)} isRtl={isRtl} dir="ltr" placeholder="api/finance/approve" />
+                                            </div>
+                                        )}
+
+                                        {selectedNode.type === 'SEND_TASK' && (
+                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                                <SelectField size="sm" label={t('کانال ارتباطی', 'Channel')} value={selectedNode.channel || 'SYSTEM'} onChange={(e) => updateElement('node', selectedNode.id, 'channel', e.target.value)} options={[
+                                                    {value: 'SYSTEM', label: t('نوتیفیکیشن سیستمی', 'System Notification')},
+                                                    {value: 'SMS', label: t('پیامک', 'SMS')},
+                                                    {value: 'EMAIL', label: t('ایمیل', 'Email')}
+                                                ]} isRtl={isRtl} />
+                                                <TextField size="sm" label={t('گیرنده (نقش / شخص)', 'Recipient')} value={selectedNode.recipient || ''} onChange={(e) => updateElement('node', selectedNode.id, 'recipient', e.target.value)} isRtl={isRtl} placeholder={t('ایجاد کننده سند', 'Document Creator')} />
+                                                <TextField size="sm" label={t('متن پیام', 'Message Template')} value={selectedNode.message_template || ''} onChange={(e) => updateElement('node', selectedNode.id, 'message_template', e.target.value)} isRtl={isRtl} placeholder={t('سند شما تایید شد.', 'Your doc is approved.')} />
+                                            </div>
+                                        )}
+
+                                        {selectedNode.type === 'TIMER_EVENT' && (
+                                            <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
+                                                <TextField size="sm" type="number" label={t('مدت تاخیر (ساعت)', 'Delay (Hours)')} value={selectedNode.delay_hours || ''} onChange={(e) => updateElement('node', selectedNode.id, 'delay_hours', e.target.value)} isRtl={isRtl} dir="ltr" placeholder="48" />
+                                                <p className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('فرآیند پس از رسیدن به این گره، تا زمان تعیین شده متوقف می‌ماند.', 'Process will pause here for the specified duration.')}</p>
+                                            </div>
+                                        )}
+
                                         {selectedNode.type === 'SUB_PROCESS' && (
                                             <div className="flex flex-col gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-4">
                                                 <SelectField 
@@ -636,7 +700,7 @@
                                                     options={[{value: '', label: t('انتخاب کنید...', 'Select...')}, ...workflowsList]} 
                                                     isRtl={isRtl} 
                                                 />
-                                                <p className="text-[10px] text-slate-400 font-bold">{t('در این گام، یک گردش کار طراحی شده دیگر اجرا خواهد شد.', 'In this step, another designed workflow will be executed.')}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold leading-relaxed">{t('در این گام، یک گردش کار طراحی شده دیگر اجرا خواهد شد.', 'In this step, another designed workflow will be executed.')}</p>
                                             </div>
                                         )}
 
@@ -649,6 +713,12 @@
                                         {selectedNode.type === 'EXCLUSIVE_GATEWAY' && (
                                             <div className="text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
                                                 {t('این دروازه برای انشعاب‌های شرطی چندگانه است. روی خطوط خروجی کلیک کنید تا شرط هر کدام را تعیین نمایید.', 'This gateway branches paths based on conditions. Click on outgoing flows to define their conditions.')}
+                                            </div>
+                                        )}
+
+                                        {selectedNode.type === 'PARALLEL_GATEWAY' && (
+                                            <div className="text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
+                                                {t('این دروازه فرآیند را به صورت همزمان (موازی) به چند مسیر تقسیم می‌کند، یا منتظر می‌ماند تا تمام مسیرهای ورودی به آن برسند تا ادامه دهد (AND).', 'This gateway splits the process into parallel paths, or waits for all incoming paths to merge (AND).')}
                                             </div>
                                         )}
                                     </div>
