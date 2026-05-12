@@ -431,6 +431,7 @@
                         selectable={false}
                         gridState={gridState}
                         onGridStateChange={setGridState}
+                        hideImport={true}
                         actions={[
                             { 
                                 icon: Eye, 
