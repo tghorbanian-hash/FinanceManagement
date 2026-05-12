@@ -565,10 +565,10 @@
                   {theme === 'dark' ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-500" />}
                 </button>
                 <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر تقویم', 'Change Calendar')}>
-                  <Calendar size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{calendarMode === 'jalali' ? 'Ja' : 'Gre'}</span>
+                  <Calendar size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{calendarMode === 'jalali' ? 'Gre' : 'Ja'}</span>
                 </button>
                 <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر زبان', 'Change Language')}>
-                  <Globe size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{isRtl ? 'FA' : 'EN'}</span>
+                  <Globe size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{isRtl ? 'EN' : 'FA'}</span>
                 </button>
               </div>
               <div className="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
