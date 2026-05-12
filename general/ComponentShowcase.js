@@ -845,6 +845,9 @@
                       <SuffixField size="sm" label={t('ورودی مقدار با واحد (وزن)', 'Value with Unit (Weight)')} value={weightVal} onChange={setWeightVal} unitValue={weightUnit} onUnitChange={setWeightUnit} unitOptions={weightUnits} isRtl={isRtl} />
                       <SuffixField size="sm" label={t('مبلغ ارزی', 'Foreign Currency')} value={foreignAmount} onChange={setForeignAmount} unitValue={foreignUnit} onUnitChange={setForeignUnit} unitOptions={currencyUnits} isCurrency={true} isRtl={isRtl} />
 
+                      <SuffixField size="sm" label={t('مقدار با واحد (غیرفعال)', 'Disabled Unit Field')} value="5000" unitValue="aed" unitOptions={currencyUnits} isCurrency={true} disabled={true} isRtl={isRtl} />
+                      <TextField size="sm" label={t('ورودی متنی (غیرفعال)', 'Disabled Text Field')} value={t('غیرقابل ویرایش', 'Uneditable')} disabled={true} isRtl={isRtl} />
+
                       <div className="md:col-span-2">
                         <TextAreaField size="sm" label={t('توضیحات طولانی', 'Text Area')} placeholder={t('متن خود را اینجا وارد کنید...', 'Enter long text here...')} rows={2} isRtl={isRtl} />
                       </div>
