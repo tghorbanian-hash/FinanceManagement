@@ -97,7 +97,7 @@
                 effective_end_date: '',
                 bpmn_data: {
                     nodes: [
-                        { id: `start_${generateId()}`, type: 'START_EVENT', name: t('شروع', 'Start'), position: { x: 100, y: 300 } }
+                        { id: `start_${generateId()}`, type: 'START_EVENT', name: t('شروع', 'Start'), position: { x: 100, y: 150 } }
                     ],
                     flows: []
                 }
@@ -107,20 +107,21 @@
         }
     }, [definition?.id, systemEntities.length]); 
 
+    // شنونده دائمی و بدون دیپندنسی برای رفع مشکل چسبیدن آیتم به موس
     useEffect(() => {
         const handleGlobalMouseUp = () => {
-            if (draggingNode) setDraggingNode(null);
-            if (connectingStart) setConnectingStart(null);
+            setDraggingNode(null);
+            setConnectingStart(null);
         };
         
-        if (draggingNode || connectingStart) {
-            window.addEventListener('mouseup', handleGlobalMouseUp);
-        }
+        window.addEventListener('mouseup', handleGlobalMouseUp);
+        window.addEventListener('mouseleave', handleGlobalMouseUp);
         
         return () => {
             window.removeEventListener('mouseup', handleGlobalMouseUp);
+            window.removeEventListener('mouseleave', handleGlobalMouseUp);
         };
-    }, [draggingNode, connectingStart]);
+    }, []);
 
     const handleSaveDefinition = async () => {
         try {
@@ -176,39 +177,61 @@
             return;
         }
 
-        const nodeLevels = new Map();
-        const queue = startNodes.map(n => ({ id: n.id, level: 0 }));
+        const orderedNodes = [];
         const visited = new Set();
+        const queue = [...startNodes];
 
-        while (queue.length > 0) {
+        while(queue.length > 0) {
             const curr = queue.shift();
-            
-            const currentLevel = nodeLevels.get(curr.id) || 0;
-            nodeLevels.set(curr.id, Math.max(currentLevel, curr.level));
-
-            if (visited.has(curr.id)) continue;
+            if(visited.has(curr.id)) continue;
             visited.add(curr.id);
+            orderedNodes.push(curr);
 
             const outgoing = flows.filter(f => f.sourceRef === curr.id);
             outgoing.forEach(f => {
-                queue.push({ id: f.targetRef, level: nodeLevels.get(curr.id) + 1 });
+                const targetNode = nodes.find(n => n.id === f.targetRef);
+                if(targetNode && !visited.has(targetNode.id) && !queue.includes(targetNode)) {
+                    queue.push(targetNode);
+                }
             });
         }
+        
+        nodes.forEach(n => {
+            if(!visited.has(n.id)) orderedNodes.push(n);
+        });
 
-        const levelCounts = {};
+        const canvasWidth = canvasRef.current ? canvasRef.current.clientWidth : 1000;
+        const nodeSpacingX = 220;
+        const nodeSpacingY = 160;
+        const startX = 100;
+        const startY = 100;
+        
+        // محاسبه هوشمند تعداد المان‌ها در هر ردیف بر اساس عرض موجود
+        const maxPerRow = Math.max(1, Math.floor((canvasWidth - 150) / nodeSpacingX));
+
         const newNodes = nodes.map(n => {
-            if (!nodeLevels.has(n.id)) return n;
-            const level = nodeLevels.get(n.id);
-            levelCounts[level] = (levelCounts[level] || 0) + 1;
+            const idx = orderedNodes.findIndex(on => on.id === n.id);
+            if(idx === -1) return n;
             
-            const x = 120 + (level * 220); 
-            const y = 150 + ((levelCounts[level] - 1) * 140); 
+            const row = Math.floor(idx / maxPerRow);
+            const col = idx % maxPerRow;
             
+            let x;
+            if (row % 2 === 0) {
+                // چیدمان چپ به راست
+                x = startX + (col * nodeSpacingX);
+            } else {
+                // چیدمان راست به چپ (مارپیچ/زیگ‌زاگ)
+                const reverseCol = (maxPerRow - 1) - col;
+                x = startX + (reverseCol * nodeSpacingX);
+            }
+            
+            const y = startY + (row * nodeSpacingY);
             return { ...n, position: { x, y } };
         });
 
         setEditingDef(prev => ({ ...prev, bpmn_data: { ...prev.bpmn_data, nodes: newNodes } }));
-        showToast(t('المان‌ها با موفقیت مرتب شدند.', 'Elements auto-aligned successfully.'), 'success');
+        showToast(t('المان‌ها به صورت مارپیچ (Snake) و یکپارچه مرتب شدند.', 'Elements aligned in snake pattern.'), 'success');
     };
 
     const uniqueDomains = useMemo(() => {
@@ -403,10 +426,6 @@
         }
     };
 
-    const handleCanvasMouseUp = () => {
-        setDraggingNode(null);
-    };
-
     const getNodeEdges = (node) => {
         if (!node) return { right: 0, left: 0, top: 0, bottom: 0, x: 0, y: 0 };
         const { x, y } = node.position;
@@ -455,7 +474,7 @@
             });
         });
         
-        const curvature = 50;
+        const curvature = 40;
         const c1x = bestS.x + (bestS.dir === 'right' ? curvature : bestS.dir === 'left' ? -curvature : 0);
         const c1y = bestS.y + (bestS.dir === 'down' ? curvature : bestS.dir === 'up' ? -curvature : 0);
         
@@ -575,7 +594,7 @@
             )}
 
             {activeTab === 'process' && (
-                <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900/50">
+                <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900/50 relative">
                     {/* Palette Sidebar - 2 Column Grid */}
                     <div className={`w-[130px] shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-y-6 gap-x-4 p-4 content-start justify-items-center shadow-sm z-20 overflow-y-auto custom-scrollbar`}>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
@@ -612,148 +631,156 @@
 
                     {/* Canvas Area */}
                     <div 
-                        className="flex-1 relative overflow-hidden outline-none bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px] z-10"
+                        className="flex-1 relative overflow-auto custom-scrollbar outline-none bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:20px_20px] z-10"
                         ref={canvasRef}
                         onDragOver={handleCanvasDragOver}
                         onDrop={handleCanvasDrop}
                         onMouseMove={handleCanvasMouseMove}
-                        onMouseUp={handleCanvasMouseUp}
-                        onMouseLeave={handleCanvasMouseUp}
                         onClick={() => setSelectedElement(null)}
                         dir="ltr" 
                     >
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                            <defs>
-                                <marker id="arrowhead" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto">
-                                    <polygon points="0 0, 6 2.5, 0 5" fill="#94a3b8" />
-                                </marker>
-                                <marker id="arrowhead-selected" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto">
-                                    <polygon points="0 0, 6 2.5, 0 5" fill="#6366f1" />
-                                </marker>
-                            </defs>
-                            
+                        {/* برای فعال کردن اسکرول، ابعاد یک لایه داخلی را برابر با بزرگترین x و y گره‌ها قرار می‌دهیم.
+                          حداقل ابعاد هم 2000 در 2000 تا جای کافی برای طراحی اولیه باشد.
+                        */}
+                        <div style={{
+                            width: Math.max(2000, ...editingDef.bpmn_data.nodes.map(n => n.position.x + 300)),
+                            height: Math.max(2000, ...editingDef.bpmn_data.nodes.map(n => n.position.y + 300)),
+                            position: 'relative'
+                        }}>
+                            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                                <defs>
+                                    <marker id="arrowhead" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
+                                        <polygon points="0 0, 5 2, 0 4" fill="#94a3b8" />
+                                    </marker>
+                                    <marker id="arrowhead-selected" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
+                                        <polygon points="0 0, 5 2, 0 4" fill="#6366f1" />
+                                    </marker>
+                                </defs>
+                                
+                                {editingDef.bpmn_data.flows.map(flow => {
+                                    const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
+                                    const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
+                                    if (!sourceNode || !targetNode) return null;
+                                    
+                                    const isSelected = selectedElement?.id === flow.id;
+                                    const d = getDynamicPath(sourceNode, targetNode);
+                                    
+                                    return (
+                                        <g key={flow.id} className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}>
+                                            <path d={d} stroke="transparent" strokeWidth="20" fill="none" />
+                                            <path 
+                                                d={d} 
+                                                stroke={isSelected ? '#6366f1' : '#94a3b8'} 
+                                                strokeWidth={isSelected ? "3" : "2"} 
+                                                fill="none" 
+                                                markerEnd={`url(#${isSelected ? 'arrowhead-selected' : 'arrowhead'})`}
+                                                className="transition-all"
+                                            />
+                                        </g>
+                                    );
+                                })}
+                                
+                                {connectingStart && (
+                                    <path 
+                                        d={getDynamicPath(
+                                            editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart), 
+                                            { position: mousePos, type: 'USER_TASK' }
+                                        )} 
+                                        stroke="#94a3b8" 
+                                        strokeWidth="2" 
+                                        strokeDasharray="5,5" 
+                                        fill="none" 
+                                    />
+                                )}
+                            </svg>
+
+                            {/* Labels for Flows */}
                             {editingDef.bpmn_data.flows.map(flow => {
                                 const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
                                 const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
-                                if (!sourceNode || !targetNode) return null;
+                                if (!sourceNode || !targetNode || !flow.name) return null;
                                 
+                                const sourceEdges = getNodeEdges(sourceNode);
+                                const targetEdges = getNodeEdges(targetNode);
+                                const midX = (sourceEdges.x + targetEdges.x) / 2;
+                                const midY = (sourceEdges.y + targetEdges.y) / 2;
                                 const isSelected = selectedElement?.id === flow.id;
-                                const d = getDynamicPath(sourceNode, targetNode);
-                                
+
                                 return (
-                                    <g key={flow.id} className="pointer-events-auto cursor-pointer" onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}>
-                                        <path d={d} stroke="transparent" strokeWidth="20" fill="none" />
-                                        <path 
-                                            d={d} 
-                                            stroke={isSelected ? '#6366f1' : '#94a3b8'} 
-                                            strokeWidth={isSelected ? "3" : "2"} 
-                                            fill="none" 
-                                            markerEnd={`url(#${isSelected ? 'arrowhead-selected' : 'arrowhead'})`}
-                                            className="transition-all"
-                                        />
-                                    </g>
+                                    <div 
+                                        key={`label_${flow.id}`}
+                                        className={`absolute px-2 py-0.5 rounded text-[10px] font-black z-10 pointer-events-auto cursor-pointer whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 transition-colors border ${isSelected ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-200 shadow-sm hover:border-indigo-200'}`}
+                                        style={{ left: midX, top: midY }}
+                                        onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}
+                                        dir={isRtl ? 'rtl' : 'ltr'}
+                                    >
+                                        {flow.name}
+                                    </div>
                                 );
                             })}
-                            
-                            {connectingStart && (
-                                <path 
-                                    d={getDynamicPath(
-                                        editingDef.bpmn_data.nodes.find(n=>n.id===connectingStart), 
-                                        { position: mousePos, type: 'USER_TASK' }
-                                    )} 
-                                    stroke="#94a3b8" 
-                                    strokeWidth="2" 
-                                    strokeDasharray="5,5" 
-                                    fill="none" 
-                                />
-                            )}
-                        </svg>
 
-                        {/* Labels for Flows */}
-                        {editingDef.bpmn_data.flows.map(flow => {
-                            const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.sourceRef);
-                            const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === flow.targetRef);
-                            if (!sourceNode || !targetNode || !flow.name) return null;
-                            
-                            const sourceEdges = getNodeEdges(sourceNode);
-                            const targetEdges = getNodeEdges(targetNode);
-                            const midX = (sourceEdges.x + targetEdges.x) / 2;
-                            const midY = (sourceEdges.y + targetEdges.y) / 2;
-                            const isSelected = selectedElement?.id === flow.id;
-
-                            return (
-                                <div 
-                                    key={`label_${flow.id}`}
-                                    className={`absolute px-2 py-0.5 rounded text-[10px] font-black z-10 pointer-events-auto cursor-pointer whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 transition-colors border ${isSelected ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-200 shadow-sm hover:border-indigo-200'}`}
-                                    style={{ left: midX, top: midY }}
-                                    onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'flow', id: flow.id }); }}
-                                    dir={isRtl ? 'rtl' : 'ltr'}
-                                >
-                                    {flow.name}
-                                </div>
-                            );
-                        })}
-
-                        {/* Nodes Layer */}
-                        {editingDef.bpmn_data.nodes.map(node => {
-                            const isSelected = selectedElement?.id === node.id;
-                            const styleClass = getNodeStyle(node.type);
-                            
-                            return (
-                                <div 
-                                    key={node.id}
-                                    className={`absolute flex items-center justify-center flex-col z-20 transition-shadow group ${isSelected ? 'ring-4 ring-indigo-500/30 rounded-xl' : 'hover:ring-2 ring-slate-300 rounded-xl'}`}
-                                    style={{ left: node.position.x, top: node.position.y, transform: 'translate(-50%, -50%)' }}
-                                    onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'node', id: node.id }); }}
-                                    onMouseDown={(e) => {
-                                        if (e.target.closest('.connector')) return;
-                                        e.stopPropagation();
-                                        setDraggingNode(node.id);
-                                        setSelectedElement({ type: 'node', id: node.id });
-                                    }}
-                                    onMouseUp={(e) => {
-                                        e.stopPropagation();
-                                        if (connectingStart && connectingStart !== node.id) {
-                                            addFlow(connectingStart, node.id);
-                                            setConnectingStart(null);
-                                        }
-                                    }}
-                                >
-                                    <div className={`${styleClass} flex items-center justify-center relative cursor-move bg-white shadow-md`}>
-                                        {node.type.includes('GATEWAY') ? (
-                                            <div className="absolute inset-0 flex items-center justify-center -rotate-45 pointer-events-none">
-                                                {node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : node.type === 'PARALLEL_GATEWAY' ? <Plus size={24} /> : <Diamond size={24} />}
-                                            </div>
-                                        ) : node.type === 'TIMER_EVENT' ? (
-                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <Clock size={20} />
-                                            </div>
-                                        ) : (
-                                            <div className="px-3 text-center text-[11px] font-black leading-tight select-none break-words max-w-full overflow-hidden pointer-events-none" dir={isRtl ? 'rtl' : 'ltr'}>
+                            {/* Nodes Layer */}
+                            {editingDef.bpmn_data.nodes.map(node => {
+                                const isSelected = selectedElement?.id === node.id;
+                                const styleClass = getNodeStyle(node.type);
+                                const isTargetable = connectingStart && connectingStart !== node.id;
+                                
+                                return (
+                                    <div 
+                                        key={node.id}
+                                        className={`absolute flex items-center justify-center flex-col z-20 transition-all group ${isSelected ? 'ring-4 ring-indigo-500/30 rounded-xl' : isTargetable ? 'ring-2 ring-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)] rounded-xl cursor-pointer' : 'hover:ring-2 ring-slate-300 rounded-xl'}`}
+                                        style={{ left: node.position.x, top: node.position.y, transform: 'translate(-50%, -50%)' }}
+                                        onClick={(e) => { e.stopPropagation(); setSelectedElement({ type: 'node', id: node.id }); }}
+                                        onMouseDown={(e) => {
+                                            if (e.target.closest('.connector')) return;
+                                            e.stopPropagation();
+                                            setDraggingNode(node.id);
+                                            setSelectedElement({ type: 'node', id: node.id });
+                                        }}
+                                        onMouseUp={(e) => {
+                                            e.stopPropagation();
+                                            if (connectingStart && connectingStart !== node.id) {
+                                                addFlow(connectingStart, node.id);
+                                                setConnectingStart(null);
+                                            }
+                                        }}
+                                    >
+                                        <div className={`${styleClass} flex items-center justify-center relative cursor-move bg-white shadow-md`}>
+                                            {node.type.includes('GATEWAY') ? (
+                                                <div className="absolute inset-0 flex items-center justify-center -rotate-45 pointer-events-none">
+                                                    {node.type === 'APPROVAL_GATEWAY' ? <Split size={24} /> : node.type === 'PARALLEL_GATEWAY' ? <Plus size={24} /> : <Diamond size={24} />}
+                                                </div>
+                                            ) : node.type === 'TIMER_EVENT' ? (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <Clock size={20} />
+                                                </div>
+                                            ) : (
+                                                <div className="px-3 text-center text-[11px] font-black leading-tight select-none break-words max-w-full overflow-hidden pointer-events-none" dir={isRtl ? 'rtl' : 'ltr'}>
+                                                    {node.name}
+                                                </div>
+                                            )}
+                                            
+                                            {/* 4 Connection Points */}
+                                            {node.type !== 'END_EVENT' && ['top', 'right', 'bottom', 'left'].map(pos => (
+                                                <div 
+                                                    key={pos}
+                                                    className={`connector absolute ${pos==='top'?'-top-3 left-1/2 -translate-x-1/2':pos==='bottom'?'-bottom-3 left-1/2 -translate-x-1/2':pos==='left'?'-left-3 top-1/2 -translate-y-1/2':'-right-3 top-1/2 -translate-y-1/2'} w-4 h-4 bg-white border border-indigo-500 rounded-full cursor-crosshair opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm`}
+                                                    onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }}
+                                                >
+                                                    <Plus size={10} className="text-indigo-500 pointer-events-none"/>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        
+                                        {(node.type.includes('GATEWAY') || node.type === 'TIMER_EVENT') && (
+                                            <div className="absolute top-full mt-2 text-[10px] font-black text-slate-700 bg-white/90 px-2 py-0.5 rounded shadow-sm border border-slate-200 whitespace-nowrap" dir={isRtl ? 'rtl' : 'ltr'}>
                                                 {node.name}
                                             </div>
                                         )}
-                                        
-                                        {/* 4 Connection Points */}
-                                        {node.type !== 'END_EVENT' && ['top', 'right', 'bottom', 'left'].map(pos => (
-                                            <div 
-                                                key={pos}
-                                                className={`connector absolute ${pos==='top'?'-top-3 left-1/2 -translate-x-1/2':pos==='bottom'?'-bottom-3 left-1/2 -translate-x-1/2':pos==='left'?'-left-3 top-1/2 -translate-y-1/2':'-right-3 top-1/2 -translate-y-1/2'} w-4 h-4 bg-white border border-indigo-500 rounded-full cursor-crosshair opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-30 shadow-sm`}
-                                                onMouseDown={(e) => { e.stopPropagation(); setConnectingStart(node.id); }}
-                                            >
-                                                <Plus size={10} className="text-indigo-500 pointer-events-none"/>
-                                            </div>
-                                        ))}
                                     </div>
-                                    
-                                    {(node.type.includes('GATEWAY') || node.type === 'TIMER_EVENT') && (
-                                        <div className="absolute top-full mt-2 text-[10px] font-black text-slate-700 bg-white/90 px-2 py-0.5 rounded shadow-sm border border-slate-200 whitespace-nowrap" dir={isRtl ? 'rtl' : 'ltr'}>
-                                            {node.name}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Mini Settings Panel overlay */}
