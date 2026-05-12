@@ -205,7 +205,7 @@
         }
 
         let name = '';
-        if (type === 'USER_TASK') name = t('فعالیت جدید', 'New Task');
+        if (type === 'USER_TASK') name = t('فعالیت کاربری', 'User Task');
         if (type === 'SERVICE_TASK') name = t('عملیات سیستمی', 'System Task');
         if (type === 'SEND_TASK') name = t('ارسال اعلان', 'Send Task');
         if (type === 'SUB_PROCESS') name = t('زیرفرآیند', 'Subprocess');
@@ -229,18 +229,54 @@
         const sourceNode = editingDef.bpmn_data.nodes.find(n => n.id === sourceRef);
         const targetNode = editingDef.bpmn_data.nodes.find(n => n.id === targetRef);
 
+        const existingOutFlows = editingDef.bpmn_data.flows.filter(f => f.sourceRef === sourceRef).length;
+
+        // Validation Rules for Flows
+        if (sourceNode?.type === 'END_EVENT') {
+            showToast(t('گره پایان نمی‌تواند نقطه شروع مسیر باشد.', 'End event cannot have outgoing flows.'), 'error');
+            return;
+        }
+
+        if (targetNode?.type === 'START_EVENT') {
+            showToast(t('نمی‌توان به گره شروع مسیر وصل کرد.', 'Start event cannot have incoming flows.'), 'error');
+            return;
+        }
+
         if (sourceNode?.type === 'START_EVENT' && targetNode?.type === 'END_EVENT') {
             showToast(t('اتصال مستقیم نقطه شروع به پایان مجاز نیست. حداقل یک گام میانی تعریف کنید.', 'Direct connection from start to end is not allowed. Define at least one intermediate step.'), 'error');
             return;
         }
 
-        let defaultName = '';
-        if (sourceNode?.type === 'APPROVAL_GATEWAY') {
-            const existingOutFlows = editingDef.bpmn_data.flows.filter(f => f.sourceRef === sourceRef).length;
-            defaultName = existingOutFlows === 0 ? t('بله (تایید)', 'Yes (Approve)') : t('خیر (عدم تایید)', 'No (Reject)');
+        if (sourceNode?.type === 'START_EVENT' && existingOutFlows >= 1) {
+            showToast(t('گره شروع فقط می‌تواند یک خروجی داشته باشد.', 'Start event can only have one outgoing flow.'), 'error');
+            return;
         }
 
-        const newFlow = { id: `flow_${generateId()}`, sourceRef, targetRef, name: defaultName, condition: '', action_label: '' };
+        if (sourceNode?.type === 'APPROVAL_GATEWAY' && existingOutFlows >= 2) {
+            showToast(t('دروازه تایید/رد فقط می‌تواند حداکثر دو خروجی (بله/خیر) داشته باشد.', 'Approval gateway can only have max two outgoing flows.'), 'error');
+            return;
+        }
+
+        const singleOutputNodes = ['USER_TASK', 'SERVICE_TASK', 'SEND_TASK', 'SUB_PROCESS', 'TIMER_EVENT'];
+        if (singleOutputNodes.includes(sourceNode?.type) && existingOutFlows >= 1) {
+            showToast(t('این فعالیت فقط می‌تواند یک مسیر خروجی داشته باشد. برای ایجاد انشعاب در فرآیند، حتماً از دروازه‌ها (Gateways) استفاده کنید.', 'This task can only have one outgoing flow. Use gateways for branching.'), 'error');
+            return;
+        }
+
+        let defaultName = '';
+        let defaultActionLabel = '';
+        
+        if (sourceNode?.type === 'APPROVAL_GATEWAY') {
+            if (existingOutFlows === 0) {
+                defaultName = t('بله (تایید)', 'Yes (Approve)');
+                defaultActionLabel = t('تایید', 'Approve');
+            } else {
+                defaultName = t('خیر (رد)', 'No (Reject)');
+                defaultActionLabel = t('رد', 'Reject');
+            }
+        }
+
+        const newFlow = { id: `flow_${generateId()}`, sourceRef, targetRef, name: defaultName, condition: '', action_label: defaultActionLabel, is_default: false };
         setEditingDef(prev => ({ ...prev, bpmn_data: { ...prev.bpmn_data, flows: [...prev.bpmn_data.flows, newFlow] } }));
         setSelectedElement({ type: 'flow', id: newFlow.id });
     };
