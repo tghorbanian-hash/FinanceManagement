@@ -107,7 +107,6 @@
         }
     }, [definition?.id, systemEntities.length]); 
 
-    // شنونده دائمی و بدون دیپندنسی برای رفع مشکل چسبیدن آیتم به موس
     useEffect(() => {
         const handleGlobalMouseUp = () => {
             setDraggingNode(null);
@@ -206,7 +205,6 @@
         const startX = 100;
         const startY = 100;
         
-        // محاسبه هوشمند تعداد المان‌ها در هر ردیف بر اساس عرض موجود
         const maxPerRow = Math.max(1, Math.floor((canvasWidth - 150) / nodeSpacingX));
 
         const newNodes = nodes.map(n => {
@@ -218,10 +216,8 @@
             
             let x;
             if (row % 2 === 0) {
-                // چیدمان چپ به راست
                 x = startX + (col * nodeSpacingX);
             } else {
-                // چیدمان راست به چپ (مارپیچ/زیگ‌زاگ)
                 const reverseCol = (maxPerRow - 1) - col;
                 x = startX + (reverseCol * nodeSpacingX);
             }
@@ -409,6 +405,10 @@
     };
 
     const handleCanvasMouseMove = (e) => {
+        if (e.buttons === 0 && draggingNode) {
+            setDraggingNode(null);
+            return;
+        }
         if (!canvasRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -424,6 +424,10 @@
                 }
             }));
         }
+    };
+
+    const handleCanvasMouseUp = () => {
+        setDraggingNode(null);
     };
 
     const getNodeEdges = (node) => {
@@ -447,41 +451,36 @@
         const sRect = getNodeEdges(sourceNode);
         const tRect = getNodeEdges(targetNode);
         
-        const sPoints = [
-            { x: sRect.x, y: sRect.top, dir: 'up' },
-            { x: sRect.right, y: sRect.y, dir: 'right' },
-            { x: sRect.x, y: sRect.bottom, dir: 'down' },
-            { x: sRect.left, y: sRect.y, dir: 'left' }
-        ];
-        
-        const tPoints = [
-            { x: tRect.x, y: tRect.top, dir: 'up' },
-            { x: tRect.right, y: tRect.y, dir: 'right' },
-            { x: tRect.x, y: tRect.bottom, dir: 'down' },
-            { x: tRect.left, y: tRect.y, dir: 'left' }
-        ];
-        
-        let minD = Infinity;
-        let bestS = sPoints[1], bestT = tPoints[3]; 
-        
-        sPoints.forEach(sp => {
-            tPoints.forEach(tp => {
-                const d = Math.pow(sp.x - tp.x, 2) + Math.pow(sp.y - tp.y, 2);
-                if(d < minD) {
-                    minD = d;
-                    bestS = sp; bestT = tp;
-                }
-            });
-        });
-        
-        const curvature = 40;
-        const c1x = bestS.x + (bestS.dir === 'right' ? curvature : bestS.dir === 'left' ? -curvature : 0);
-        const c1y = bestS.y + (bestS.dir === 'down' ? curvature : bestS.dir === 'up' ? -curvature : 0);
-        
-        const c2x = bestT.x + (bestT.dir === 'right' ? curvature : bestT.dir === 'left' ? -curvature : 0);
-        const c2y = bestT.y + (bestT.dir === 'down' ? curvature : bestT.dir === 'up' ? -curvature : 0);
-        
-        return `M ${bestS.x} ${bestS.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${bestT.x} ${bestT.y}`;
+        let startX = sRect.right, startY = sRect.y;
+        let endX = tRect.left, endY = tRect.y;
+
+        if (sRect.right + 20 < tRect.left) {
+            startX = sRect.right; startY = sRect.y;
+            endX = tRect.left; endY = tRect.y;
+        } else if (sRect.left > tRect.right + 20) {
+            startX = sRect.left; startY = sRect.y;
+            endX = tRect.right; endY = tRect.y;
+        } else if (sRect.bottom + 20 < tRect.top) {
+            startX = sRect.x; startY = sRect.bottom;
+            endX = tRect.x; endY = tRect.top;
+        } else if (sRect.top > tRect.bottom + 20) {
+            startX = sRect.x; startY = sRect.top;
+            endX = tRect.x; endY = tRect.bottom;
+        } else {
+            startX = sRect.right; startY = sRect.y;
+            endX = tRect.left; endY = tRect.y;
+        }
+
+        const midX = startX + (endX - startX) / 2;
+        const midY = startY + (endY - startY) / 2;
+
+        if (startY === sRect.y && endY === tRect.y) {
+            return `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+        } else if (startX === sRect.x && endX === tRect.x) {
+            return `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY}`;
+        } else {
+            return `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`;
+        }
     };
 
     const getNodeStyle = (type) => {
@@ -639,9 +638,6 @@
                         onClick={() => setSelectedElement(null)}
                         dir="ltr" 
                     >
-                        {/* برای فعال کردن اسکرول، ابعاد یک لایه داخلی را برابر با بزرگترین x و y گره‌ها قرار می‌دهیم.
-                          حداقل ابعاد هم 2000 در 2000 تا جای کافی برای طراحی اولیه باشد.
-                        */}
                         <div style={{
                             width: Math.max(2000, ...editingDef.bpmn_data.nodes.map(n => n.position.x + 300)),
                             height: Math.max(2000, ...editingDef.bpmn_data.nodes.map(n => n.position.y + 300)),
@@ -649,11 +645,11 @@
                         }}>
                             <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                                 <defs>
-                                    <marker id="arrowhead" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
-                                        <polygon points="0 0, 5 2, 0 4" fill="#94a3b8" />
+                                    <marker id="arrowhead" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto">
+                                        <polygon points="0 0, 6 2.5, 0 5" fill="#94a3b8" />
                                     </marker>
-                                    <marker id="arrowhead-selected" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto">
-                                        <polygon points="0 0, 5 2, 0 4" fill="#6366f1" />
+                                    <marker id="arrowhead-selected" markerWidth="6" markerHeight="5" refX="5.5" refY="2.5" orient="auto">
+                                        <polygon points="0 0, 6 2.5, 0 5" fill="#6366f1" />
                                     </marker>
                                 </defs>
                                 
@@ -672,6 +668,7 @@
                                                 d={d} 
                                                 stroke={isSelected ? '#6366f1' : '#94a3b8'} 
                                                 strokeWidth={isSelected ? "3" : "2"} 
+                                                strokeLinejoin="round"
                                                 fill="none" 
                                                 markerEnd={`url(#${isSelected ? 'arrowhead-selected' : 'arrowhead'})`}
                                                 className="transition-all"
@@ -688,6 +685,7 @@
                                         )} 
                                         stroke="#94a3b8" 
                                         strokeWidth="2" 
+                                        strokeLinejoin="round"
                                         strokeDasharray="5,5" 
                                         fill="none" 
                                     />
@@ -739,6 +737,7 @@
                                         }}
                                         onMouseUp={(e) => {
                                             e.stopPropagation();
+                                            setDraggingNode(null);
                                             if (connectingStart && connectingStart !== node.id) {
                                                 addFlow(connectingStart, node.id);
                                                 setConnectingStart(null);
