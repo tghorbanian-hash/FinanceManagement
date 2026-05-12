@@ -231,7 +231,6 @@
 
         const existingOutFlows = editingDef.bpmn_data.flows.filter(f => f.sourceRef === sourceRef).length;
 
-        // Validation Rules for Flows
         if (sourceNode?.type === 'END_EVENT') {
             showToast(t('گره پایان نمی‌تواند نقطه شروع مسیر باشد.', 'End event cannot have outgoing flows.'), 'error');
             return;
@@ -466,10 +465,13 @@
 
             {activeTab === 'process' && (
                 <div className="flex-1 flex overflow-hidden bg-slate-50 dark:bg-slate-900/50">
-                    {/* Palette Sidebar */}
-                    <div className={`w-16 shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 flex flex-col items-center py-4 gap-3 shadow-sm z-20 overflow-y-auto custom-scrollbar`}>
+                    {/* Palette Sidebar - 2 Column Grid */}
+                    <div className={`w-[110px] shrink-0 bg-white dark:bg-slate-800 border-${isRtl ? 'l' : 'r'} border-slate-200 dark:border-slate-700 grid grid-cols-2 gap-2 p-3 content-start justify-items-center shadow-sm z-20 overflow-y-auto custom-scrollbar`}>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'START_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500" title={t('گره شروع', 'Start Event')}>
                             {getNodePaletteIcon('START_EVENT')}
+                        </div>
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-rose-500" title={t('گره پایان', 'End Event')}>
+                            {getNodePaletteIcon('END_EVENT')}
                         </div>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'USER_TASK')} className="w-10 h-10 shrink-0 rounded-lg border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500" title={t('فعالیت کاربری', 'User Task')}>
                             {getNodePaletteIcon('USER_TASK')}
@@ -483,9 +485,6 @@
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'SUB_PROCESS')} className="w-10 h-10 shrink-0 rounded-lg border-2 border-dashed border-teal-400 bg-teal-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-teal-500" title={t('زیرفرآیند', 'Subprocess')}>
                             {getNodePaletteIcon('SUB_PROCESS')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'TIMER_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-orange-400 bg-orange-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-orange-500" title={t('رویداد زمانی', 'Timer Event')}>
-                            {getNodePaletteIcon('TIMER_EVENT')}
-                        </div>
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'APPROVAL_GATEWAY')} className="w-10 h-10 shrink-0 border-2 border-indigo-400 bg-indigo-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-indigo-500 rotate-45" title={t('تصمیم بله/خیر', 'Decision Gateway')}>
                             {getNodePaletteIcon('APPROVAL_GATEWAY')}
                         </div>
@@ -495,8 +494,8 @@
                         <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'PARALLEL_GATEWAY')} className="w-10 h-10 shrink-0 border-2 border-emerald-400 bg-emerald-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-emerald-500 rotate-45" title={t('دروازه موازی (AND)', 'Parallel Gateway')}>
                             {getNodePaletteIcon('PARALLEL_GATEWAY')}
                         </div>
-                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'END_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-4 border-rose-400 bg-rose-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-rose-500 mt-1" title={t('گره پایان', 'End Event')}>
-                            {getNodePaletteIcon('END_EVENT')}
+                        <div draggable onDragStart={(e) => e.dataTransfer.setData('nodeType', 'TIMER_EVENT')} className="w-10 h-10 shrink-0 rounded-full border-2 border-orange-400 bg-orange-50 flex items-center justify-center cursor-grab hover:shadow-md transition-shadow text-orange-500" title={t('رویداد زمانی', 'Timer Event')}>
+                            {getNodePaletteIcon('TIMER_EVENT')}
                         </div>
                     </div>
 
