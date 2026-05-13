@@ -18,7 +18,6 @@
     const [actionLoading, setActionLoading] = useState(false);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
 
-    // نقش‌های تستی برای شبیه‌سازی کاربران مختلف سیستم
     const roleOptions = [
       { value: 'MANAGER', label: 'کارتابل معاونت (MANAGER)' },
       { value: 'CEO', label: 'کارتابل مدیرعامل (CEO)' },
@@ -31,13 +30,19 @@
       setTimeout(() => setToast({ isVisible: false, message: '', type: 'success' }), 4000);
     };
 
+    const extractValue = (e) => {
+      if (e && typeof e === 'object' && e.target !== undefined) {
+        return e.target.value;
+      }
+      return e !== undefined && e !== null ? e : '';
+    };
+
     const fetchTasks = async () => {
       setLoading(true);
       try {
         if (!window.WorkflowEngine) {
           throw new Error('موتور گردش کار (WorkflowEngine) بارگذاری نشده است.');
         }
-        // دریافت کارهای معلق بر اساس نقش انتخاب شده
         const currentUser = `User_${selectedRole}`;
         const pendingTasks = await window.WorkflowEngine.getPendingTasks([selectedRole], currentUser);
         setTasks(pendingTasks || []);
@@ -62,7 +67,7 @@
       if (instance && instance.entity_type === 'BUDGET_REQUEST' && supabase) {
         setDetailsLoading(true);
         try {
-          const { data, error } = await supabase.schema('bdg')
+          const { data, error } = await supabase
             .from('budget_requests')
             .select('*, budget_request_items(*)')
             .eq('id', instance.record_id)
@@ -93,14 +98,14 @@
           activeTask.id,
           actionType,
           comments,
-          { current_role: selectedRole }, // متغیرهای اضافی برای پاس دادن به گردش کار
+          { current_role: selectedRole },
           currentUser
         );
 
         if (result.success) {
           showToast(`عملیات ${actionType === 'APPROVED' ? 'تایید' : 'رد'} با موفقیت انجام شد.`);
           handleCloseTask();
-          fetchTasks(); // بروزرسانی کارتابل
+          fetchTasks();
         } else {
           showToast('خطا در انجام عملیات: ' + result.error, 'error');
         }
@@ -125,7 +130,7 @@
           React.createElement(SelectField, {
             options: roleOptions,
             value: selectedRole,
-            onChange: setSelectedRole,
+            onChange: (e) => setSelectedRole(extractValue(e)),
             className: 'w-full bg-white'
           })
         )
@@ -194,7 +199,6 @@
           )
       ),
 
-      // مدال یا لایه بازشو برای انجام کار روی تسک
       activeTask && React.createElement(
         'div',
         { className: 'fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4' },
@@ -202,7 +206,6 @@
           'div',
           { className: 'bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200' },
           
-          // Header
           React.createElement(
             'div',
             { className: 'flex justify-between items-center p-5 border-b border-slate-100 bg-slate-50/50' },
@@ -219,7 +222,6 @@
             )
           ),
 
-          // Body
           React.createElement(
             'div',
             { className: 'p-6 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-6' },
@@ -260,7 +262,7 @@
               React.createElement(TextAreaField, {
                 label: 'هامش / یادداشت شما',
                 value: comments,
-                onChange: setComments,
+                onChange: (e) => setComments(extractValue(e)),
                 placeholder: 'نظرات خود را برای ثبت در سوابق این مرحله وارد کنید...',
                 rows: 4,
                 className: 'w-full'
@@ -268,7 +270,6 @@
             )
           ),
 
-          // Footer / Actions
           React.createElement(
             'div',
             { className: 'p-5 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3' },
