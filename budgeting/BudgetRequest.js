@@ -48,19 +48,23 @@
       { value: 'EUR', label: 'یورو' }
     ];
 
+    // تابع کمکی برای استخراج امن مقادیر از کامپوننت‌های دیزاین سیستم
     const extractValue = (e) => {
-      if (e && e.target !== undefined) {
+      if (e && typeof e === 'object' && e.target !== undefined) {
         return e.target.value;
       }
-      return e;
+      return e !== undefined && e !== null ? e : '';
     };
 
     const handleHeaderChange = (field, value) => {
-      setHeaderData(prev => ({ ...prev, [field]: value }));
+      setHeaderData(prev => ({ ...prev, [field]: extractValue(value) }));
     };
 
     const handleAddItem = () => {
-      if (!newItem.project_name || !newItem.requested_amount) return;
+      if (!newItem.project_name || !newItem.requested_amount) {
+        alert('لطفا نام پروژه و مبلغ درخواستی را وارد کنید.');
+        return;
+      }
       setItems(prev => [...prev, { ...newItem, id: Date.now().toString() }]);
       setNewItem({ project_name: '', currency: 'IRR', requested_amount: '', approved_amount: 0, item_status: 'PENDING' });
     };
@@ -70,19 +74,23 @@
     };
 
     const handleSave = async () => {
-      if (!supabase) return alert('خطا: ارتباط با دیتابیس برقرار نیست.');
+      if (!supabase) {
+        alert('خطا: ارتباط با دیتابیس (Supabase) برقرار نیست.');
+        return;
+      }
+      
       setSaving(true);
       try {
         const totalRequested = items.reduce((sum, item) => sum + Number(item.requested_amount || 0), 0);
 
         const payload = {
-          requester_name: headerData.requester_name,
-          department: headerData.department,
-          budget_type: headerData.budget_type,
-          request_date: headerData.request_date,
+          requester_name: headerData.requester_name || null,
+          department: headerData.department || null,
+          budget_type: headerData.budget_type || null,
+          request_date: headerData.request_date || new Date().toISOString().split('T')[0],
           effective_from: headerData.effective_from || null,
           effective_to: headerData.effective_to || null,
-          description: headerData.description,
+          description: headerData.description || null,
           total_requested_amount: totalRequested,
           status: status
         };
@@ -95,30 +103,35 @@
         } else {
           const { data, error } = await supabase.schema('bdg').from('budget_requests').insert([payload]).select().single();
           if (error) throw error;
-          currentReqId = data.id;
-          setRequestId(data.id);
+          if (data) {
+             currentReqId = data.id;
+             setRequestId(data.id);
+          }
         }
 
-        await supabase.schema('bdg').from('budget_request_items').delete().eq('request_id', currentReqId);
+        // بروزرسانی آیتم‌ها
+        if (currentReqId) {
+            await supabase.schema('bdg').from('budget_request_items').delete().eq('request_id', currentReqId);
 
-        const itemsPayload = items.map(item => ({
-          request_id: currentReqId,
-          project_name: item.project_name,
-          currency: item.currency,
-          requested_amount: Number(item.requested_amount),
-          approved_amount: Number(item.approved_amount),
-          item_status: item.item_status
-        }));
+            const itemsPayload = items.map(item => ({
+              request_id: currentReqId,
+              project_name: item.project_name,
+              currency: item.currency || 'IRR',
+              requested_amount: Number(item.requested_amount || 0),
+              approved_amount: Number(item.approved_amount || 0),
+              item_status: item.item_status || 'PENDING'
+            }));
 
-        if (itemsPayload.length > 0) {
-          const { error: itemsError } = await supabase.schema('bdg').from('budget_request_items').insert(itemsPayload);
-          if (itemsError) throw itemsError;
+            if (itemsPayload.length > 0) {
+              const { error: itemsError } = await supabase.schema('bdg').from('budget_request_items').insert(itemsPayload);
+              if (itemsError) throw itemsError;
+            }
         }
 
         alert('درخواست بودجه با موفقیت ذخیره شد.');
       } catch (error) {
         console.error('Save Error:', error);
-        alert('خطا در ذخیره اطلاعات');
+        alert(`خطا در ذخیره اطلاعات:\n${error.message || JSON.stringify(error)}\n(لطفا از اضافه شدن اسکیمای bdg در بخش Exposed Schemas سوپابیس اطمینان حاصل کنید)`);
       } finally {
         setSaving(false);
       }
@@ -126,7 +139,7 @@
 
     const handleSendToWorkflow = async () => {
       if (!requestId) {
-        alert('ابتدا باید درخواست را ذخیره کنید.');
+        alert('ابتدا باید درخواست را ذخیره (پیش‌نویس) کنید.');
         return;
       }
       if (status !== 'DRAFT') {
@@ -134,7 +147,7 @@
         return;
       }
       if (!window.WorkflowEngine) {
-        alert('موتور گردش کار در سیستم یافت نشد.');
+        alert('موتور گردش کار (WorkflowEngine) در سیستم یافت نشد.');
         return;
       }
 
@@ -148,15 +161,17 @@
         );
 
         if (wfResult.success) {
-          await supabase.schema('bdg').from('budget_requests').update({ status: 'IN_REVIEW' }).eq('id', requestId);
+          const { error } = await supabase.schema('bdg').from('budget_requests').update({ status: 'IN_REVIEW' }).eq('id', requestId);
+          if (error) throw error;
+          
           setStatus('IN_REVIEW');
-          alert('درخواست بودجه با موفقیت به گردش کار ارسال شد و در کارتابل مدیر قرار گرفت.');
+          alert('درخواست بودجه با موفقیت به گردش کار ارسال شد و در کارتابل قرار گرفت.');
         } else {
-          alert('خطا در راه‌اندازی گردش کار: ' + wfResult.message);
+          alert('خطا در راه‌اندازی گردش کار: ' + (wfResult.message || wfResult.error));
         }
       } catch (err) {
         console.error('WF Start Error:', err);
-        alert('خطای سیستمی هنگام اتصال به موتور گردش کار.');
+        alert(`خطای سیستمی هنگام اتصال به موتور گردش کار:\n${err.message || 'نامشخص'}`);
       } finally {
         setSaving(false);
       }
@@ -214,7 +229,7 @@
               React.createElement(TextField, {
                 label: 'درخواست دهنده',
                 value: headerData.requester_name,
-                onChange: (e) => handleHeaderChange('requester_name', extractValue(e)),
+                onChange: (e) => handleHeaderChange('requester_name', e),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -222,7 +237,7 @@
                 label: 'دپارتمان',
                 options: departmentOptions,
                 value: headerData.department,
-                onChange: (e) => handleHeaderChange('department', extractValue(e)),
+                onChange: (e) => handleHeaderChange('department', e),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -230,7 +245,7 @@
                 label: 'نوع بودجه',
                 options: budgetTypeOptions,
                 value: headerData.budget_type,
-                onChange: (e) => handleHeaderChange('budget_type', extractValue(e)),
+                onChange: (e) => handleHeaderChange('budget_type', e),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -238,7 +253,7 @@
                 label: 'تاریخ درخواست',
                 type: 'date',
                 value: headerData.request_date,
-                onChange: (e) => handleHeaderChange('request_date', extractValue(e)),
+                onChange: (e) => handleHeaderChange('request_date', e),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -246,7 +261,7 @@
                 label: 'موثر از تاریخ',
                 type: 'date',
                 value: headerData.effective_from,
-                onChange: (e) => handleHeaderChange('effective_from', extractValue(e)),
+                onChange: (e) => handleHeaderChange('effective_from', e),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -254,7 +269,7 @@
                 label: 'موثر تا تاریخ',
                 type: 'date',
                 value: headerData.effective_to,
-                onChange: (e) => handleHeaderChange('effective_to', extractValue(e)),
+                onChange: (e) => handleHeaderChange('effective_to', e),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -264,7 +279,7 @@
                 React.createElement(TextField, {
                   label: 'توضیحات کلی',
                   value: headerData.description,
-                  onChange: (e) => handleHeaderChange('description', extractValue(e)),
+                  onChange: (e) => handleHeaderChange('description', e),
                   disabled: isReadOnly,
                   className: 'w-full'
                 })
