@@ -48,7 +48,6 @@
       { value: 'EUR', label: 'یورو' }
     ];
 
-    // تابع کمکی برای استخراج امن مقادیر از کامپوننت‌های دیزاین سیستم
     const extractValue = (e) => {
       if (e && typeof e === 'object' && e.target !== undefined) {
         return e.target.value;
@@ -98,10 +97,10 @@
         let currentReqId = requestId;
 
         if (currentReqId) {
-          const { error } = await supabase.schema('bdg').from('budget_requests').update(payload).eq('id', currentReqId);
+          const { error } = await supabase.from('budget_requests').update(payload).eq('id', currentReqId);
           if (error) throw error;
         } else {
-          const { data, error } = await supabase.schema('bdg').from('budget_requests').insert([payload]).select().single();
+          const { data, error } = await supabase.from('budget_requests').insert([payload]).select().single();
           if (error) throw error;
           if (data) {
              currentReqId = data.id;
@@ -109,9 +108,8 @@
           }
         }
 
-        // بروزرسانی آیتم‌ها
         if (currentReqId) {
-            await supabase.schema('bdg').from('budget_request_items').delete().eq('request_id', currentReqId);
+            await supabase.from('budget_request_items').delete().eq('request_id', currentReqId);
 
             const itemsPayload = items.map(item => ({
               request_id: currentReqId,
@@ -123,7 +121,7 @@
             }));
 
             if (itemsPayload.length > 0) {
-              const { error: itemsError } = await supabase.schema('bdg').from('budget_request_items').insert(itemsPayload);
+              const { error: itemsError } = await supabase.from('budget_request_items').insert(itemsPayload);
               if (itemsError) throw itemsError;
             }
         }
@@ -131,7 +129,7 @@
         alert('درخواست بودجه با موفقیت ذخیره شد.');
       } catch (error) {
         console.error('Save Error:', error);
-        alert(`خطا در ذخیره اطلاعات:\n${error.message || JSON.stringify(error)}\n(لطفا از اضافه شدن اسکیمای bdg در بخش Exposed Schemas سوپابیس اطمینان حاصل کنید)`);
+        alert(`خطا در ذخیره اطلاعات:\n${error.message || JSON.stringify(error)}`);
       } finally {
         setSaving(false);
       }
@@ -161,7 +159,7 @@
         );
 
         if (wfResult.success) {
-          const { error } = await supabase.schema('bdg').from('budget_requests').update({ status: 'IN_REVIEW' }).eq('id', requestId);
+          const { error } = await supabase.from('budget_requests').update({ status: 'IN_REVIEW' }).eq('id', requestId);
           if (error) throw error;
           
           setStatus('IN_REVIEW');
