@@ -13,8 +13,7 @@
         return;
       }
       try {
-        // تغییر از schema('wf') به حالت پیش‌فرض (public) بر اساس ساختار دیتابیس شما
-        await supabase.from('wf_history').insert([{
+        await supabase.schema('wf').from('wf_history').insert([{
           instance_id: instanceId,
           node_id: nodeId,
           action: action,
@@ -34,7 +33,7 @@
         if (!supabase) throw new Error("Supabase is required.");
 
         // 1. جستجوی آخرین نسخه گردش کار فعال برای این موجودیت
-        const { data: defs, error: defError } = await supabase.from('wf_definitions')
+        const { data: defs, error: defError } = await supabase.schema('wf').from('wf_definitions')
           .select('*')
           .eq('entity_type', entityType)
           .eq('is_active', true)
@@ -72,7 +71,7 @@
         if (!selectedDef) return { success: false, message: 'شروط گردش کارهای موجود با داده‌های این رکورد همخوانی ندارد.' };
 
         // 3. ایجاد یک نمونه (Instance) از این گردش کار
-        const { data: instance, error: instError } = await supabase.from('wf_instances').insert([{
+        const { data: instance, error: instError } = await supabase.schema('wf').from('wf_instances').insert([{
           workflow_id: selectedDef.id,
           entity_type: entityType,
           record_id: String(recordId),
@@ -124,7 +123,7 @@
       const { nodes, flows } = bpmnData;
       
       // بروزرسانی موقعیت فعلی در جدول اینستنس
-      await supabase.from('wf_instances').update({ current_node_id: currentNodeId, updated_at: new Date().toISOString() }).eq('id', instanceId);
+      await supabase.schema('wf').from('wf_instances').update({ current_node_id: currentNodeId, updated_at: new Date().toISOString() }).eq('id', instanceId);
 
       const outgoingFlows = flows.filter(f => f.sourceRef === currentNodeId);
       if (outgoingFlows.length === 0) return; // بن‌بست یا پایان واقعی فرآیند
@@ -165,14 +164,14 @@
       if (!node) return;
 
       // آپدیت مکان اینستنس
-      await supabase.from('wf_instances').update({ current_node_id: nodeId, updated_at: new Date().toISOString() }).eq('id', instanceId);
+      await supabase.schema('wf').from('wf_instances').update({ current_node_id: nodeId, updated_at: new Date().toISOString() }).eq('id', instanceId);
 
       if (node.type === 'USER_TASK') {
          // محاسبه مهلت انجام کار (در صورت وجود SLA در نقشه فرآیند)
          const dueDate = node.sla_hours ? new Date(Date.now() + (node.sla_hours * 3600000)).toISOString() : null;
 
          // ایجاد وظیفه جدید در کارتابل
-         await supabase.from('wf_tasks').insert([{
+         await supabase.schema('wf').from('wf_tasks').insert([{
             instance_id: instanceId,
             node_id: node.id,
             task_type: node.task_type || 'USER_TASK',
@@ -202,7 +201,7 @@
          await this.processNextNodes(instanceId, bpmnData, node.id, data, currentUser);
       }
       else if (node.type === 'END_EVENT') {
-         await supabase.from('wf_instances').update({ status: 'COMPLETED', updated_at: new Date().toISOString() }).eq('id', instanceId);
+         await supabase.schema('wf').from('wf_instances').update({ status: 'COMPLETED', updated_at: new Date().toISOString() }).eq('id', instanceId);
          await this.logHistory(instanceId, node.id, 'PROCESS_COMPLETED', 'SYSTEM', 'Workflow reached end event.');
       }
       else if (node.type.includes('GATEWAY')) {
@@ -216,14 +215,14 @@
      */
     static async delegateTask(taskId, delegatedTo, currentUser) {
       try {
-        const { error } = await supabase.from('wf_tasks').update({
+        const { error } = await supabase.schema('wf').from('wf_tasks').update({
           delegated_to: delegatedTo
         }).eq('id', taskId);
 
         if (error) throw error;
 
         // ثبت در تاریخچه
-        const { data: task } = await supabase.from('wf_tasks').select('*').eq('id', taskId).single();
+        const { data: task } = await supabase.schema('wf').from('wf_tasks').select('*').eq('id', taskId).single();
         if (task) {
           await this.logHistory(task.instance_id, task.node_id, 'TASK_DELEGATED', currentUser, `Task delegated to user/role: ${delegatedTo}`);
         }
@@ -241,11 +240,11 @@
     static async completeTask(taskId, actionTaken, comments, variables = {}, currentUser) {
         try {
             // 1. واکشی اطلاعات وظیفه و اینستنس متصل
-            const { data: task, error: taskErr } = await supabase.from('wf_tasks').select('*, wf_instances(*)').eq('id', taskId).single();
+            const { data: task, error: taskErr } = await supabase.schema('wf').from('wf_tasks').select('*, wf_instances(*)').eq('id', taskId).single();
             if (taskErr || !task) throw new Error('وظیفه مورد نظر یافت نشد.');
             
             // 2. تغییر وضعیت وظیفه به تکمیل شده
-            await supabase.from('wf_tasks').update({
+            await supabase.schema('wf').from('wf_tasks').update({
                 status: 'COMPLETED',
                 action_taken: actionTaken,
                 comments: comments || null,
@@ -256,7 +255,7 @@
             await this.logHistory(task.instance_id, task.node_id, 'TASK_COMPLETED', currentUser, `Action: ${actionTaken} | Comments: ${comments || 'None'}`);
 
             // 3. دریافت نقشه فرآیند برای یافتن قدم بعدی
-            const { data: def } = await supabase.from('wf_definitions').select('bpmn_data').eq('id', task.wf_instances.workflow_id).single();
+            const { data: def } = await supabase.schema('wf').from('wf_definitions').select('bpmn_data').eq('id', task.wf_instances.workflow_id).single();
             
             // ما متغیر اکشن (Action) را مستقیما به داده‌ها تزریق می‌کنیم تا دروازه‌های شرطی بعدی بتوانند روی آن تصمیم‌گیری کنند
             const enrichedData = { ...variables, action_taken: actionTaken };
@@ -276,7 +275,7 @@
      */
     static async getPendingTasks(userRoles = [], currentUser = '') {
        try {
-         const { data, error } = await supabase.from('wf_tasks')
+         const { data, error } = await supabase.schema('wf').from('wf_tasks')
             .select(`
                 *,
                 wf_instances (
