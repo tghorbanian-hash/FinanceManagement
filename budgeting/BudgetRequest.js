@@ -48,6 +48,13 @@
       { value: 'EUR', label: 'یورو' }
     ];
 
+    const extractValue = (e) => {
+      if (e && e.target !== undefined) {
+        return e.target.value;
+      }
+      return e;
+    };
+
     const handleHeaderChange = (field, value) => {
       setHeaderData(prev => ({ ...prev, [field]: value }));
     };
@@ -207,7 +214,7 @@
               React.createElement(TextField, {
                 label: 'درخواست دهنده',
                 value: headerData.requester_name,
-                onChange: (v) => handleHeaderChange('requester_name', v),
+                onChange: (e) => handleHeaderChange('requester_name', extractValue(e)),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -215,7 +222,7 @@
                 label: 'دپارتمان',
                 options: departmentOptions,
                 value: headerData.department,
-                onChange: (v) => handleHeaderChange('department', v),
+                onChange: (e) => handleHeaderChange('department', extractValue(e)),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -223,7 +230,7 @@
                 label: 'نوع بودجه',
                 options: budgetTypeOptions,
                 value: headerData.budget_type,
-                onChange: (v) => handleHeaderChange('budget_type', v),
+                onChange: (e) => handleHeaderChange('budget_type', extractValue(e)),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -231,7 +238,7 @@
                 label: 'تاریخ درخواست',
                 type: 'date',
                 value: headerData.request_date,
-                onChange: (v) => handleHeaderChange('request_date', v),
+                onChange: (e) => handleHeaderChange('request_date', extractValue(e)),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -239,7 +246,7 @@
                 label: 'موثر از تاریخ',
                 type: 'date',
                 value: headerData.effective_from,
-                onChange: (v) => handleHeaderChange('effective_from', v),
+                onChange: (e) => handleHeaderChange('effective_from', extractValue(e)),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -247,7 +254,7 @@
                 label: 'موثر تا تاریخ',
                 type: 'date',
                 value: headerData.effective_to,
-                onChange: (v) => handleHeaderChange('effective_to', v),
+                onChange: (e) => handleHeaderChange('effective_to', extractValue(e)),
                 disabled: isReadOnly,
                 className: 'w-full'
               }),
@@ -257,7 +264,7 @@
                 React.createElement(TextField, {
                   label: 'توضیحات کلی',
                   value: headerData.description,
-                  onChange: (v) => handleHeaderChange('description', v),
+                  onChange: (e) => handleHeaderChange('description', extractValue(e)),
                   disabled: isReadOnly,
                   className: 'w-full'
                 })
@@ -283,7 +290,7 @@
                 React.createElement(TextField, {
                   label: 'نام پروژه / کمپین',
                   value: newItem.project_name,
-                  onChange: (v) => setNewItem({ ...newItem, project_name: v }),
+                  onChange: (e) => setNewItem({ ...newItem, project_name: extractValue(e) }),
                   placeholder: 'مثلا: کمپین شب یلدا'
                 })
               ),
@@ -294,7 +301,7 @@
                   label: 'ارز',
                   options: currencyOptions,
                   value: newItem.currency,
-                  onChange: (v) => setNewItem({ ...newItem, currency: v })
+                  onChange: (e) => setNewItem({ ...newItem, currency: extractValue(e) })
                 })
               ),
               React.createElement(
@@ -304,7 +311,7 @@
                   label: 'مبلغ درخواستی',
                   type: 'number',
                   value: newItem.requested_amount,
-                  onChange: (v) => setNewItem({ ...newItem, requested_amount: v })
+                  onChange: (e) => setNewItem({ ...newItem, requested_amount: extractValue(e) })
                 })
               ),
               React.createElement(
