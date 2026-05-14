@@ -80,11 +80,8 @@
             mobile: p.mobile,
             email: p.email
           })));
-        } else if (pError) {
-          console.error('Parties Fetch Error:', pError);
         }
 
-        // استفاده از View ساخته شده در اسکیمای public برای دور زدن باگ Supabase
         const { data: usersData, error } = await supabase
           .from('sec_users')
           .select('*')
@@ -109,7 +106,6 @@
 
     const handleSave = async () => {
       if (!formData.username || !formData.partyId) {
-        alert(t('وارد کردن نام کاربری و اتصال به شخص الزامی است.', 'Username and Party connection are required.'));
         return;
       }
       if (!currentRecord && !formData.password) return;
@@ -230,8 +226,8 @@
       setFormData(prev => ({
         ...prev,
         partyId: selectedId,
-        mobile: selectedParty?.mobile || prev.mobile,
-        email: selectedParty?.email || prev.email
+        mobile: selectedParty?.mobile || '',
+        email: selectedParty?.email || ''
       }));
     };
 
@@ -288,14 +284,14 @@
       },
       { 
         field: 'party_id', 
-        header_fa: 'نام و نام خانوادگی / شخص متصل', 
-        header_en: 'Linked Party / Full Name', 
-        width: '200px',
+        header_fa: 'شخص / پرسنل متصل', 
+        header_en: 'Linked Party', 
+        width: '250px',
         render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200">{getPartyName(val)}</span>
       },
       { 
         field: 'user_type', 
-        header_fa: 'نوع کاربری', 
+        header_fa: 'نوع', 
         header_en: 'Type', 
         width: '120px',
         render: (val) => (
@@ -449,6 +445,7 @@
                 value={formData.partyId} 
                 onChange={handlePartyChange} 
                 isRtl={isRtl}
+                required
                 options={[
                   { value: '', label: `-- ${t('انتخاب کنید', 'Select')} --` },
                   ...partiesDropdown.map(p => ({ value: p.id, label: p.label }))
