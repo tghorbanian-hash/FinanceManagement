@@ -104,7 +104,6 @@
 
     const handleSave = async () => {
       if (!formData.code || (formData.partyType === 'real' && !formData.lastName) || (formData.partyType === 'legal' && !formData.companyName)) {
-         alert(t('لطفاً فیلدهای اجباری را تکمیل کنید.', 'Please fill out required fields.'));
          return;
       }
 
@@ -136,7 +135,6 @@
         fetchData();
       } catch (err) {
         console.error('Save Error:', err);
-        alert(t('خطا در ذخیره‌سازی اطلاعات.', 'Error saving data.'));
       } finally {
         setIsLoading(false);
       }
@@ -172,7 +170,6 @@
         fetchData();
       } catch (err) {
         console.error("Delete error:", err);
-        alert(t('خطا در حذف اطلاعات. ممکن است این رکورد در جای دیگری استفاده شده باشد.', 'Error deleting data. This record might be in use.'));
       } finally {
         setIsLoading(false);
       }
@@ -207,6 +204,31 @@
       }
     };
 
+    const handleDownloadSample = () => {
+      const headers = isRtl
+        ? 'کد شخص,نوع شخص (real/legal),نام,نام خانوادگی,نام شرکت,کد/شناسه ملی,کد اقتصادی,موبایل,تلفن ثابت,ایمیل,آدرس'
+        : 'Code,Party Type (real/legal),First Name,Last Name,Company Name,National ID,Economic Code,Mobile,Phone,Email,Address';
+        
+      const sampleRow = isRtl
+        ? '1001,real,علی,احمدی,,1234567890,,09120000000,0210000000,test@test.com,تهران...'
+        : '1001,real,Ali,Ahmadi,,1234567890,,09120000000,0210000000,test@test.com,Tehran...';
+        
+      const csv = '\uFEFF' + headers + '\n' + sampleRow;
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'Parties_Import_Sample.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    const handleImportFile = (file) => {
+      if (!file) return;
+      console.log('Import file selected:', file.name);
+      // منطق پردازش فایل اکسل/CSV در فازهای بعدی می‌تواند در اینجا پیاده‌سازی شود
+    };
+
     const columns = [
       { field: 'code', header_fa: 'کد', header_en: 'Code', width: '100px' },
       { 
@@ -233,7 +255,7 @@
         field: 'roles', 
         header_fa: 'نقش‌ها', 
         header_en: 'Roles', 
-        width: '220px',
+        width: '240px',
         render: (roles) => (
           <div className="flex gap-1 flex-wrap">
              {(roles || []).map(r => {
@@ -241,7 +263,8 @@
                   customer: t('مشتری', 'Customer'),
                   vendor: t('تامین‌کننده', 'Vendor'),
                   employee: t('کارمند', 'Employee'),
-                  shareholder: t('سهامدار', 'Shareholder')
+                  shareholder: t('سهامدار', 'Shareholder'),
+                  system_user: t('کاربر سیستم', 'System User')
                 };
                 return <Badge key={r} variant="slate" size="sm" className="text-[9px] px-1.5 py-0.5">{roleLabels[r] || r}</Badge>
              })}
@@ -260,21 +283,6 @@
 
     const filteredData = useMemo(() => {
       let result = [...data];
-      if (filters.code) {
-         result = result.filter(c => c.code && c.code.toLowerCase().includes(filters.code.toLowerCase()));
-      }
-      if (filters.name) {
-         result = result.filter(c => {
-             const fullName = c.partyType === 'legal' ? c.companyName : `${c.firstName || ''} ${c.lastName || ''}`;
-             return fullName && fullName.toLowerCase().includes(filters.name.toLowerCase());
-         });
-      }
-      if (filters.partyType) {
-         result = result.filter(c => c.partyType === filters.partyType);
-      }
-      if (filters.nationalId) {
-         result = result.filter(c => c.nationalId && c.nationalId.includes(filters.nationalId));
-      }
       if (filters.role) {
          result = result.filter(c => c.roles && c.roles.includes(filters.role));
       }
@@ -282,16 +290,18 @@
     }, [data, filters]);
 
     const filterFields = [
-      { name: 'code', label: t('کد شخص', 'Code'), type: 'text' },
-      { name: 'name', label: t('نام/عنوان', 'Name'), type: 'text' },
-      { name: 'partyType', label: t('نوع شخص', 'Party Type'), type: 'select', options: [{value: 'real', label: t('حقیقی', 'Real')}, {value: 'legal', label: t('حقوقی', 'Legal')}] },
-      { name: 'nationalId', label: t('کد/شناسه ملی', 'National ID'), type: 'text' },
-      { name: 'role', label: t('نقش', 'Role'), type: 'select', options: [
+      { 
+        name: 'role', 
+        label: t('نقش', 'Role'), 
+        type: 'select', 
+        options: [
           {value: 'customer', label: t('مشتری', 'Customer')},
           {value: 'vendor', label: t('تامین‌کننده', 'Vendor')},
           {value: 'employee', label: t('کارمند', 'Employee')},
-          {value: 'shareholder', label: t('سهامدار', 'Shareholder')}
-      ]}
+          {value: 'shareholder', label: t('سهامدار', 'Shareholder')},
+          {value: 'system_user', label: t('کاربر سیستم', 'System User')}
+        ]
+      }
     ];
 
     return (
@@ -327,8 +337,8 @@
               onRowDoubleClick={(row) => handleOpenModal(row)}
               gridState={gridState}
               onGridStateChange={setGridState}
-              onDownloadSample={() => console.log('Download Sample Clicked')}
-              onImport={(file) => console.log('File imported:', file)}
+              onDownloadSample={handleDownloadSample}
+              onImport={handleImportFile}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
@@ -393,6 +403,7 @@
                       <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />
                       <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
                       <CheckboxField size="sm" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} />
+                      <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
                   </div>
               </div>
               <div className="col-span-1 p-3 flex flex-col justify-center h-full border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
