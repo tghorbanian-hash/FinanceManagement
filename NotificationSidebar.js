@@ -211,14 +211,14 @@
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1.5">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
             {loading ? (
               <div className="h-full flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" /></div>
             ) : currentData.length > 0 ? (
               currentData.map((notif) => (
                 <div 
                   key={notif.id} 
-                  className={`group relative border rounded-lg p-2.5 transition-all animate-in fade-in slide-in-from-bottom-2 ${
+                  className={`group relative border rounded-lg p-3 transition-all animate-in fade-in slide-in-from-bottom-2 ${
                     notif.is_read 
                       ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600' 
                       : 'bg-indigo-50/40 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-sm'
@@ -229,9 +229,9 @@
                       {notif.type === 'success' ? <CheckCircle2 size={14} /> : notif.type === 'error' ? <AlertCircle size={14} /> : <Info size={14} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className={`text-[12px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{notif.title}</h4>
-                      <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{notif.message}</p>
-                      <span className="text-[8px] text-slate-400 dark:text-slate-500 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</span>
+                      <h4 className={`text-[12px] font-bold mb-1 leading-tight ${notif.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{notif.title}</h4>
+                      <p className={`text-[11px] leading-relaxed mb-1.5 line-clamp-2 ${notif.is_read ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{notif.message}</p>
+                      <div className="block mt-1.5 text-[9px] text-slate-400 dark:text-slate-500 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</div>
                     </div>
                     
                     <div className="flex flex-col gap-0.5 transition-all self-start shrink-0">
