@@ -10,7 +10,7 @@
   
   const { 
     Users, User, Building, Edit, Trash2, Save, 
-    AlertTriangle, Lock 
+    AlertTriangle, Lock, MapPin, Plus 
   } = window.LucideIcons || {};
   const supabase = window.supabase;
 
@@ -39,10 +39,11 @@
       mobile: '',
       phone: '',
       email: '',
-      address: '',
+      addresses: [],
       roles: [],
       isActive: true
     });
+    const [newAddress, setNewAddress] = useState('');
 
     const [gridState, setGridState] = useState(null);
 
@@ -89,7 +90,7 @@
           mobile: item.mobile,
           phone: item.phone,
           email: item.email,
-          address: item.address,
+          addresses: item.addresses || [],
           roles: item.roles || [],
           isActive: item.is_active ?? true
         }));
@@ -120,7 +121,7 @@
           mobile: formData.mobile,
           phone: formData.phone,
           email: formData.email,
-          address: formData.address,
+          addresses: formData.addresses || [],
           roles: formData.roles || [],
           is_active: formData.isActive,
           updated_at: new Date().toISOString()
@@ -187,11 +188,12 @@
         mobile: '',
         phone: '',
         email: '',
-        address: '',
+        addresses: [],
         roles: [],
         isActive: true 
       });
       setCurrentRecord(record);
+      setNewAddress('');
       setIsModalOpen(true);
     };
 
@@ -204,14 +206,21 @@
       }
     };
 
+    const handleSetDefaultAddress = (addrId) => {
+      setFormData(prev => ({
+        ...prev,
+        addresses: prev.addresses.map(a => ({ ...a, isDefault: a.id === addrId }))
+      }));
+    };
+
     const handleDownloadSample = () => {
       const headers = isRtl
-        ? 'کد شخص,نوع شخص (real/legal),نام,نام خانوادگی,نام شرکت,کد/شناسه ملی,کد اقتصادی,موبایل,تلفن ثابت,ایمیل,آدرس'
-        : 'Code,Party Type (real/legal),First Name,Last Name,Company Name,National ID,Economic Code,Mobile,Phone,Email,Address';
+        ? 'کد شخص,نوع شخص (real/legal),نام,نام خانوادگی,نام شرکت,کد/شناسه ملی,کد اقتصادی,موبایل,تلفن ثابت,ایمیل'
+        : 'Code,Party Type (real/legal),First Name,Last Name,Company Name,National ID,Economic Code,Mobile,Phone,Email';
         
       const sampleRow = isRtl
-        ? '1001,real,علی,احمدی,,1234567890,,09120000000,0210000000,test@test.com,تهران...'
-        : '1001,real,Ali,Ahmadi,,1234567890,,09120000000,0210000000,test@test.com,Tehran...';
+        ? '1001,real,علی,احمدی,,1234567890,,09120000000,0210000000,test@test.com'
+        : '1001,real,Ali,Ahmadi,,1234567890,,09120000000,0210000000,test@test.com';
         
       const csv = '\uFEFF' + headers + '\n' + sampleRow;
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -316,7 +325,7 @@
           viewConfig={viewConfig}
         />
 
-        <div className="flex-1 flex flex-col min-h-0 mt-3 animate-in fade-in duration-300">
+        <div className="flex-1 flex flex-col min-h-0 mt-2 animate-in fade-in duration-300">
           <AdvancedFilter 
             fields={filterFields}
             initialValues={filters}
@@ -325,7 +334,7 @@
             language={language}
           />
 
-          <div className="flex-1 min-h-0 mt-1.5">
+          <div className="flex-1 min-h-0 mt-1">
             <DataGrid 
               data={filteredData}
               columns={columns} 
@@ -365,7 +374,7 @@
                </label>
                <label className="flex items-center gap-2 cursor-pointer">
                  <input type="radio" name="partyType" value="legal" checked={formData.partyType === 'legal'} 
-                        onChange={() => setFormData({...formData, partyType: 'legal', roles: formData.roles.filter(r => r !== 'system_user')})} 
+                        onChange={() => setFormData({...formData, partyType: 'legal', roles: formData.roles.filter(r => r !== 'system_user' && r !== 'employee')})} 
                         className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
                  <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><Building size={14}/> {t('شخص حقوقی', 'Legal Entity')}</span>
                </label>
@@ -393,13 +402,57 @@
               <TextField size="sm" label={t('تلفن ثابت', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('ایمیل', 'Email')} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName={formData.partyType === 'legal' ? "md:col-span-1" : "md:col-span-1"} />
               
-              <div className="flex items-center mt-5 md:pl-2">
+              <div className="flex items-center mt-6">
                  <ToggleField size="sm" label={t('وضعیت فعال', 'Active Status')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
               </div>
+            </div>
 
-              <div className="md:col-span-3 mt-1">
-                 <TextField size="sm" label={t('آدرس کامل', 'Full Address')} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} isRtl={isRtl} />
-              </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
+               <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
+               <div className="flex gap-2 mb-3">
+                 <div className="flex-1">
+                   <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'New address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="m-0" />
+                 </div>
+                 <Button variant="secondary" size="sm" icon={Plus} onClick={() => {
+                   if(!newAddress.trim()) return;
+                   setFormData({...formData, addresses: [...formData.addresses, { id: Date.now(), text: newAddress.trim(), isDefault: formData.addresses.length === 0 }]});
+                   setNewAddress('');
+                 }}>{t('افزودن', 'Add')}</Button>
+               </div>
+               
+               <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
+                 {formData.addresses.map(a => (
+                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[11px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                     <div className="flex items-center gap-2 flex-1 min-w-0">
+                       <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
+                     </div>
+                     <div className="flex items-center gap-2 shrink-0">
+                       {a.isDefault ? (
+                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 px-1">{t('پیش‌فرض', 'Default')}</span>
+                       ) : (
+                         <button 
+                           onClick={() => handleSetDefaultAddress(a.id)} 
+                           className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors px-1"
+                         >
+                           {t('پیش‌فرض', 'Default')}
+                         </button>
+                       )}
+                       <button 
+                         onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} 
+                         className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                         title={t('حذف', 'Delete')}
+                       >
+                         <Trash2 size={12}/>
+                       </button>
+                     </div>
+                   </div>
+                 ))}
+                 {formData.addresses.length === 0 && (
+                   <div className="text-center py-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-md">
+                      <span className="text-[10px] text-slate-400">{t('هیچ آدرسی ثبت نشده است.', 'No addresses found.')}</span>
+                   </div>
+                 )}
+               </div>
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
@@ -407,11 +460,13 @@
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     <CheckboxField size="sm" label={t('مشتری', 'Customer')} checked={formData.roles.includes('customer')} onChange={() => toggleRole('customer')} isRtl={isRtl} />
                     <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />
-                    <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
                     <CheckboxField size="sm" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} />
                     <CheckboxField size="sm" label={t('صرافی', 'Exchange')} checked={formData.roles.includes('exchange')} onChange={() => toggleRole('exchange')} isRtl={isRtl} />
                     {formData.partyType === 'real' && (
-                      <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
+                      <>
+                        <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
+                        <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
+                      </>
                     )}
                 </div>
             </div>
