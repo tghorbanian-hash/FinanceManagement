@@ -790,11 +790,11 @@
               <div className="flex flex-col max-h-[350px] overflow-y-auto custom-scrollbar pr-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
                  {manualRatesList.map((item, idx) => (
                     <div key={`${item.base}-${item.target}`} className="flex items-center gap-3 py-2 border-b border-slate-100 dark:border-slate-700/50 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-700/50 px-3 transition-colors">
-                       <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[13px] text-center">{item.base}</div>
+                       <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[14px] text-center">{item.base}</div>
                        <div className="text-indigo-400 dark:text-indigo-500 shrink-0 flex items-center justify-center">
                           {isRtl ? <ArrowLeft size={16} /> : <ArrowRight size={16} />}
                        </div>
-                       <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[13px] text-center">{item.target}</div>
+                       <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[14px] text-center">{item.target}</div>
                        <div className="flex-1 ml-2">
                           <CurrencyField size="sm" value={item.rate} onChange={(v) => {
                               const newList = [...manualRatesList];
@@ -821,15 +821,15 @@
         <Modal isOpen={isEditRateModalOpen} onClose={() => setIsEditRateModalOpen(false)} title={t('ویرایش نرخ دستی', 'Edit Manual Rate')} language={language} width="max-w-sm">
            <div className="p-4 flex flex-col gap-4">
               <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
-                 <div className="flex items-center justify-between text-[13px]">
+                 <div className="flex items-center justify-between text-[14px]">
                    <span className="text-slate-500 dark:text-slate-400 font-bold">{t('ارز پایه:', 'Base:')}</span>
                    <span className="font-black text-slate-800 dark:text-slate-200">{editingRate?.base_currency}</span>
                  </div>
-                 <div className="flex items-center justify-between text-[13px]">
+                 <div className="flex items-center justify-between text-[14px]">
                    <span className="text-slate-500 dark:text-slate-400 font-bold">{t('ارز هدف:', 'Target:')}</span>
                    <span className="font-black text-slate-800 dark:text-slate-200">{editingRate?.target_currency}</span>
                  </div>
-                 <div className="flex items-center justify-between text-[13px]">
+                 <div className="flex items-center justify-between text-[14px]">
                    <span className="text-slate-500 dark:text-slate-400 font-bold">{t('تاریخ:', 'Date:')}</span>
                    <span className="font-black text-slate-800 dark:text-slate-200 font-mono" dir="ltr">
                      {formatGlobalDate ? formatGlobalDate(editingRate?.rate_date, globalCalendarMode) : editingRate?.rate_date}

@@ -721,7 +721,7 @@
               <div className="flex items-center justify-between mb-3 shrink-0 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md"><ListTree size={18}/></div>
-                  <span className="text-[13px] font-black text-slate-800 dark:text-slate-100">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
+                  <span className="text-[14px] font-black text-slate-800 dark:text-slate-100">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/50 p-1 rounded-lg">
                   <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درختی', 'Tree View')}</button>
@@ -883,7 +883,7 @@
                         <Avatar name="Ali Alavi" size="md" />
                         <div className="flex flex-col">
                           <span className="text-[12px] font-black text-slate-700 dark:text-slate-200">علی علوی</span>
-                          <span className="text-[9px] text-slate-400 dark:text-slate-500">مدیر ارشد مالی</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500">مدیر ارشد مالی</span>
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -990,8 +990,8 @@
                     title={t('نمودار روند یکپارچه', 'Integrated Trend Chart')}
                     action={
                       <div className="flex bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <button onClick={() => setLineChartMode('monthly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'monthly' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('ماهانه', 'Monthly')}</button>
-                        <button onClick={() => setLineChartMode('yearly')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${lineChartMode === 'yearly' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('سالیانه', 'Yearly')}</button>
+                        <button onClick={() => setLineChartMode('monthly')} className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${lineChartMode === 'monthly' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('ماهانه', 'Monthly')}</button>
+                        <button onClick={() => setLineChartMode('yearly')} className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${lineChartMode === 'yearly' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('سالیانه', 'Yearly')}</button>
                       </div>
                     }
                     data={processedChartData.trendData} 
@@ -1007,8 +1007,8 @@
                   title={t('نمودار توزیع زمانی', 'Time Distribution Chart')}
                   action={
                     <div className="flex bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <button onClick={() => setBarChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'amount' ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('مبلغ', 'Amount')}</button>
-                      <button onClick={() => setBarChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${barChartMode === 'count' ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('تعداد', 'Count')}</button>
+                      <button onClick={() => setBarChartMode('amount')} className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${barChartMode === 'amount' ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('مبلغ', 'Amount')}</button>
+                      <button onClick={() => setBarChartMode('count')} className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${barChartMode === 'count' ? 'bg-white dark:bg-slate-600 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('تعداد', 'Count')}</button>
                     </div>
                   }
                   data={processedChartData.barData} 
@@ -1023,8 +1023,8 @@
                   title={t('نمودار سهم دسته‌بندی', 'Category Share Chart')}
                   action={
                     <div className="flex bg-slate-100 dark:bg-slate-700/50 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <button onClick={() => setPieChartMode('amount')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'amount' ? 'bg-white dark:bg-slate-600 shadow-sm text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('مبلغ', 'Amount')}</button>
-                      <button onClick={() => setPieChartMode('count')} className={`px-2 py-0.5 text-[9px] font-bold rounded-md transition-all ${pieChartMode === 'count' ? 'bg-white dark:bg-slate-600 shadow-sm text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('تعداد', 'Count')}</button>
+                      <button onClick={() => setPieChartMode('amount')} className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${pieChartMode === 'amount' ? 'bg-white dark:bg-slate-600 shadow-sm text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('مبلغ', 'Amount')}</button>
+                      <button onClick={() => setPieChartMode('count')} className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${pieChartMode === 'count' ? 'bg-white dark:bg-slate-600 shadow-sm text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('تعداد', 'Count')}</button>
                     </div>
                   }
                   data={processedChartData.pieData} 

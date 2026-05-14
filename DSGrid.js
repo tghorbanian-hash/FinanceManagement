@@ -28,7 +28,7 @@
         {label && <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative flex items-center" onClick={() => !disabled && setIsOpen(true)}>
           <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Search size={size === 'sm' ? 14 : 16} /></div>
-          <div className={`w-full ${size === 'sm' ? 'h-8 text-[12px]' : 'h-10 text-[13px]'} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
+          <div className={`w-full ${size === 'sm' ? 'h-8 text-[12px]' : 'h-10 text-[14px]'} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
             <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
           </div>
         </div>
@@ -594,7 +594,7 @@
                           <div className="text-indigo-500 dark:text-indigo-400">{isRtl ? (isCollapsed ? <ChevronLeft size={14}/> : <ChevronDown size={14}/>) : (isCollapsed ? <ChevronRight size={14}/> : <ChevronDown size={14}/>)}</div>
                           <Layers size={12} className="text-indigo-400 dark:text-indigo-500" />
                           <span className="text-[12px] font-black text-indigo-900 dark:text-indigo-300">{row.groupValue}</span>
-                          <span className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-bold">{row.count} {t('ردیف', 'rows')}</span>
+                          <span className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 px-1.5 py-0.5 rounded text-[10px] font-bold">{row.count} {t('ردیف', 'rows')}</span>
                         </div>
                       </td>
                     </tr>

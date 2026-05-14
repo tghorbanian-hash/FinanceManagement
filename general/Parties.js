@@ -275,7 +275,7 @@
                   system_user: t('کاربر سیستم', 'System User'),
                   exchange: t('صرافی', 'Exchange')
                 };
-                return <Badge key={r} variant="slate" size="sm" className="text-[9px] px-1.5 py-0.5">{roleLabels[r] || r}</Badge>
+                return <Badge key={r} variant="slate" size="sm" className="text-[10px] px-1.5 py-0.5">{roleLabels[r] || r}</Badge>
              })}
           </div>
         )
@@ -408,7 +408,7 @@
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
-               <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
+               <label className="text-[12px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
                <div className="flex gap-2 mb-3">
                  <div className="flex-1">
                    <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'New address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="m-0" />
@@ -422,7 +422,7 @@
                
                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                  {formData.addresses.map(a => (
-                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[11px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[12px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
                      <div className="flex items-center gap-2 flex-1 min-w-0">
                        <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
                      </div>
@@ -456,7 +456,7 @@
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-3 block">{t('نقش‌های این شخص در سیستم', 'System Roles')}</label>
+                <label className="text-[12px] font-bold text-slate-600 dark:text-slate-300 mb-3 block">{t('نقش‌های این شخص در سیستم', 'System Roles')}</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     <CheckboxField size="sm" label={t('مشتری', 'Customer')} checked={formData.roles.includes('customer')} onChange={() => toggleRole('customer')} isRtl={isRtl} />
                     <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />

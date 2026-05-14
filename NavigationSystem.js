@@ -25,7 +25,7 @@
             <FileWarning size={32} />
           </div>
           <h3 className="text-[16px] font-black text-slate-800 dark:text-slate-100 mb-2">خطا در بارگذاری فرم</h3>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg mt-2 font-sans">
+          <p className="text-[14px] text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg mt-2 font-sans">
             کامپوننت <br/><strong className="text-red-600 dark:text-red-400 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که فایل آن آپلود شده باشد).
           </p>
         </div>
@@ -325,7 +325,7 @@
                 </div>
               </>
             )}
-            <span className={`flex-1 truncate ${isRtl ? 'pr-1.5' : 'pl-1.5'} ${depth === 0 ? 'text-[13px]' : 'text-[12px]'} ${isSelected ? 'font-black' : 'font-medium'}`}>
+            <span className={`flex-1 truncate ${isRtl ? 'pr-1.5' : 'pl-1.5'} ${depth === 0 ? 'text-[14px]' : 'text-[12px]'} ${isSelected ? 'font-black' : 'font-medium'}`}>
               {getLabel(node)}
             </span>
             {isForm && (
@@ -410,7 +410,7 @@
                   <div className="space-y-4 pt-1 animate-in slide-in-from-top-1 duration-200">
                     {moduleDirectForms.length > 0 && (
                       <div className="flex flex-col md:flex-row md:items-start gap-4 mb-4">
-                        <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 dark:text-slate-500 text-[13px] uppercase tracking-wider">{t('عمومی', 'General')}</div>
+                        <div className="w-24 shrink-0 pt-1.5 flex items-center font-black text-slate-400 dark:text-slate-500 text-[14px] uppercase tracking-wider">{t('عمومی', 'General')}</div>
                         <div className="flex-1 flex flex-wrap gap-3">{moduleDirectForms.map(renderTileCard)}</div>
                       </div>
                     )}
@@ -419,7 +419,7 @@
                       if (sectionForms.length === 0) return null;
                       return (
                         <div key={section.id} className="flex flex-col md:flex-row md:items-start gap-4 mb-4 font-sans">
-                          <div className="w-24 shrink-0 pt-1.5 flex items-center gap-1.5 font-black text-slate-700 dark:text-slate-300 text-[13px]">
+                          <div className="w-24 shrink-0 pt-1.5 flex items-center gap-1.5 font-black text-slate-700 dark:text-slate-300 text-[14px]">
                             <div className="w-1.5 h-1.5 bg-indigo-400 dark:bg-indigo-500 rounded-full"></div>
                             <span className="leading-tight">{getLabel(section)}</span>
                           </div>
@@ -446,14 +446,14 @@
               <Clock size={18} className="text-indigo-500 dark:text-indigo-400" strokeWidth={2.5} />
               <h2 className="text-[16px] font-black text-slate-800 dark:text-slate-100">{t('بازدیدهای اخیر', 'Recent Visits')}</h2>
             </div>
-            <div className="flex flex-wrap gap-3">{recentItems.length > 0 ? recentItems.map(renderTileCard) : <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center text-slate-400 dark:text-slate-500 text-[13px] font-sans">{t('شما هنوز از فرمی بازدید نکرده‌اید.', 'You have not visited any forms yet.')}</div>}</div>
+            <div className="flex flex-wrap gap-3">{recentItems.length > 0 ? recentItems.map(renderTileCard) : <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center text-slate-400 dark:text-slate-500 text-[14px] font-sans">{t('شما هنوز از فرمی بازدید نکرده‌اید.', 'You have not visited any forms yet.')}</div>}</div>
           </section>
           <section>
             <div className="flex items-center gap-2 mb-4 px-1 border-b border-slate-200 dark:border-slate-700 pb-2">
               <Star size={18} className="text-amber-500 dark:text-amber-400" fill="currentColor" />
               <h2 className="text-[16px] font-black text-slate-800 dark:text-slate-100">{t('فرم‌های منتخب (علاقه‌مندی‌ها)', 'Favorite Forms')}</h2>
             </div>
-            <div className="flex flex-wrap gap-3">{favItems.length > 0 ? favItems.map(renderTileCard) : <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center text-slate-400 dark:text-slate-500 text-[13px] font-sans">{t('فرمی به علاقه‌مندی‌ها اضافه نشده است.', 'No forms added to favorites.')}</div>}</div>
+            <div className="flex flex-wrap gap-3">{favItems.length > 0 ? favItems.map(renderTileCard) : <div className="w-full bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-8 text-center text-slate-400 dark:text-slate-500 text-[14px] font-sans">{t('فرمی به علاقه‌مندی‌ها اضافه نشده است.', 'No forms added to favorites.')}</div>}</div>
           </section>
         </div>
       );
@@ -463,7 +463,7 @@
       <div className="h-screen w-full flex items-center justify-center bg-[#f8fafc] dark:bg-slate-900">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-500 rounded-full animate-spin"></div>
-          <p className="text-[13px] font-bold text-slate-500 dark:text-slate-400 font-sans">در حال بارگذاری...</p>
+          <p className="text-[14px] font-bold text-slate-500 dark:text-slate-400 font-sans">در حال بارگذاری...</p>
         </div>
       </div>
     );
@@ -492,7 +492,7 @@
         {showSidebar && (
           <aside className={`bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex flex-col shrink-0 z-30 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-72' : 'w-0 overflow-hidden opacity-0'} ${isRtl ? 'border-l' : 'border-r'}`}>
             <div className="h-12 flex items-center justify-between px-4 border-b border-slate-100 dark:border-slate-700/50 shrink-0 font-sans">
-              <h2 className="font-black text-slate-800 dark:text-slate-100 tracking-tight text-[13px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
+              <h2 className="font-black text-slate-800 dark:text-slate-100 tracking-tight text-[14px] truncate flex-1 font-sans">{getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
               <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-400 dark:text-slate-500 transition-colors">{isRtl ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}</button>
             </div>
             
@@ -588,7 +588,7 @@
               <div className="h-full flex flex-col items-center justify-center text-center p-12 font-sans">
                 <Monitor size={40} className="text-slate-300 dark:text-slate-700 mb-4" strokeWidth={1.5} />
                 <h2 className="text-xl font-black text-slate-700 dark:text-slate-200 font-sans">{t('ناحیه کاری ', 'Workspace ')} {getLabel(domains.find(d => d.id === activeDomainId) || {})}</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-[13px] mt-3 max-w-sm leading-relaxed font-sans">{t('جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.', 'Use the tree menu to open forms.')}</p>
+                <p className="text-slate-500 dark:text-slate-400 text-[14px] mt-3 max-w-sm leading-relaxed font-sans">{t('جهت باز کردن فرم‌ها، از منوی درختی در سمت راست استفاده نمایید.', 'Use the tree menu to open forms.')}</p>
               </div>
             )}
           </div>

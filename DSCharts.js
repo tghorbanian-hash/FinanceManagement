@@ -438,7 +438,7 @@
               <span className={`${isMaximized ? 'text-[32px]' : 'text-[20px]'} font-black text-slate-800 dark:text-slate-100 tracking-tight transition-all`}>
                 {safeValue.toLocaleString()}
               </span>
-              {label && <span className={`${isMaximized ? 'text-[13px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 mt-1 transition-all`}>{label}</span>}
+              {label && <span className={`${isMaximized ? 'text-[14px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 mt-1 transition-all`}>{label}</span>}
             </div>
             <div className={`absolute bottom-1 left-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 pointer-events-none transition-all`}>{min}</div>
             <div className={`absolute bottom-1 right-2 ${isMaximized ? 'text-[12px]' : 'text-[10px]'} font-bold text-slate-400 dark:text-slate-500 pointer-events-none transition-all`}>{max}</div>

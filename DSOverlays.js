@@ -33,7 +33,7 @@
           className={`absolute top-0 bottom-0 ${width} w-full bg-white/95 dark:bg-slate-800/95 backdrop-blur-2xl shadow-[0_0_60px_rgba(0,0,0,0.1)] dark:shadow-[0_0_60px_rgba(0,0,0,0.5)] border-slate-200/60 dark:border-slate-700/60 flex flex-col transition-all duration-300 ${placementClasses} ${slideAnim}`}
         >
           <div className="h-12 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between px-4 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
-            <h3 className="font-black text-slate-700 dark:text-slate-200 text-[13px] tracking-tight truncate">{title}</h3>
+            <h3 className="font-black text-slate-700 dark:text-slate-200 text-[14px] tracking-tight truncate">{title}</h3>
             <button onClick={onClose} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all active:scale-95">
               <X size={16} strokeWidth={2.5} />
             </button>

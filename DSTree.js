@@ -151,7 +151,7 @@
                   <HighlightText text={node[displayField]} term={searchTerm} />
               </span>
               {!isNodeActive && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200/50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shrink-0 font-bold mx-1">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shrink-0 font-bold mx-1">
                   {t('غیرفعال', 'Inactive')}
                 </span>
               )}

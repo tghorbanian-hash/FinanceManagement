@@ -45,7 +45,7 @@
         <div className="flex items-center justify-center min-h-full p-2 sm:p-4 pointer-events-none">
           <div className={`pointer-events-auto bg-white dark:bg-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex flex-col relative z-10 transition-all duration-300 animate-in zoom-in-95 ${isMaximized ? 'w-full min-h-[calc(100vh-1rem)] rounded-xl' : `${width} w-full rounded-2xl`} border border-slate-200 dark:border-slate-700`}>
             <div className="h-11 px-4 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/80 shrink-0 rounded-t-2xl">
-              <h3 className="font-black text-slate-700 dark:text-slate-200 text-[13px] tracking-tight">{title}</h3>
+              <h3 className="font-black text-slate-700 dark:text-slate-200 text-[14px] tracking-tight">{title}</h3>
               <div className="flex items-center gap-1">
                 {showMaximize && (
                   <button onClick={() => setIsMaximized(!isMaximized)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all active:scale-95">
@@ -213,7 +213,7 @@
             </button>
           </div>
           <div className="px-6 pb-6">
-            <div className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed font-bold py-1">
+            <div className="text-slate-600 dark:text-slate-300 text-[14px] leading-relaxed font-bold py-1">
               {children}
             </div>
             <div className="mt-8 flex justify-end gap-2.5">

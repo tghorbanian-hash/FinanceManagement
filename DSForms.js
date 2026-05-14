@@ -28,7 +28,7 @@
     
     const [generatedId] = useState(() => `input-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
-    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
     
     return (
       <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
@@ -79,7 +79,7 @@
       String(o.value).toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
 
     return (
       <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
@@ -195,7 +195,7 @@
         {label && <label htmlFor={inputId} className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <textarea
           id={inputId} disabled={disabled} rows={rows}
-          className={`w-full bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none p-2.5 text-[13px] placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
+          className={`w-full bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none p-2.5 text-[14px] placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
           dir={isRtl ? 'rtl' : 'ltr'} {...restProps}
         />
         {error && <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
@@ -254,7 +254,7 @@
     const containerRef = useRef(null);
     const [generatedId] = useState(() => `datepicker-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
-    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
     const t = (fa, en) => isRtl ? fa : en;
 
     useEffect(() => {
@@ -373,7 +373,7 @@
           <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded p-0.5 z-10`}>
             <button 
               type="button" onClick={(e) => { e.stopPropagation(); toggleCalendarMode(); }}
-              className={`px-1.5 py-0.5 rounded text-[9px] font-black transition-all bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300`}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-black transition-all bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300`}
               title={t('تغییر نوع تقویم', 'Toggle Calendar Mode')}
             >
               {calendarMode === 'jalali' ? 'FA' : 'EN'}
@@ -471,7 +471,7 @@
             <div key={idx} className="flex items-center justify-between p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:border-indigo-200 dark:hover:border-indigo-500/50 transition-colors group shrink-0">
               <div className="flex items-center gap-2.5 overflow-hidden">
                 <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md shrink-0"><FileText size={14} /></div>
-                <div className="flex flex-col min-w-0"><span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{file.name}</span><span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">{formatSize(file.size)}</span></div>
+                <div className="flex flex-col min-w-0"><span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{file.name}</span><span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{formatSize(file.size)}</span></div>
               </div>
               <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md"><Download size={14} /></button>}
@@ -558,7 +558,7 @@
       }
     };
 
-    const heights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[13px]', lg: 'h-12 text-[14px]' };
+    const heights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
 
     return (
       <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>

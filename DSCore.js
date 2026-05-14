@@ -466,7 +466,7 @@
                   <div className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-slate-50 dark:bg-slate-800/80">
                     <div className="flex items-center gap-2">
                       <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{t('پیش‌فرض سیستم', 'System Default')}</span>
-                      {isSystemDefault && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
+                      {isSystemDefault && <Badge variant="emerald" className="!py-0 !px-1.5 text-[10px]">{t('پیش‌فرض', 'Default')}</Badge>}
                     </div>
                     <div className="flex items-center gap-1">
                       <button onClick={() => handleSetDefaultView('system')} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${isSystemDefault ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
@@ -482,7 +482,7 @@
                     <div key={v.id} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800">
                       <div className="flex items-center gap-2">
                         <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200">{v.view_name}</span>
-                        {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[9px]">{t('پیش‌فرض', 'Default')}</Badge>}
+                        {v.is_default && <Badge variant="emerald" className="!py-0 !px-1.5 text-[10px]">{t('پیش‌فرض', 'Default')}</Badge>}
                       </div>
                       <div className="flex items-center gap-1">
                         <button onClick={() => handleSetDefaultView(v.id)} title={t('تنظیم به عنوان پیش‌فرض', 'Set as Default')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-colors ${v.is_default ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
