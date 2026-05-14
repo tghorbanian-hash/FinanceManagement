@@ -9,8 +9,8 @@
   } = window.DesignSystem || {};
   
   const { 
-    Users, User, Edit, Trash2, Save, 
-    AlertTriangle, Lock, Plus, RefreshCw
+    Users, Edit, Trash2, Save, 
+    AlertTriangle, Lock, RefreshCw
   } = window.LucideIcons || {};
   const supabase = window.supabase;
 
@@ -19,7 +19,8 @@
     const t = (fa, en) => isRtl ? fa : en;
     
     const [data, setData] = useState([]);
-    const [parties, setParties] = useState([]);
+    const [allParties, setAllParties] = useState([]);
+    const [partiesDropdown, setPartiesDropdown] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState({});
     
@@ -32,8 +33,7 @@
     
     const [formData, setFormData] = useState({
       username: '',
-      password: '',
-      fullName: '',
+      password: '123456',
       partyId: '',
       userType: 'کاربر سیستم',
       isActive: true,
@@ -67,12 +67,21 @@
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data: pData } = await supabase.schema('cmn').from('parties').select('id, name, company_name, party_type, code');
-        if (pData) {
-          setParties(pData.map(p => ({
+        const { data: pData, error: pError } = await supabase
+          .from('parties')
+          .select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email');
+          
+        if (pData && !pError) {
+          setAllParties(pData);
+          const sysUsers = pData.filter(p => p.roles && p.roles.includes('system_user'));
+          setPartiesDropdown(sysUsers.map(p => ({
             id: p.id,
-            label: `${p.party_type === 'legal' ? p.company_name : p.name} (${p.code})`
+            label: `${p.party_type === 'legal' ? (p.company_name || '') : ((p.first_name || '') + ' ' + (p.last_name || '')).trim()} (${p.code})`,
+            mobile: p.mobile,
+            email: p.email
           })));
+        } else if (pError) {
+          console.error('Parties Fetch Error:', pError);
         }
 
         const { data: usersData, error } = await supabase
@@ -99,14 +108,16 @@
     };
 
     const handleSave = async () => {
-      if (!formData.username) return;
+      if (!formData.username || !formData.partyId) {
+        alert(t('وارد کردن نام کاربری و اتصال به شخص الزامی است.', 'Username and Party connection are required.'));
+        return;
+      }
       if (!currentRecord && !formData.password) return;
 
       setIsLoading(true);
       try {
         const payload = {
           username: formData.username,
-          full_name: formData.fullName,
           party_id: formData.partyId || null,
           user_type: formData.userType,
           is_active: formData.isActive,
@@ -124,7 +135,7 @@
           : await supabase.schema('sec').from('users').insert([payload]);
 
         if (error) {
-          if (error.message?.includes('unique')) {
+          if (error.message?.includes('unique') || error.code === '23505') {
             alert(t('این نام کاربری قبلاً ثبت شده است.', 'This username is already taken.'));
           } else {
             throw error;
@@ -195,16 +206,14 @@
       setFormData(record ? {
         username: record.username || '',
         password: '',
-        fullName: record.full_name || '',
         partyId: record.party_id || '',
         userType: record.user_type || 'کاربر سیستم',
-        isActive: record.is_active,
+        isActive: record.is_active ?? true,
         email: record.email || '',
         mobile: record.mobile || ''
       } : { 
         username: '',
-        password: '',
-        fullName: '',
+        password: '123456',
         partyId: '',
         userType: 'کاربر سیستم',
         isActive: true,
@@ -215,14 +224,26 @@
       setIsModalOpen(true);
     };
 
+    const handlePartyChange = (e) => {
+      const selectedId = e.target.value;
+      const selectedParty = partiesDropdown.find(p => p.id === selectedId);
+      
+      setFormData(prev => ({
+        ...prev,
+        partyId: selectedId,
+        mobile: selectedParty?.mobile || prev.mobile,
+        email: selectedParty?.email || prev.email
+      }));
+    };
+
     const handleDownloadSample = () => {
       const headers = isRtl
-        ? 'نام کاربری,نام و نام خانوادگی,نوع کاربری,ایمیل,موبایل'
-        : 'Username,Full Name,User Type,Email,Mobile';
+        ? 'نام کاربری,نوع کاربری,ایمیل,موبایل'
+        : 'Username,User Type,Email,Mobile';
         
       const sampleRow = isRtl
-        ? 'admin,مدیر سیستم,مدیر سیستم,admin@test.com,09120000000'
-        : 'admin,System Admin,System Admin,admin@test.com,09120000000';
+        ? 'admin,مدیر سیستم,admin@test.com,09120000000'
+        : 'admin,System Admin,admin@test.com,09120000000';
         
       const csv = '\uFEFF' + headers + '\n' + sampleRow;
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -251,6 +272,13 @@
       }
     };
 
+    const getPartyName = (partyId) => {
+      if (!partyId) return '-';
+      const p = allParties.find(x => x.id === partyId);
+      if (!p) return '-';
+      return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
+    };
+
     const columns = [
       { 
         field: 'username', 
@@ -260,11 +288,11 @@
         render: (val) => <span className="font-mono text-slate-700 dark:text-slate-300">{val}</span>
       },
       { 
-        field: 'full_name', 
-        header_fa: 'نام و نام خانوادگی', 
-        header_en: 'Full Name', 
+        field: 'party_id', 
+        header_fa: 'نام و نام خانوادگی / شخص متصل', 
+        header_en: 'Linked Party / Full Name', 
         width: '200px',
-        render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200">{val || '-'}</span>
+        render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200">{getPartyName(val)}</span>
       },
       { 
         field: 'user_type', 
@@ -284,7 +312,7 @@
         header_fa: 'آخرین ورود', 
         header_en: 'Last Login', 
         width: '140px',
-        render: (val) => <span className="text-[11px] text-slate-500 dir-ltr inline-block">{formatDateTime(val)}</span>
+        render: (val) => <span className="text-[12px] text-slate-500 dir-ltr inline-block">{formatDateTime(val)}</span>
       },
       { 
         field: 'is_active', 
@@ -301,8 +329,11 @@
       if (filters.username) {
          result = result.filter(u => u.username && u.username.toLowerCase().includes(filters.username.toLowerCase()));
       }
-      if (filters.fullName) {
-         result = result.filter(u => u.full_name && u.full_name.toLowerCase().includes(filters.fullName.toLowerCase()));
+      if (filters.partyName) {
+         result = result.filter(u => {
+            const pName = getPartyName(u.party_id).toLowerCase();
+            return pName.includes(filters.partyName.toLowerCase());
+         });
       }
       if (filters.userType) {
          result = result.filter(u => u.user_type === filters.userType);
@@ -312,11 +343,11 @@
          result = result.filter(u => u.is_active === wantActive);
       }
       return result;
-    }, [data, filters]);
+    }, [data, filters, allParties]);
 
     const filterFields = [
       { name: 'username', label: t('نام کاربری', 'Username'), type: 'text' },
-      { name: 'fullName', label: t('نام و نام خانوادگی', 'Full Name'), type: 'text' },
+      { name: 'partyName', label: t('شخص متصل', 'Linked Party'), type: 'text' },
       { 
         name: 'userType', 
         label: t('نوع کاربری', 'User Type'), 
@@ -413,23 +444,27 @@
                 ]}
               />
 
-              <TextField 
-                size="sm" 
-                label={t('نام و نام خانوادگی', 'Full Name')} 
-                value={formData.fullName} 
-                onChange={e => setFormData({...formData, fullName: e.target.value})} 
-                isRtl={isRtl} 
-              />
               <SelectField 
                 size="sm" 
-                label={t('اتصال به شخص / پرسنل (اختیاری)', 'Link to Party')} 
+                label={t('اتصال به شخص / پرسنل *', 'Link to Party *')} 
                 value={formData.partyId} 
-                onChange={e => setFormData({...formData, partyId: e.target.value})} 
+                onChange={handlePartyChange} 
                 isRtl={isRtl}
                 options={[
                   { value: '', label: `-- ${t('انتخاب کنید', 'Select')} --` },
-                  ...parties.map(p => ({ value: p.id, label: p.label }))
+                  ...partiesDropdown.map(p => ({ value: p.id, label: p.label }))
                 ]}
+              />
+              <TextField 
+                size="sm" 
+                label={currentRecord ? t('رمز عبور جدید (اختیاری)', 'New Password (Optional)') : t('رمز عبور *', 'Password *')} 
+                type="password"
+                value={formData.password} 
+                onChange={e => setFormData({...formData, password: e.target.value})} 
+                isRtl={isRtl} 
+                required={!currentRecord}
+                dir="ltr" 
+                placeholder="********"
               />
 
               <TextField 
@@ -448,20 +483,8 @@
                 isRtl={isRtl} 
                 dir="ltr" 
               />
-              
-              <TextField 
-                size="sm" 
-                label={currentRecord ? t('رمز عبور جدید (اختیاری)', 'New Password (Optional)') : t('رمز عبور', 'Password')} 
-                type="password"
-                value={formData.password} 
-                onChange={e => setFormData({...formData, password: e.target.value})} 
-                isRtl={isRtl} 
-                required={!currentRecord}
-                dir="ltr" 
-                placeholder="********"
-              />
 
-              <div className="flex items-center mt-6">
+              <div className="md:col-span-2 flex items-center mt-2">
                  <ToggleField size="sm" label={t('کاربر فعال است', 'Is Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
               </div>
             </div>
