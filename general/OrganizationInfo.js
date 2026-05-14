@@ -1,10 +1,10 @@
 /* Filename: OrganizationInfo.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo } = React;
+  const { useState, useEffect } = React;
   
   const { 
-    Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
+    Button, PageHeader, Modal, DataGrid, 
     TextField, ToggleField, Badge
   } = window.DesignSystem || {};
   
@@ -20,7 +20,6 @@
     
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [filters, setFilters] = useState({});
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState(null);
@@ -42,19 +41,15 @@
 
     const [gridState, setGridState] = useState(null);
 
-    // مدیریت نماها (View Config)
     const viewConfig = {
       pageId: 'organization_info_main',
       currentState: () => ({ 
-        filters,
         gridState
       }),
       onApplyState: (state) => {
         if (state) {
-          if (state.filters) setFilters(state.filters);
           if (state.gridState) setGridState(state.gridState);
         } else {
-          setFilters({});
           setGridState(null);
         }
       }
@@ -191,22 +186,6 @@
       }
     ];
 
-    const filteredData = useMemo(() => {
-      let result = [...data];
-      if (filters.code) {
-         result = result.filter(c => c.code.toLowerCase().includes(filters.code.toLowerCase()));
-      }
-      if (filters.name) {
-         result = result.filter(c => c.name.toLowerCase().includes(filters.name.toLowerCase()));
-      }
-      return result;
-    }, [data, filters]);
-
-    const filterFields = [
-      { name: 'code', label: t('کد سازمان', 'Code'), type: 'text' },
-      { name: 'name', label: t('نام سازمان', 'Name'), type: 'text' }
-    ];
-
     return (
       <div className="flex flex-col h-full p-4 bg-[#f8fafc] dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
@@ -219,17 +198,9 @@
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
-          <AdvancedFilter 
-            fields={filterFields}
-            initialValues={filters}
-            onFilter={setFilters}
-            onClear={() => setFilters({})}
-            language={language}
-          />
-
-          <div className="flex-1 min-h-0 mt-2">
+          <div className="flex-1 min-h-0">
             <DataGrid 
-              data={filteredData}
+              data={data}
               columns={columns} 
               language={language}
               selectable={true}
