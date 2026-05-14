@@ -25,10 +25,10 @@
     
     return (
       <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
-        {label && <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
+        {label && <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative flex items-center" onClick={() => !disabled && setIsOpen(true)}>
           <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Search size={size === 'sm' ? 14 : 16} /></div>
-          <div className={`w-full ${size === 'sm' ? 'h-8 text-[11px]' : 'h-10 text-[13px]'} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
+          <div className={`w-full ${size === 'sm' ? 'h-8 text-[12px]' : 'h-10 text-[13px]'} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${disabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
             <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
           </div>
         </div>
@@ -376,7 +376,7 @@
       if (col.type === 'toggle') return <ToggleField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'checkbox') return <CheckboxField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'badge') return <Badge variant={col.badgeColor ? col.badgeColor(val) : 'gray'}>{val}</Badge>;
-      if (col.type === 'date') return <span dir="ltr" className="font-mono text-[11px] font-medium text-slate-800 dark:text-slate-200">{formatGlobalDate(val, globalMode)}</span>;
+      if (col.type === 'date') return <span dir="ltr" className="font-mono text-[12px] font-medium text-slate-800 dark:text-slate-200">{formatGlobalDate(val, globalMode)}</span>;
       return val;
     };
 
@@ -385,7 +385,7 @@
         <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 gap-2 shrink-0 min-h-[46px]">
           <div className="flex items-center shrink-0">
             {onAdd && (
-              <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[11px] shadow-sm">
+              <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[12px] shadow-sm">
                 {t('جدید', 'New')}
               </Button>
             )}
@@ -393,7 +393,7 @@
 
           {selectedRows.length > 0 && bulkActions.length > 0 ? (
             <div className="flex-1 flex items-center gap-3 px-4 py-1 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/30 rounded-md transition-all animate-in fade-in">
-              <span className="text-[11px] font-black text-indigo-800 dark:text-indigo-300">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
+              <span className="text-[12px] font-black text-indigo-800 dark:text-indigo-300">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
               <div className="w-px h-4 bg-indigo-200 dark:bg-indigo-800/50 mx-1"></div>
               {bulkActions.map((act, i) => (
                 <Button key={i} size="sm" variant={act.variant || 'outline'} icon={act.icon} onClick={() => {act.onClick(selectedRows); setSelectedRows([]);}} className={`!h-7 text-[10px] ${act.className || ''}`}>
@@ -405,13 +405,13 @@
             <div className={`flex-1 flex items-center gap-2 px-3 py-1 border border-dashed rounded-md transition-colors overflow-x-auto custom-scrollbar ${groupCols.length > 0 ? 'bg-indigo-50/30 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`} onDragOver={(e) => e.preventDefault()} onDrop={handleGroupDrop}>
               <Layers size={14} className={groupCols.length > 0 ? 'text-indigo-500 dark:text-indigo-400 shrink-0' : 'text-slate-400 dark:text-slate-500 shrink-0'} />
               {groupCols.length === 0 ? (
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">{t('هدر ستون را برای گروه‌بندی اینجا رها کنید', 'Drop column header here to group')}</span>
+                <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">{t('هدر ستون را برای گروه‌بندی اینجا رها کنید', 'Drop column header here to group')}</span>
               ) : (
                 <div className="flex items-center gap-2 flex-1 min-w-max">
                   {groupCols.map((field, idx) => {
                     const colDef = columns.find(c => c.field === field);
                     return (
-                      <div key={field} className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-[11px] font-bold shadow-sm">
+                      <div key={field} className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-[12px] font-bold shadow-sm">
                         <span>{colDef ? t(colDef.header_fa, colDef.header_en) : field}</span>
                         <button onClick={() => removeGroupCol(field)} className="text-indigo-400 dark:text-indigo-500 hover:text-red-500 dark:hover:text-red-400 rounded-full p-0.5 ml-1"><X size={12} /></button>
                         {idx < groupCols.length - 1 && <ChevronLeft size={12} className="text-slate-300 dark:text-slate-600 ml-1" />}
@@ -441,7 +441,7 @@
                     </Button>
                     {activeHeaderMenu === idx && (
                       <div className="absolute top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg p-1.5 z-50 min-w-[180px] right-0 animate-in zoom-in-95 duration-100 flex flex-col gap-0.5">
-                        <div className="text-[11px] font-black text-slate-400 dark:text-slate-500 mb-1 px-2 pt-1 uppercase">{menu.label}</div>
+                        <div className="text-[12px] font-black text-slate-400 dark:text-slate-500 mb-1 px-2 pt-1 uppercase">{menu.label}</div>
                         {menu.items.map((item, i) => {
                           if (item.divider) return <div key={i} className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>;
                           return (
@@ -466,7 +466,7 @@
                   <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 mb-2 pb-2 border-b border-slate-100 dark:border-slate-700 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
                     {columns.map(c => (
-                      <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[11px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
+                      <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[12px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
                         <input type="checkbox" checked={!hiddenCols.includes(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
                         {t(c.header_fa, c.header_en)}
                       </label>
@@ -507,7 +507,7 @@
                       key={col.field} draggable
                       onDragStart={(e) => handleColDragStart(e, actualIndex, col.field)} onDragEnter={(e) => handleColDragEnter(e, actualIndex)} onDragEnd={handleColDragEnd} onDragOver={(e) => e.preventDefault()}
                       style={{ width: col.width || '150px', ...getStickyStyles(col.field, false, true) }}
-                      className={`p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 select-none bg-slate-100 dark:bg-slate-900 border-0`}
+                      className={`p-1.5 text-[12px] font-black text-slate-700 dark:text-slate-200 select-none bg-slate-100 dark:bg-slate-900 border-0`}
                     >
                       <div className="flex items-center justify-between gap-1 group">
                         <div className="flex items-center gap-1.5 cursor-pointer flex-1 overflow-hidden" onClick={() => handleSort(col.field)}>
@@ -523,7 +523,7 @@
                   )
                 })}
                 {actions.length > 0 && (
-                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-0">
+                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[12px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-0">
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
@@ -593,7 +593,7 @@
                         <div className="flex items-center gap-2 p-1.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors w-max" style={{ paddingInlineStart: `${row.depth * 20 + 8}px` }} onClick={() => toggleGroupCollapse(row.groupKey)}>
                           <div className="text-indigo-500 dark:text-indigo-400">{isRtl ? (isCollapsed ? <ChevronLeft size={14}/> : <ChevronDown size={14}/>) : (isCollapsed ? <ChevronRight size={14}/> : <ChevronDown size={14}/>)}</div>
                           <Layers size={12} className="text-indigo-400 dark:text-indigo-500" />
-                          <span className="text-[11px] font-black text-indigo-900 dark:text-indigo-300">{row.groupValue}</span>
+                          <span className="text-[12px] font-black text-indigo-900 dark:text-indigo-300">{row.groupValue}</span>
                           <span className="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 px-1.5 py-0.5 rounded text-[9px] font-bold">{row.count} {t('ردیف', 'rows')}</span>
                         </div>
                       </td>
@@ -625,7 +625,7 @@
                       </td>
                     )}
                     {visibleColumns.map((col) => (
-                      <td key={`${row.id || rowIndex}-${col.field}`} style={{...getStickyStyles(col.field), backgroundColor: 'inherit'}} className={`p-1.5 text-[11px] text-slate-700 dark:text-slate-300 truncate bg-inherit group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''} ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
+                      <td key={`${row.id || rowIndex}-${col.field}`} style={{...getStickyStyles(col.field), backgroundColor: 'inherit'}} className={`p-1.5 text-[12px] text-slate-700 dark:text-slate-300 truncate bg-inherit group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50 ${isSelected ? 'bg-indigo-50 dark:bg-indigo-900/30' : ''} ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
                         {renderCellContent(col, row, rowIndex)}
                       </td>
                     ))}
@@ -686,17 +686,17 @@
 
         <div className="flex flex-wrap items-center justify-between p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-4 shrink-0 z-50">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{t('تعداد در صفحه:', 'Rows per page:')}</span>
-            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-slate-700 dark:text-slate-200 cursor-pointer">
+            <span className="text-[12px] font-bold text-slate-500 dark:text-slate-400">{t('تعداد در صفحه:', 'Rows per page:')}</span>
+            <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="text-[12px] font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-slate-700 dark:text-slate-200 cursor-pointer">
               {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mx-2 hidden sm:block">{t(`نمایش ${(page - 1) * pageSize + 1} تا ${Math.min(page * pageSize, totalRecords)} از ${totalRecords}`, `Showing ${(page - 1) * pageSize + 1} to ${Math.min(page * pageSize, totalRecords)} of ${totalRecords}`)}</span>
+            <span className="text-[12px] font-bold text-slate-500 dark:text-slate-400 mx-2 hidden sm:block">{t(`نمایش ${(page - 1) * pageSize + 1} تا ${Math.min(page * pageSize, totalRecords)} از ${totalRecords}`, `Showing ${(page - 1) * pageSize + 1} to ${Math.min(page * pageSize, totalRecords)} of ${totalRecords}`)}</span>
             <div className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded p-0.5 shadow-sm">
               <button onClick={() => setPage(1)} disabled={page === 1} className="p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 rounded"><ChevronsRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 rounded"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
-              <div className="text-[11px] font-black text-indigo-700 dark:text-indigo-300 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded">{page} <span className="text-indigo-300 dark:text-indigo-600 mx-1">/</span> {totalPages || 1}</div>
+              <div className="text-[12px] font-black text-indigo-700 dark:text-indigo-300 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 rounded">{page} <span className="text-indigo-300 dark:text-indigo-600 mx-1">/</span> {totalPages || 1}</div>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0} className="p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 rounded"><ChevronLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
               <button onClick={() => setPage(totalPages)} disabled={page === totalPages || totalPages === 0} className="p-1 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 rounded"><ChevronsLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
             </div>
