@@ -84,9 +84,9 @@
           console.error('Parties Fetch Error:', pError);
         }
 
+        // استفاده از View ساخته شده در اسکیمای public برای دور زدن باگ Supabase
         const { data: usersData, error } = await supabase
-          .schema('sec')
-          .from('users')
+          .from('sec_users')
           .select('*')
           .order('created_at', { ascending: false });
 
@@ -131,8 +131,8 @@
         }
 
         const { error } = currentRecord?.id 
-          ? await supabase.schema('sec').from('users').update(payload).eq('id', currentRecord.id)
-          : await supabase.schema('sec').from('users').insert([payload]);
+          ? await supabase.from('sec_users').update(payload).eq('id', currentRecord.id)
+          : await supabase.from('sec_users').insert([payload]);
 
         if (error) {
           if (error.message?.includes('unique') || error.code === '23505') {
@@ -155,8 +155,7 @@
     const handleToggleActive = async (row, newValue) => {
       try {
         const { error } = await supabase
-          .schema('sec')
-          .from('users')
+          .from('sec_users')
           .update({ is_active: newValue })
           .eq('id', row.id);
         
@@ -171,10 +170,10 @@
       setIsLoading(true);
       try {
         if (deleteConfirm.type === 'single') {
-          const { error } = await supabase.schema('sec').from('users').delete().eq('id', deleteConfirm.data.id);
+          const { error } = await supabase.from('sec_users').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
         } else if (deleteConfirm.type === 'bulk') {
-          const { error } = await supabase.schema('sec').from('users').delete().in('id', deleteConfirm.data);
+          const { error } = await supabase.from('sec_users').delete().in('id', deleteConfirm.data);
           if (error) throw error;
         }
         
@@ -192,7 +191,7 @@
       setIsLoading(true);
       try {
         const newHash = await hashPassword('123456');
-        const { error } = await supabase.schema('sec').from('users').update({ password_hash: newHash }).eq('id', resetConfirm.data.id);
+        const { error } = await supabase.from('sec_users').update({ password_hash: newHash }).eq('id', resetConfirm.data.id);
         if (error) throw error;
         setResetConfirm({ isOpen: false, data: null });
       } catch (err) {
@@ -312,7 +311,7 @@
         header_fa: 'آخرین ورود', 
         header_en: 'Last Login', 
         width: '140px',
-        render: (val) => <span className="text-[12px] text-slate-500 dir-ltr inline-block">{formatDateTime(val)}</span>
+        render: (val) => <span className="text-[11px] text-slate-500 dir-ltr inline-block">{formatDateTime(val)}</span>
       },
       { 
         field: 'is_active', 
