@@ -316,7 +316,7 @@
           viewConfig={viewConfig}
         />
 
-        <div className="flex-1 flex flex-col min-h-0 mt-2 animate-in fade-in duration-300">
+        <div className="flex-1 flex flex-col min-h-0 mt-3 animate-in fade-in duration-300">
           <AdvancedFilter 
             fields={filterFields}
             initialValues={filters}
@@ -391,33 +391,32 @@
               
               <TextField size="sm" label={t('موبایل', 'Mobile')} value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('تلفن ثابت', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" />
-              <TextField size="sm" label={t('ایمیل', 'Email')} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName={formData.partyType === 'legal' ? "md:col-span-2" : "md:col-span-1"} />
+              <TextField size="sm" label={t('ایمیل', 'Email')} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName={formData.partyType === 'legal' ? "md:col-span-1" : "md:col-span-1"} />
               
-              <div className="md:col-span-3 mt-2">
+              <div className="flex items-center mt-5 md:pl-2">
+                 <ToggleField size="sm" label={t('وضعیت فعال', 'Active Status')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
+              </div>
+
+              <div className="md:col-span-3 mt-1">
                  <TextField size="sm" label={t('آدرس کامل', 'Full Address')} value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} isRtl={isRtl} />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start mt-2">
-              <div className="col-span-1 md:col-span-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-2 block">{t('نقش‌های این شخص در سیستم', 'System Roles')}</label>
-                  <div className="flex flex-wrap gap-x-6 gap-y-3">
-                      <CheckboxField size="sm" label={t('مشتری', 'Customer')} checked={formData.roles.includes('customer')} onChange={() => toggleRole('customer')} isRtl={isRtl} />
-                      <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />
-                      <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
-                      <CheckboxField size="sm" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} />
-                      <CheckboxField size="sm" label={t('صرافی', 'Exchange')} checked={formData.roles.includes('exchange')} onChange={() => toggleRole('exchange')} isRtl={isRtl} />
-                      {formData.partyType === 'real' && (
-                        <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
-                      )}
-                  </div>
-              </div>
-              <div className="col-span-1 p-3 flex flex-col justify-center h-full border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                  <ToggleField size="sm" label={t('وضعیت فعال', 'Active Status')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} wrapperClassName="justify-center" />
-              </div>
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-3 block">{t('نقش‌های این شخص در سیستم', 'System Roles')}</label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    <CheckboxField size="sm" label={t('مشتری', 'Customer')} checked={formData.roles.includes('customer')} onChange={() => toggleRole('customer')} isRtl={isRtl} />
+                    <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />
+                    <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
+                    <CheckboxField size="sm" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} />
+                    <CheckboxField size="sm" label={t('صرافی', 'Exchange')} checked={formData.roles.includes('exchange')} onChange={() => toggleRole('exchange')} isRtl={isRtl} />
+                    {formData.partyType === 'real' && (
+                      <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
+                    )}
+                </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-2 pt-4 border-t border-slate-100 dark:border-slate-700/50">
+            <div className="flex justify-end gap-2 mt-1 pt-3 border-t border-slate-100 dark:border-slate-700/50">
               <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSave} isLoading={isLoading}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
             </div>
