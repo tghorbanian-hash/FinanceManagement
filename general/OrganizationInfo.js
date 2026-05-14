@@ -10,7 +10,7 @@
   
   const { 
     Building2, Plus, Edit, Trash2, MapPin, Upload, X, Save, 
-    AlertTriangle, Lock, Star, Check 
+    AlertTriangle, Lock 
   } = window.LucideIcons || {};
   const supabase = window.supabase;
 
@@ -281,23 +281,23 @@
                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                  {formData.addresses.map(a => (
                    <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[11px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
-                     <div className="flex items-center gap-2 flex-1">
-                       {a.isDefault && <Check size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                     <div className="flex items-center gap-2 flex-1 min-w-0">
                        <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
                      </div>
-                     <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                       {!a.isDefault && (
+                     <div className="flex items-center gap-2 shrink-0">
+                       {a.isDefault ? (
+                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 px-1">{t('پیش‌فرض', 'Default')}</span>
+                       ) : (
                          <button 
                            onClick={() => handleSetDefaultAddress(a.id)} 
-                           className="text-slate-400 hover:text-indigo-600 bg-slate-50 dark:bg-slate-800 p-1.5 rounded"
-                           title={t('تنظیم به عنوان پیشفرض', 'Set as default')}
+                           className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors px-1"
                          >
-                           <Star size={12}/>
+                           {t('پیش‌فرض', 'Default')}
                          </button>
                        )}
                        <button 
                          onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} 
-                         className="text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800 p-1.5 rounded"
+                         className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                          title={t('حذف', 'Delete')}
                        >
                          <Trash2 size={12}/>
