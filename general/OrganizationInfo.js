@@ -40,6 +40,26 @@
     });
     const [newAddress, setNewAddress] = useState('');
 
+    const [gridState, setGridState] = useState(null);
+
+    // مدیریت نماها (View Config)
+    const viewConfig = {
+      pageId: 'organization_info_main',
+      currentState: () => ({ 
+        filters,
+        gridState
+      }),
+      onApplyState: (state) => {
+        if (state) {
+          if (state.filters) setFilters(state.filters);
+          if (state.gridState) setGridState(state.gridState);
+        } else {
+          setFilters({});
+          setGridState(null);
+        }
+      }
+    };
+
     useEffect(() => {
       fetchData();
     }, []);
@@ -195,6 +215,7 @@
           description={t('تنظیمات پایه و مدیریت ساختار شرکت', 'Base settings and company structure')}
           language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سازمان', 'Organization') }]}
+          viewConfig={viewConfig}
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
@@ -217,6 +238,8 @@
               isLoading={isLoading}
               onAdd={() => handleOpenModal()}
               onRowDoubleClick={(row) => handleOpenModal(row)}
+              gridState={gridState}
+              onGridStateChange={setGridState}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
