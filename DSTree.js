@@ -143,7 +143,7 @@
 
             <div className={`flex items-center gap-2 truncate flex-1 min-w-0 ${!isNodeActive ? 'opacity-60' : ''}`}>
               {secondaryField && node[secondaryField] && (
-                  <span className="font-mono text-[11px] font-bold bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 px-1 rounded shrink-0 text-slate-600 dark:text-slate-400">
+                  <span className="font-mono text-[12px] font-bold bg-white/60 dark:bg-slate-800/60 border border-slate-200/50 dark:border-slate-700/50 px-1 rounded shrink-0 text-slate-600 dark:text-slate-400">
                     <HighlightText text={node[secondaryField]} term={searchTerm} />
                   </span>
               )}
@@ -177,7 +177,7 @@
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1 shrink-0">
-            {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
+            {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[12px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
             <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
             <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
@@ -189,7 +189,7 @@
               <input 
                 type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('جستجو در درخت...', 'Search tree...')}
-                className={`w-48 h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                className={`w-48 h-8 text-[12px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
               />
             </div>
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
@@ -343,7 +343,7 @@
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1 shrink-0">
-            {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[11px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
+            {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[12px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
             <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
             <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
@@ -355,7 +355,7 @@
               <input 
                 type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('جستجو در درخت...', 'Search tree...')}
-                className={`w-48 h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                className={`w-48 h-8 text-[12px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
               />
             </div>
             
@@ -368,7 +368,7 @@
                   <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 mb-2 pb-2 border-b border-slate-100 dark:border-slate-700 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
                     {columns.map(c => (
-                      <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[11px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
+                      <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[12px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
                         <input type="checkbox" checked={!hiddenCols.includes(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
                         {t(c.header_fa, c.header_en)}
                       </label>
@@ -413,12 +413,12 @@
                   </th>
                 )}
                 {visibleColumns.map((col, index) => (
-                  <th key={col.field} style={{ width: col.width || '150px' }} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}>
+                  <th key={col.field} style={{ width: col.width || '150px' }} className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[12px] font-black text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 ${isRtl ? 'border-l' : 'border-r'}`}>
                     {t(col.header_fa, col.header_en)}
                   </th>
                 ))}
                 {actions.length > 0 && (
-                  <th className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center sticky ${isRtl ? 'left-0' : 'right-0'} z-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none`}>
+                  <th className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[12px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center sticky ${isRtl ? 'left-0' : 'right-0'} z-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none`}>
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
@@ -445,7 +445,7 @@
                       </td>
                     )}
                     {visibleColumns.map((col, colIndex) => (
-                      <td key={col.field} className={`py-1 px-2 text-[11px] text-slate-700 dark:text-slate-300 truncate bg-inherit ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
+                      <td key={col.field} className={`py-1 px-2 text-[12px] text-slate-700 dark:text-slate-300 truncate bg-inherit ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
                         
                         {colIndex === 0 ? (
                           <div className="flex items-center gap-2 relative" style={{ paddingInlineStart: `${row._depth * 20}px` }}>
@@ -509,7 +509,7 @@
                           ) : (
                             col.render ? col.render(row[col.field], row) : (
                                col.type === 'date' ? (
-                                   <span dir="ltr" className="font-mono text-[11px] font-medium text-slate-800 dark:text-slate-200">
+                                   <span dir="ltr" className="font-mono text-[12px] font-medium text-slate-800 dark:text-slate-200">
                                        {formatGlobalDate ? formatGlobalDate(row[col.field], globalMode) : row[col.field]}
                                    </span>
                                ) : <HighlightText text={row[col.field]} term={searchTerm} />

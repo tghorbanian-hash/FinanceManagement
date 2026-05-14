@@ -104,7 +104,7 @@
         <div className="flex-shrink-0 pt-0.5">{icons[type]}</div>
         <div className="flex-1 flex flex-col gap-0.5">
           {title && <h3 className="text-[12px] font-black">{title}</h3>}
-          <div className="text-[11px] opacity-90 leading-relaxed font-medium">{message}</div>
+          <div className="text-[12px] opacity-90 leading-relaxed font-medium">{message}</div>
         </div>
         {onClose && (
           <button onClick={onClose} className="flex-shrink-0 opacity-40 hover:opacity-100 transition-opacity p-0.5">
@@ -164,7 +164,7 @@
       <div className={`w-full flex items-center justify-between px-4 py-2 border-b transition-all duration-300 ${styles[type]} z-40`}>
         <div className="flex items-center gap-2.5">
           {icons[type]}
-          <span className="text-[11px] font-bold tracking-tight">{message}</span>
+          <span className="text-[12px] font-bold tracking-tight">{message}</span>
         </div>
         <div className="flex items-center gap-3">
           {action && (
@@ -218,12 +218,12 @@
             </div>
             <div className="mt-8 flex justify-end gap-2.5">
               {onCancel && (
-                <Button variant="outline" size="sm" onClick={onCancel} className="!rounded-xl !px-4 !border-slate-200 dark:!border-slate-600 !text-slate-500 dark:!text-slate-400 !h-8 !text-[11px]">
+                <Button variant="outline" size="sm" onClick={onCancel} className="!rounded-xl !px-4 !border-slate-200 dark:!border-slate-600 !text-slate-500 dark:!text-slate-400 !h-8 !text-[12px]">
                   {cancelLabel}
                 </Button>
               )}
               {onConfirm && (
-                <Button variant={type === 'error' ? 'danger' : 'primary'} size="sm" onClick={onConfirm} className="!rounded-xl !px-6 !h-8 !text-[11px] shadow-sm">
+                <Button variant={type === 'error' ? 'danger' : 'primary'} size="sm" onClick={onConfirm} className="!rounded-xl !px-6 !h-8 !text-[12px] shadow-sm">
                   {confirmLabel}
                 </Button>
               )}
@@ -290,7 +290,7 @@
       return (
         <div className="flex flex-col items-center justify-center p-8 gap-3 min-h-[200px]">
           <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">{t('در حال دریافت لاگ‌ها...', 'Loading logs...')}</span>
+          <span className="text-slate-500 dark:text-slate-400 text-[12px] font-bold">{t('در حال دریافت لاگ‌ها...', 'Loading logs...')}</span>
         </div>
       );
     }
@@ -346,7 +346,7 @@
                     <div className="mt-3 flex flex-col gap-1.5 border-t border-slate-100 dark:border-slate-700/50 pt-3">
                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{t('تغییرات فیلدها:', 'Field Changes:')}</span>
                        {changes.map(c => (
-                          <div key={c.key} className="flex items-center flex-wrap gap-2 text-[11px] bg-slate-100/50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-200/50 dark:border-slate-700/50">
+                          <div key={c.key} className="flex items-center flex-wrap gap-2 text-[12px] bg-slate-100/50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-200/50 dark:border-slate-700/50">
                              <span className="font-bold text-slate-600 dark:text-slate-300 min-w-[80px]">{getFieldLabel(c.key)}:</span>
                              <span className="text-rose-500 dark:text-rose-400 line-through decoration-rose-300/50 truncate max-w-[150px]" title={formatValue(c.oldVal)}>{formatValue(c.oldVal)}</span>
                              {isRtl ? <ArrowLeft size={10} className="text-slate-400 shrink-0" /> : <ArrowRight size={10} className="text-slate-400 shrink-0" />}
@@ -365,7 +365,7 @@
                           {Object.keys(log.old_data).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
                              <div key={key} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-100 dark:border-slate-700/50">
                                 <span className="text-[10px] font-bold text-slate-400 min-w-[70px]">{getFieldLabel(key)}:</span>
-                                <span className="text-[11px] font-black text-slate-700 dark:text-slate-300 truncate" title={formatValue(log.old_data[key])}>{formatValue(log.old_data[key])}</span>
+                                <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 truncate" title={formatValue(log.old_data[key])}>{formatValue(log.old_data[key])}</span>
                              </div>
                           ))}
                        </div>

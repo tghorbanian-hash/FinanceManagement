@@ -23,7 +23,7 @@
     if (!visible) return null;
     return (
       <div 
-        className="fixed z-[9999] pointer-events-none bg-slate-800 dark:bg-slate-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl transform -translate-x-1/2 -translate-y-full mt-[-15px] animate-in fade-in zoom-in-95 duration-150" 
+        className="fixed z-[9999] pointer-events-none bg-slate-800 dark:bg-slate-700 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-xl transform -translate-x-1/2 -translate-y-full mt-[-15px] animate-in fade-in zoom-in-95 duration-150" 
         style={{ left: x, top: y }}
       >
         {content}
@@ -97,7 +97,7 @@
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="flex-1 flex items-end justify-between gap-1 sm:gap-2 relative pt-6 pb-2 border-b border-slate-100 dark:border-slate-700 w-full h-full">
           {data.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
+            <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-slate-400 dark:text-slate-500">
               {t('داده‌ای برای نمایش وجود ندارد', 'No data to display')}
             </div>
           ) : data.map((item, idx) => {
@@ -189,7 +189,7 @@
       <ChartContainer title={title} action={action} isMaximized={isMaximized} setIsMaximized={setIsMaximized} height={height} isRtl={isRtl} t={t}>
         <div className="flex-1 relative w-full h-full mb-6">
           {data.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500">
+            <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-slate-400 dark:text-slate-500">
               {t('داده‌ای برای نمایش وجود ندارد', 'No data to display')}
             </div>
           ) : (
@@ -268,7 +268,7 @@
         <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
           <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-full max-w-full'}`}>
             {data.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500 border-4 border-slate-100 dark:border-slate-700 rounded-full">
+              <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-slate-400 dark:text-slate-500 border-4 border-slate-100 dark:border-slate-700 rounded-full">
                 {t('بدون داده', 'No data')}
               </div>
             ) : (
@@ -292,7 +292,7 @@
             )}
             {data.length > 0 && (
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                 <span className="text-[11px] text-slate-400 dark:text-slate-500 font-bold">{hoveredSeg ? hoveredSeg.label : t('مجموع', 'Total')}</span>
+                 <span className="text-[12px] text-slate-400 dark:text-slate-500 font-bold">{hoveredSeg ? hoveredSeg.label : t('مجموع', 'Total')}</span>
                  <span className="text-[14px] font-black text-slate-800 dark:text-slate-100 tracking-tight mt-1">
                    {hoveredSeg ? hoveredSeg.value.toLocaleString() : total.toLocaleString()}
                  </span>
@@ -313,7 +313,7 @@
                 >
                   <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{seg.label}</span>
+                    <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300 truncate">{seg.label}</span>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400">{seg.percent.toFixed(1)}%</span>
                   </div>
                 </div>
@@ -349,7 +349,7 @@
         <div className={`w-full h-full flex items-center justify-center gap-6 relative ${isMaximized ? 'flex-col sm:flex-row' : ''}`}>
           <div className={`relative aspect-square shrink-0 ${isMaximized ? 'w-[250px] h-[250px]' : 'h-full max-h-full max-w-full'}`}>
             {data.length === 0 ? (
-              <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-full">
+              <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 rounded-full">
                 {t('بدون داده', 'No data')}
               </div>
             ) : (
@@ -385,7 +385,7 @@
                 >
                   <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: seg.color }}></div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{seg.label}</span>
+                    <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300 truncate">{seg.label}</span>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400">{seg.percent.toFixed(1)}%</span>
                   </div>
                 </div>

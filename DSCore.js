@@ -116,7 +116,7 @@
       ghost: "bg-transparent text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:ring-slate-200 dark:focus:ring-slate-700"
     };
     const hasText = React.Children.count(children) > 0;
-    const sizes = { sm: `h-8 ${hasText ? 'px-3 gap-1.5 text-[11px]' : 'w-8'}`, md: `h-10 ${hasText ? 'px-4 gap-2 text-[12px]' : 'w-10'}`, lg: `h-12 ${hasText ? 'px-6 gap-2.5 text-[14px]' : 'w-12'}` };
+    const sizes = { sm: `h-8 ${hasText ? 'px-3 gap-1.5 text-[12px]' : 'w-8'}`, md: `h-10 ${hasText ? 'px-4 gap-2 text-[12px]' : 'w-10'}`, lg: `h-12 ${hasText ? 'px-6 gap-2.5 text-[14px]' : 'w-12'}` };
     const iconSizes = { sm: 14, md: 16, lg: 18 };
 
     return (
@@ -391,7 +391,7 @@
               <div className={`relative ${isDropdownOpen ? 'z-[9999]' : 'z-10'}`} ref={dropdownRef}>
                 <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className={`flex items-center gap-2 px-3 h-8 rounded-lg border text-[11px] font-bold transition-all ${activeView ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                  className={`flex items-center gap-2 px-3 h-8 rounded-lg border text-[12px] font-bold transition-all ${activeView ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                 >
                   <LayoutTemplate size={14} className={activeView ? 'text-indigo-500 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
                   <span>{t('نما:', 'View:')} <span className={activeView ? 'text-indigo-600 dark:text-indigo-400 font-black' : ''}>{activeView ? activeView.view_name : t('پیش‌فرض سیستم', 'System Default')}</span></span>
@@ -406,22 +406,22 @@
                         setSaveMode(activeView ? 'update' : 'new');
                         setNewViewName(activeView ? activeView.view_name : '');
                         setIsDefaultView(activeView ? activeView.is_default : false);
-                    }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                    }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
                       <Save size={14} /> {t('ذخیره این نما', 'Save Current View')}
                     </button>
                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
-                    <button onClick={handleResetView} className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold transition-colors ${!activeView ? 'text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-700/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                    <button onClick={handleResetView} className={`w-full flex items-center justify-between px-3 py-2 text-[12px] font-bold transition-colors ${!activeView ? 'text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-700/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
                       <span>{t('پیش‌فرض سیستم', 'System Default')}</span>
                       {!activeView && <Check size={14} className="text-emerald-500" />}
                     </button>
                     {views.map(v => (
-                      <button key={v.id} onClick={() => handleApplyView(v)} className={`w-full flex items-center justify-between px-3 py-2 text-[11px] font-bold transition-colors ${activeView?.id === v.id ? 'text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-700/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                      <button key={v.id} onClick={() => handleApplyView(v)} className={`w-full flex items-center justify-between px-3 py-2 text-[12px] font-bold transition-colors ${activeView?.id === v.id ? 'text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-700/50' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
                         <span>{v.view_name}</span>
                         {activeView?.id === v.id && <Check size={14} className="text-emerald-500" />}
                       </button>
                     ))}
                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
-                    <button onClick={() => { setIsManageModalOpen(true); setIsDropdownOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                    <button onClick={() => { setIsManageModalOpen(true); setIsDropdownOpen(false); }} className="w-full flex items-center gap-2 px-3 py-2 text-[12px] font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
                       <Settings size={14} /> {t('مدیریت نماها', 'Manage Views')}
                     </button>
                   </div>
@@ -536,7 +536,7 @@
           <Icon size={32} strokeWidth={1.5} />
         </div>
         <h4 className="text-[14px] font-black text-slate-800 dark:text-slate-100 mb-1">{title}</h4>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-[250px] leading-relaxed mb-4">{description}</p>
+        <p className="text-[12px] text-slate-400 dark:text-slate-500 max-w-[250px] leading-relaxed mb-4">{description}</p>
         {action}
       </div>
     );
@@ -565,7 +565,7 @@
           )}
         </div>
         <div className="flex flex-col">
-          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{label}</span>
+          <span className="text-[12px] font-bold text-slate-500 dark:text-slate-400">{label}</span>
           <span className="text-[18px] font-black text-slate-800 dark:text-slate-100 tracking-tight">{value}</span>
         </div>
       </div>
@@ -585,7 +585,7 @@
                 <span className="text-[12px] font-black text-slate-800 dark:text-slate-100">{item.title}</span>
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap">{item.time}</span>
               </div>
-              {item.description && <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{item.description}</p>}
+              {item.description && <p className="text-[12px] text-slate-500 dark:text-slate-400 leading-relaxed">{item.description}</p>}
             </div>
           </div>
         ))}
@@ -624,7 +624,7 @@
               <button 
                 key={i} 
                 onClick={() => { item.onClick?.(); setOpen(false); }}
-                className={`flex items-center gap-2.5 w-full px-3 py-2 text-[11px] font-bold rounded-lg transition-colors ${item.variant === 'danger' ? 'text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
+                className={`flex items-center gap-2.5 w-full px-3 py-2 text-[12px] font-bold rounded-lg transition-colors ${item.variant === 'danger' ? 'text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
               >
                 {item.icon && <item.icon size={14} />}
                 {item.label}

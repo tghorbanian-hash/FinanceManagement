@@ -104,7 +104,7 @@
                   key={idx}
                   onClick={(e) => { e.stopPropagation(); setIsVisible(false); item.onClick?.(); }}
                   disabled={item.disabled}
-                  className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[11px] font-bold transition-colors ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] font-bold transition-colors ${
                     item.disabled 
                       ? 'opacity-40 cursor-not-allowed text-slate-500 dark:text-slate-400' 
                       : item.variant === 'danger' 
