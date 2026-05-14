@@ -231,7 +231,7 @@
                     <div className="flex-1 min-w-0">
                       <h4 className={`text-[12px] font-bold mb-1 leading-tight ${notif.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{notif.title}</h4>
                       <p className={`text-[11px] leading-relaxed mb-1.5 line-clamp-2 ${notif.is_read ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{notif.message}</p>
-                      <div className="block mt-1.5 text-[9px] text-slate-400 dark:text-slate-500 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</div>
+                      <div className="block mt-1.5 text-[10px] text-slate-400 dark:text-slate-500 font-medium">{formatTime(notif.created_at)}</div>
                     </div>
                     
                     <div className="flex flex-col gap-0.5 transition-all self-start shrink-0">
