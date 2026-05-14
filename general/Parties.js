@@ -226,7 +226,6 @@
     const handleImportFile = (file) => {
       if (!file) return;
       console.log('Import file selected:', file.name);
-      // منطق پردازش فایل اکسل/CSV در فازهای بعدی می‌تواند در اینجا پیاده‌سازی شود
     };
 
     const columns = [
@@ -255,7 +254,7 @@
         field: 'roles', 
         header_fa: 'نقش‌ها', 
         header_en: 'Roles', 
-        width: '240px',
+        width: '250px',
         render: (roles) => (
           <div className="flex gap-1 flex-wrap">
              {(roles || []).map(r => {
@@ -264,7 +263,8 @@
                   vendor: t('تامین‌کننده', 'Vendor'),
                   employee: t('کارمند', 'Employee'),
                   shareholder: t('سهامدار', 'Shareholder'),
-                  system_user: t('کاربر سیستم', 'System User')
+                  system_user: t('کاربر سیستم', 'System User'),
+                  exchange: t('صرافی', 'Exchange')
                 };
                 return <Badge key={r} variant="slate" size="sm" className="text-[9px] px-1.5 py-0.5">{roleLabels[r] || r}</Badge>
              })}
@@ -299,7 +299,8 @@
           {value: 'vendor', label: t('تامین‌کننده', 'Vendor')},
           {value: 'employee', label: t('کارمند', 'Employee')},
           {value: 'shareholder', label: t('سهامدار', 'Shareholder')},
-          {value: 'system_user', label: t('کاربر سیستم', 'System User')}
+          {value: 'system_user', label: t('کاربر سیستم', 'System User')},
+          {value: 'exchange', label: t('صرافی', 'Exchange')}
         ]
       }
     ];
@@ -307,7 +308,7 @@
     return (
       <div className="flex flex-col h-full p-4 bg-[#f8fafc] dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
-          title={t('اشخاص و شرکت‌ها (Parties)', 'Parties & Companies')} 
+          title={t('اشخاص و شرکت‌ها', 'Parties & Companies')} 
           icon={Users}
           description={t('مدیریت اطلاعات پایه اشخاص حقیقی و حقوقی', 'Manage data of real and legal entities')}
           language={language}
@@ -315,7 +316,7 @@
           viewConfig={viewConfig}
         />
 
-        <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
+        <div className="flex-1 flex flex-col min-h-0 mt-2 animate-in fade-in duration-300">
           <AdvancedFilter 
             fields={filterFields}
             initialValues={filters}
@@ -324,7 +325,7 @@
             language={language}
           />
 
-          <div className="flex-1 min-h-0 mt-2">
+          <div className="flex-1 min-h-0 mt-1.5">
             <DataGrid 
               data={filteredData}
               columns={columns} 
@@ -363,7 +364,9 @@
                  <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><User size={14}/> {t('شخص حقیقی', 'Real Person')}</span>
                </label>
                <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="radio" name="partyType" value="legal" checked={formData.partyType === 'legal'} onChange={() => setFormData({...formData, partyType: 'legal'})} className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
+                 <input type="radio" name="partyType" value="legal" checked={formData.partyType === 'legal'} 
+                        onChange={() => setFormData({...formData, partyType: 'legal', roles: formData.roles.filter(r => r !== 'system_user')})} 
+                        className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
                  <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><Building size={14}/> {t('شخص حقوقی', 'Legal Entity')}</span>
                </label>
             </div>
@@ -403,7 +406,10 @@
                       <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />
                       <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
                       <CheckboxField size="sm" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} />
-                      <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
+                      <CheckboxField size="sm" label={t('صرافی', 'Exchange')} checked={formData.roles.includes('exchange')} onChange={() => toggleRole('exchange')} isRtl={isRtl} />
+                      {formData.partyType === 'real' && (
+                        <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
+                      )}
                   </div>
               </div>
               <div className="col-span-1 p-3 flex flex-col justify-center h-full border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
