@@ -577,7 +577,7 @@
 
                         <Card title={t('شروط شروع (فاکتورها)', 'Start Condition (Factors)')} noPadding className="border border-slate-200 dark:border-slate-700 shadow-sm shrink-0 relative z-[10]" headerClassName="h-10 bg-white dark:bg-slate-800" isCollapsible language={language}>
                             <div className="p-3 flex flex-col gap-3 bg-white dark:bg-slate-800">
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 m-0 leading-relaxed">
+                                <p className="text-[12px] text-slate-500 dark:text-slate-400 m-0 leading-relaxed">
                                     {t('در صورت تنظیم، گردش کار فقط برای رکوردهایی اعمال می‌شود که این شرط را برآورده کنند.', 'If set, applies only to records matching this condition.')}
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -754,7 +754,7 @@
                                                     <Clock size={20} />
                                                 </div>
                                             ) : (
-                                                <div className="px-3 text-center text-[11px] font-black leading-tight select-none break-words max-w-full overflow-hidden pointer-events-none" dir={isRtl ? 'rtl' : 'ltr'}>
+                                                <div className="px-3 text-center text-[12px] font-black leading-tight select-none break-words max-w-full overflow-hidden pointer-events-none" dir={isRtl ? 'rtl' : 'ltr'}>
                                                     {node.name}
                                                 </div>
                                             )}
@@ -867,19 +867,19 @@
                                         )}
 
                                         {selectedNode.type === 'APPROVAL_GATEWAY' && (
-                                            <div className="text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
+                                            <div className="text-[12px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
                                                 {t('این دروازه مختص تصمیم‌گیری‌های بله/خیر است. دو مسیر خروجی از این گره بکشید. سیستم به صورت خودکار یکی را "تایید" و دیگری را "رد" نام‌گذاری می‌کند.', 'This gateway is for Yes/No decisions. Draw two outgoing flows; they will be automatically named Approve/Reject.')}
                                             </div>
                                         )}
                                         
                                         {selectedNode.type === 'EXCLUSIVE_GATEWAY' && (
-                                            <div className="text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
+                                            <div className="text-[12px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
                                                 {t('این دروازه برای انشعاب‌های شرطی چندگانه است. روی خطوط خروجی کلیک کنید تا شرط هر کدام را تعیین نمایید.', 'This gateway branches paths based on conditions. Click on outgoing flows to define their conditions.')}
                                             </div>
                                         )}
 
                                         {selectedNode.type === 'PARALLEL_GATEWAY' && (
-                                            <div className="text-[11px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
+                                            <div className="text-[12px] font-bold text-slate-500 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700 text-justify leading-relaxed">
                                                 {t('این دروازه فرآیند را به صورت همزمان (موازی) به چند مسیر تقسیم می‌کند، یا منتظر می‌ماند تا تمام مسیرهای ورودی به آن برسند تا ادامه دهد (AND).', 'This gateway splits the process into parallel paths, or waits for all incoming paths to merge (AND).')}
                                             </div>
                                         )}

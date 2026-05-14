@@ -724,8 +724,8 @@
                   <span className="text-[13px] font-black text-slate-800 dark:text-slate-100">{t('مدیریت ساختار سلسله‌مراتبی', 'Hierarchical Structure Management')}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-700/50 p-1 rounded-lg">
-                  <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درختی', 'Tree View')}</button>
-                  <button onClick={() => setTreeMode('grid')} className={`px-4 py-1.5 text-[11px] font-bold rounded-md transition-colors ${treeMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
+                  <button onClick={() => setTreeMode('standard')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${treeMode === 'standard' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درختی', 'Tree View')}</button>
+                  <button onClick={() => setTreeMode('grid')} className={`px-4 py-1.5 text-[12px] font-bold rounded-md transition-colors ${treeMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>{t('نمایش درخت-جدول', 'TreeGrid View')}</button>
                 </div>
               </div>
 
@@ -882,7 +882,7 @@
                       <div className="p-3 border border-indigo-100 dark:border-indigo-800 bg-indigo-50/30 dark:bg-indigo-900/20 rounded-lg flex items-center gap-3">
                         <Avatar name="Ali Alavi" size="md" />
                         <div className="flex flex-col">
-                          <span className="text-[11px] font-black text-slate-700 dark:text-slate-200">علی علوی</span>
+                          <span className="text-[12px] font-black text-slate-700 dark:text-slate-200">علی علوی</span>
                           <span className="text-[9px] text-slate-400 dark:text-slate-500">مدیر ارشد مالی</span>
                         </div>
                       </div>
@@ -928,7 +928,7 @@
                           position="bottom"
                           trigger={<Button variant="outline" size="sm">{t('تنظیمات', 'Settings')}</Button>}
                         >
-                          <div className="w-[200px] flex flex-col gap-2 text-[11px]">
+                          <div className="w-[200px] flex flex-col gap-2 text-[12px]">
                              <div className="font-bold text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-slate-700/50 pb-2 mb-1 px-1">{t('تنظیمات سریع', 'Quick Settings')}</div>
                              <ToggleField label={t('ارسال ایمیل', 'Send Email')} checked={popoverSettings.email} onChange={(v) => setPopoverSettings({...popoverSettings, email: v})} isRtl={isRtl} />
                              <ToggleField label={t('تایید خودکار', 'Auto Approve')} checked={popoverSettings.autoApprove} onChange={(v) => setPopoverSettings({...popoverSettings, autoApprove: v})} isRtl={isRtl} wrapperClassName="pt-1" />
@@ -1080,7 +1080,7 @@
                     <TextField size="sm" label={t('شرح سند', 'Description')} value={selectedRow.description} disabled isRtl={isRtl} wrapperClassName="md:col-span-3" />
                     
                     <div className="flex flex-col gap-1 w-full">
-                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
+                      <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('وضعیت سند', 'Status')}</label>
                       <div className="flex items-center h-8">
                         <Badge variant={selectedRow.status === 'تایید شده' ? 'success' : selectedRow.status === 'رد شده' ? 'danger' : selectedRow.status === 'در حال بررسی' ? 'blue' : selectedRow.status === 'پیش‌نویس' ? 'orange' : 'gray'}>
                           {selectedRow.status}

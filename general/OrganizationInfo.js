@@ -239,7 +239,7 @@
                ) : (
                  <label className="cursor-pointer flex flex-col items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
                    <Upload size={20}/>
-                   <span className="text-[11px] font-bold">{t('بارگذاری لوگوی سازمان', 'Upload Logo')}</span>
+                   <span className="text-[12px] font-bold">{t('بارگذاری لوگوی سازمان', 'Upload Logo')}</span>
                    <input type="file" className="hidden" accept="image/*" onChange={(e) => {
                      const reader = new FileReader();
                      reader.onload = () => setFormData({...formData, logo: reader.result});
@@ -261,7 +261,7 @@
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-2">
-               <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
+               <label className="text-[12px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
                <div className="flex gap-2 mb-3">
                  <div className="flex-1">
                    <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'New address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="m-0" />
@@ -275,7 +275,7 @@
                
                <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                  {formData.addresses.map(a => (
-                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[11px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[12px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
                      <div className="flex items-center gap-2 flex-1 min-w-0">
                        <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
                      </div>

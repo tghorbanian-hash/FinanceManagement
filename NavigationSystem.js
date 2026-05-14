@@ -485,7 +485,7 @@
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
             <button className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"><Settings size={18} /></button>
-            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[11px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">PM</div>
+            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">PM</div>
           </div>
         </nav>
 
@@ -512,7 +512,7 @@
                   <input 
                     type="text" value={treeSearchTerm} onChange={(e) => setTreeSearchTerm(e.target.value)}
                     placeholder={t('جستجو در درخت...', 'Search tree...')}
-                    className={`w-full h-8 text-[11px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
+                    className={`w-full h-8 text-[12px] font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all ${isRtl ? 'pr-7 pl-2' : 'pl-7 pr-2'}`}
                   />
                 </div>
                 <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
@@ -525,7 +525,7 @@
             <div className="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 font-sans">
               <div className="space-y-[2px]">
                 {filteredActiveTree.length > 0 ? filteredActiveTree.map(node => renderSidebarNode(node)) : (
-                  <div className="py-8 text-center text-slate-400 dark:text-slate-500 text-[11px] font-sans">
+                  <div className="py-8 text-center text-slate-400 dark:text-slate-500 text-[12px] font-sans">
                     {t('نتیجه‌ای یافت نشد.', 'No results found.')}
                   </div>
                 )}
@@ -540,21 +540,21 @@
               {showSidebar && !sidebarOpen && <button onClick={() => setSidebarOpen(true)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-500 dark:text-slate-400 transition-all active:scale-95 shrink-0">{isRtl ? <ChevronLeft size={16} strokeWidth={2.5} /> : <ChevronRight size={16} strokeWidth={2.5} />}</button>}
               {activeDomainId !== 'HOME_FAV' && (
                 <div className="flex bg-slate-100 dark:bg-slate-900/50 p-0.5 rounded-md border border-slate-200 dark:border-slate-700 shrink-0 h-8">
-                  <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tree' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}><ListTree size={14} /><span>{t('درختی', 'Tree')}</span></button>
-                  <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[11px] font-bold transition-all h-full ${viewMode === 'tile' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}><LayoutGrid size={14} /><span>{t('کاشی', 'Tile')}</span></button>
+                  <button onClick={() => setViewMode('tree')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[12px] font-bold transition-all h-full ${viewMode === 'tree' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}><ListTree size={14} /><span>{t('درختی', 'Tree')}</span></button>
+                  <button onClick={() => setViewMode('tile')} className={`flex items-center gap-1.5 px-3 py-1 rounded text-[12px] font-bold transition-all h-full ${viewMode === 'tile' ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}><LayoutGrid size={14} /><span>{t('کاشی', 'Tile')}</span></button>
                 </div>
               )}
               <div className="relative w-full max-w-md">
                 <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400 dark:text-slate-500`} />
-                <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[11px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-300 dark:focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[12px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-300 dark:focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 {searchTerm && (
                   <div className="absolute top-full right-0 left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50 font-sans">
                     {filteredItems.length > 0 ? filteredItems.map(item => (
                       <div key={item.id} onClick={() => { handleFormClick(item); setSearchTerm(''); }} className="px-5 py-2.5 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer border-b border-slate-50 dark:border-slate-700/50 last:border-0 transition-all flex items-center justify-between">
-                        <div><div className="font-bold text-slate-800 dark:text-slate-100 text-[12px] font-sans">{getLabel(item)}</div><div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 font-sans">{item.fullPath}</div></div>
+                        <div><div className="font-bold text-slate-800 dark:text-slate-100 text-[12px] font-sans">{getLabel(item)}</div><div className="text-[12px] text-slate-400 dark:text-slate-500 mt-0.5 font-sans">{item.fullPath}</div></div>
                         {isRtl ? <ArrowLeft size={14} className="text-slate-300 dark:text-slate-600" /> : <ArrowRight size={14} className="text-slate-300 dark:text-slate-600" />}
                       </div>
-                    )) : <div className="p-4 text-center text-slate-400 dark:text-slate-500 text-[11px] font-sans">{t('نتیجه‌ای یافت نشد.', 'No results found.')}</div>}
+                    )) : <div className="p-4 text-center text-slate-400 dark:text-slate-500 text-[12px] font-sans">{t('نتیجه‌ای یافت نشد.', 'No results found.')}</div>}
                   </div>
                 )}
               </div>
@@ -564,10 +564,10 @@
                 <button onClick={toggleTheme} className="flex items-center justify-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" title={t('تغییر تم', 'Change Theme')}>
                   {theme === 'dark' ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-500" />}
                 </button>
-                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر تقویم', 'Change Calendar')}>
+                <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[12px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر تقویم', 'Change Calendar')}>
                   <Calendar size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{calendarMode === 'jalali' ? 'Gre' : 'Ja'}</span>
                 </button>
-                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[11px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر زبان', 'Change Language')}>
+                <button onClick={() => setCurrentLanguage(isRtl ? 'en' : 'fa')} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[12px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر زبان', 'Change Language')}>
                   <Globe size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{isRtl ? 'EN' : 'FA'}</span>
                 </button>
               </div>

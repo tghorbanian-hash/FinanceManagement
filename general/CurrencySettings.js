@@ -536,7 +536,7 @@
           return (
              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                <Calendar size={12} className="text-slate-400 dark:text-slate-500" />
-               <span className="font-mono text-[11px] font-medium" dir="ltr">{formattedDate}</span>
+               <span className="font-mono text-[12px] font-medium" dir="ltr">{formattedDate}</span>
                <Clock size={12} className="text-slate-400 dark:text-slate-500 ml-1" />
                <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-700 px-1 rounded" dir="ltr">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
              </div>
@@ -717,14 +717,14 @@
               
               <div className="sm:col-span-2 flex flex-col gap-1 w-full">
                   <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('عنوان ارز', 'Title')} <span className="text-red-500 dark:text-red-400">*</span></label>
+                      <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('عنوان ارز', 'Title')} <span className="text-red-500 dark:text-red-400">*</span></label>
                       <ToggleField label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
                   </div>
                   <input
                       type="text"
                       value={selectedCurrency?.title || ''}
                       onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})}
-                      className="w-full h-8 text-[11px] px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20"
+                      className="w-full h-8 text-[12px] px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20"
                       dir={isRtl ? 'rtl' : 'ltr'}
                   />
               </div>
@@ -740,7 +740,7 @@
             </div>
             
             <div className="mt-1 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-               <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
+               <label className="text-[12px] font-black text-slate-500 dark:text-slate-400 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
                <div className="flex flex-col gap-2">
                  <SelectField 
                    value="" 
@@ -782,8 +782,8 @@
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
                  <DatePicker size="sm" label={t('تاریخ ثبت نرخ', 'Rate Date')} value={manualDate} onChange={setManualDate} isRtl={isRtl} language={language} required />
                  <div className="flex flex-col gap-1 w-full">
-                    <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500 dark:text-red-400">*</span></label>
-                    <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[11px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 px-2.5 transition-all`} required />
+                    <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500 dark:text-red-400">*</span></label>
+                    <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[12px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 px-2.5 transition-all`} required />
                  </div>
               </div>
 

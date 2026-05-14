@@ -148,7 +148,7 @@
         { field: 'entity_type', header_fa: 'موجودیت هدف', header_en: 'Target Entity', width: '220px', render: (v) => (
             <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 w-fit">
                 <Database size={12} className="text-indigo-500" />
-                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{getEntityDisplay(v)}</span>
+                <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{getEntityDisplay(v)}</span>
             </div>
         )},
         { field: 'version', header_fa: 'نسخه', header_en: 'Version', width: '80px', render: (v) => <Badge variant="slate" size="sm" className="font-mono">v{v}.0</Badge> },

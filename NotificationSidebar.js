@@ -229,7 +229,7 @@
                       {notif.type === 'success' ? <CheckCircle2 size={14} /> : notif.type === 'error' ? <AlertCircle size={14} /> : <Info size={14} />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className={`text-[11px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{notif.title}</h4>
+                      <h4 className={`text-[12px] font-bold mb-0.5 leading-tight ${notif.is_read ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{notif.title}</h4>
                       <p className={`text-[10px] leading-relaxed mb-1 line-clamp-2 ${notif.is_read ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{notif.message}</p>
                       <span className="text-[8px] text-slate-400 dark:text-slate-500 font-medium font-mono" dir="ltr">{formatTime(notif.created_at)}</span>
                     </div>

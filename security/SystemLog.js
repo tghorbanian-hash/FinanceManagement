@@ -212,7 +212,7 @@
           return (
              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                <Calendar size={12} className="text-slate-400 dark:text-slate-500" />
-               <span className="font-mono text-[11px] font-medium" dir="ltr">{formattedDate}</span>
+               <span className="font-mono text-[12px] font-medium" dir="ltr">{formattedDate}</span>
                <Clock size={12} className="text-slate-400 dark:text-slate-500 ml-1" />
                <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-slate-600" dir="ltr">
                   {String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}
@@ -239,7 +239,7 @@
                 <div className="w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
                     <User size={10} strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-[11px] text-slate-700 dark:text-slate-200 truncate">{v}</span>
+                <span className="font-bold text-[12px] text-slate-700 dark:text-slate-200 truncate">{v}</span>
             </div>
         )
       },
@@ -249,7 +249,7 @@
         render: (v) => (
             <div className="flex items-center gap-1.5">
                 <Database size={12} className="text-slate-400 dark:text-slate-500" />
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300">{getEntityLabel(v)}</span>
+                <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300">{getEntityLabel(v)}</span>
             </div>
         )
       },
@@ -258,13 +258,13 @@
         render: (v) => (
             <div className="flex items-center gap-1">
                <Hash size={10} className="text-slate-400" />
-               <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">{v}</span>
+               <span className="text-[12px] font-mono text-slate-600 dark:text-slate-400">{v}</span>
             </div>
         )
       },
       { 
         field: 'details', header_fa: 'شرح جزئیات', header_en: 'Details', width: 'auto', minWidth: '250px',
-        render: (v) => <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block w-full">{v || '-'}</span> 
+        render: (v) => <span className="text-[12px] text-slate-600 dark:text-slate-400 truncate block w-full">{v || '-'}</span> 
       }
     ];
 
@@ -288,7 +288,7 @@
             if (!selectedLog.old_data && !selectedLog.new_data) return (
                 <div className="flex flex-col items-center justify-center p-8 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 mt-4">
                     <Box size={32} className="opacity-40 mb-2" />
-                    <span className="text-[11px] font-bold">{t('اطلاعات دقیق ساختاری برای این لاگ ثبت نشده است.', 'No structural data recorded for this log.')}</span>
+                    <span className="text-[12px] font-bold">{t('اطلاعات دقیق ساختاری برای این لاگ ثبت نشده است.', 'No structural data recorded for this log.')}</span>
                 </div>
             );
             
@@ -304,7 +304,7 @@
                 });
                 
                 if (changes.length === 0) return (
-                    <div className="p-4 mt-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-center text-[11px] text-slate-500 font-bold">
+                    <div className="p-4 mt-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-center text-[12px] text-slate-500 font-bold">
                         {t('هیچ تغییر مقداری در فیلدها یافت نشد.', 'No value changes found in fields.')}
                     </div>
                 );
@@ -317,7 +317,7 @@
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                             {changes.map(c => (
-                                <div key={c.key} className="flex items-center flex-wrap gap-2 text-[11px] bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                                <div key={c.key} className="flex items-center flex-wrap gap-2 text-[12px] bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 shadow-sm">
                                     <span className="font-black text-slate-700 dark:text-slate-300 min-w-[70px] shrink-0">{getFieldLabel(c.key)}:</span>
                                     <span className="text-rose-500 dark:text-rose-400 line-through decoration-rose-300/50 truncate max-w-[150px] font-medium" title={formatValue(c.oldVal)}>{formatValue(c.oldVal)}</span>
                                     {isRtl ? <ArrowLeft size={12} className="text-slate-400 shrink-0" /> : <ArrowRight size={12} className="text-slate-400 shrink-0" />}
@@ -340,7 +340,7 @@
                             {Object.keys(selectedLog.old_data).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
                                 <div key={key} className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
                                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 min-w-[80px]">{getFieldLabel(key)}:</span>
-                                    <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate" title={formatValue(selectedLog.old_data[key])}>{formatValue(selectedLog.old_data[key])}</span>
+                                    <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate" title={formatValue(selectedLog.old_data[key])}>{formatValue(selectedLog.old_data[key])}</span>
                                 </div>
                             ))}
                         </div>
@@ -359,7 +359,7 @@
                             {Object.keys(selectedLog.new_data).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
                                 <div key={key} className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
                                     <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 min-w-[80px]">{getFieldLabel(key)}:</span>
-                                    <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 truncate" title={formatValue(selectedLog.new_data[key])}>{formatValue(selectedLog.new_data[key])}</span>
+                                    <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate" title={formatValue(selectedLog.new_data[key])}>{formatValue(selectedLog.new_data[key])}</span>
                                 </div>
                             ))}
                         </div>
@@ -377,7 +377,7 @@
                         {getActionBadge(selectedLog.action)}
                         <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{selectedLog.user_name}</span>
                         <span className="text-slate-300 dark:text-slate-600">|</span>
-                        <span className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"><Database size={12}/> {getEntityLabel(selectedLog.entity_type)}</span>
+                        <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"><Database size={12}/> {getEntityLabel(selectedLog.entity_type)}</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-[10.5px] font-mono font-medium" dir="ltr">
                         <div className="flex items-center gap-1.5"><Calendar size={12} /> <span>{formattedDate}</span></div>
