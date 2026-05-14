@@ -8,7 +8,10 @@
     TextField, ToggleField, Badge
   } = window.DesignSystem || {};
   
-  const { Building2, Plus, Edit, Trash2, MapPin, Upload, X, Save, AlertTriangle, Lock } = window.LucideIcons || {};
+  const { 
+    Building2, Plus, Edit, Trash2, MapPin, Upload, X, Save, 
+    AlertTriangle, Lock, Star, Check 
+  } = window.LucideIcons || {};
   const supabase = window.supabase;
 
   const OrganizationInfo = ({ isAdmin, language = 'fa' }) => {
@@ -101,6 +104,20 @@
       }
     };
 
+    const handleToggleActive = async (row, newValue) => {
+      try {
+        const { error } = await supabase
+          .from('organization_info')
+          .update({ is_active: newValue })
+          .eq('id', row.id);
+        
+        if (error) throw error;
+        setData(prev => prev.map(item => item.id === row.id ? { ...item, isActive: newValue } : item));
+      } catch (err) {
+        console.error("Toggle Error:", err);
+      }
+    };
+
     const executeDelete = async () => {
       setIsLoading(true);
       try {
@@ -132,18 +149,25 @@
       setIsModalOpen(true);
     };
 
+    const handleSetDefaultAddress = (addrId) => {
+      setFormData(prev => ({
+        ...prev,
+        addresses: prev.addresses.map(a => ({ ...a, isDefault: a.id === addrId }))
+      }));
+    };
+
     const columns = [
       { field: 'code', header_fa: 'کد', header_en: 'Code', width: '100px' },
       { field: 'name', header_fa: 'نام سازمان', header_en: 'Name', width: '250px' },
       { field: 'regNo', header_fa: 'شماره ثبت', header_en: 'Reg No', width: '120px' },
       { field: 'phone', header_fa: 'تلفن', header_en: 'Phone', width: '120px' },
       { 
-        field: 'isActive', header_fa: 'وضعیت', header_en: 'Status', width: '100px',
-        render: (val) => (
-          <Badge variant={val ? "success" : "slate"} size="sm">
-            {val ? t('فعال', 'Active') : t('غیرفعال', 'Inactive')}
-          </Badge>
-        ) 
+        field: 'isActive', 
+        header_fa: 'وضعیت', 
+        header_en: 'Status', 
+        width: '100px', 
+        type: 'toggle',
+        onToggle: (row, val) => handleToggleActive(row, val)
       }
     ];
 
@@ -235,7 +259,7 @@
               <TextField size="sm" label={t('نام سازمان', 'Name')} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} isRtl={isRtl} required />
               <TextField size="sm" label={t('شماره ثبت', 'Reg No')} value={formData.regNo} onChange={e => setFormData({...formData, regNo: e.target.value})} isRtl={isRtl} dir="ltr" />
               <div className="flex items-center mt-6">
-                <ToggleField size="sm" label={t('وضعیت فعال بودن سازمان', 'Active Status')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
+                <ToggleField size="sm" label={t('فعال', 'Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
               </div>
               <TextField size="sm" label={t('تلفن', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('فکس', 'Fax')} value={formData.fax} onChange={e => setFormData({...formData, fax: e.target.value})} isRtl={isRtl} dir="ltr" />
@@ -249,16 +273,36 @@
                  </div>
                  <Button variant="secondary" size="sm" icon={Plus} onClick={() => {
                    if(!newAddress.trim()) return;
-                   setFormData({...formData, addresses: [...formData.addresses, { id: Date.now(), text: newAddress.trim() }]});
+                   setFormData({...formData, addresses: [...formData.addresses, { id: Date.now(), text: newAddress.trim(), isDefault: formData.addresses.length === 0 }]});
                    setNewAddress('');
                  }}>{t('افزودن', 'Add')}</Button>
                </div>
                
-               <div className="space-y-1.5 max-h-28 overflow-y-auto custom-scrollbar pr-1">
+               <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
                  {formData.addresses.map(a => (
-                   <div key={a.id} className="flex justify-between items-center bg-white dark:bg-slate-900 p-2 rounded-md border border-slate-200 dark:border-slate-700 text-[11px] group shadow-sm">
-                     <span className="text-slate-700 dark:text-slate-300 leading-relaxed">{a.text}</span>
-                     <button onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} className="text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800 p-1.5 rounded transition-colors ms-2 opacity-0 group-hover:opacity-100"><Trash2 size={12}/></button>
+                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[11px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
+                     <div className="flex items-center gap-2 flex-1">
+                       {a.isDefault && <Check size={14} className="text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                       <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
+                     </div>
+                     <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                       {!a.isDefault && (
+                         <button 
+                           onClick={() => handleSetDefaultAddress(a.id)} 
+                           className="text-slate-400 hover:text-indigo-600 bg-slate-50 dark:bg-slate-800 p-1.5 rounded"
+                           title={t('تنظیم به عنوان پیشفرض', 'Set as default')}
+                         >
+                           <Star size={12}/>
+                         </button>
+                       )}
+                       <button 
+                         onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} 
+                         className="text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-slate-800 p-1.5 rounded"
+                         title={t('حذف', 'Delete')}
+                       >
+                         <Trash2 size={12}/>
+                       </button>
+                     </div>
                    </div>
                  ))}
                  {formData.addresses.length === 0 && (
