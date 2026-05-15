@@ -11,7 +11,7 @@
     Plus = FallbackIcon, Search = FallbackIcon, Check = FallbackIcon, 
     X = FallbackIcon, AlertTriangle = FallbackIcon, ChevronRight = FallbackIcon, 
     ChevronDown = FallbackIcon, Layers = FallbackIcon, UserPlus = FallbackIcon,
-    UserMinus = FallbackIcon, RefreshCw = FallbackIcon
+    UserMinus = FallbackIcon, RefreshCw = FallbackIcon, Hash = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -29,7 +29,7 @@
 
   const supabase = window.supabase;
 
-  // Level 2: Available Actions per Form
+  // Level 2: Available Actions per Form (Standard Actions)
   const AVAILABLE_ACTIONS = [
     { id: 'read', label_fa: 'مشاهده اطلاعات', label_en: 'Read' },
     { id: 'create', label_fa: 'ایجاد', label_en: 'Create' },
@@ -68,7 +68,7 @@
     // Permissions State (3 Levels)
     const [permModal, setPermModal] = useState({ isOpen: false, role: null });
     const [selectedResource, setSelectedResource] = useState(null);
-    const [tempPermissions, setTempPermissions] = useState({}); // { [resource_code]: { actions: [], scopes: { docTypes: [], branches: [] } } }
+    const [tempPermissions, setTempPermissions] = useState({}); 
 
     const [expandedNodes, setExpandedNodes] = useState({});
 
@@ -115,47 +115,21 @@
           .eq('is_active', true);
         if (usersData) setAllUsers(usersData);
 
-        // Fetch Resources (Tree)
-        // Fallback mockup if table doesn't exist or is empty
-        let resData = [];
+        // Fetch Resources
         const { data: dbResData, error: resError } = await supabase.from('sec_resources').select('*');
-        if (!resError && dbResData && dbResData.length > 0) {
-            resData = dbResData;
-        } else {
-            resData = [
-                { code: 'sys', title_fa: 'مدیریت سیستم', title_en: 'System Management', parent_code: null },
-                { code: 'sys_users', title_fa: 'مدیریت کاربران', title_en: 'User Management', parent_code: 'sys' },
-                { code: 'sys_roles', title_fa: 'مدیریت نقش‌ها', title_en: 'Role Management', parent_code: 'sys' },
-                { code: 'sys_logs', title_fa: 'لاگ سیستم', title_en: 'System Logs', parent_code: 'sys' },
-                { code: 'fin', title_fa: 'مالی و حسابداری', title_en: 'Finance & Accounting', parent_code: null },
-                { code: 'fin_voucher', title_fa: 'اسناد حسابداری', title_en: 'Vouchers', parent_code: 'fin' },
-                { code: 'fin_reports', title_fa: 'گزارشات', title_en: 'Reports', parent_code: 'fin' },
-                { code: 'fin_reports_ledger', title_fa: 'دفتر کل', title_en: 'Ledger Report', parent_code: 'fin_reports' }
-            ];
+        if (!resError && dbResData) {
+            setResources(dbResData);
         }
-        setResources(resData);
 
-        // Fetch Data Scopes
-        const mockDocTypes = [
-            { id: 'dt_open', title_fa: 'سند افتتاحیه', title_en: 'Opening' },
-            { id: 'dt_close', title_fa: 'سند اختتامیه', title_en: 'Closing' },
-            { id: 'dt_gen', title_fa: 'سند عمومی', title_en: 'General' },
-            { id: 'dt_buy', title_fa: 'سند خرید', title_en: 'Purchase' }
-        ];
-        const mockBranches = [
-            { id: 'br_hq', title_fa: 'دفتر مرکزی', title_en: 'Headquarters' },
-            { id: 'br_01', title_fa: 'شعبه شمال', title_en: 'North Branch' }
-        ];
-        
-        // Attempt to fetch real data scopes, fallback to mock if table missing
+        // Fetch Data Scopes (DocTypes & Branches)
         const [dtRes, brRes] = await Promise.all([
-            supabase.from('fm_doc_types').select('id, title').catch(()=>({data:null})),
-            supabase.from('fm_branches').select('id, title').catch(()=>({data:null}))
+            supabase.from('fm_doc_types').select('id, title').eq('is_active', true),
+            supabase.from('fm_branches').select('id, title').eq('is_active', true)
         ]);
 
         setScopesData({
-            docTypes: dtRes.data?.length ? dtRes.data : mockDocTypes,
-            branches: brRes.data?.length ? brRes.data : mockBranches,
+            docTypes: dtRes.data || [],
+            branches: brRes.data || [],
             ledgers: []
         });
 
@@ -166,7 +140,21 @@
       }
     };
 
-    // --- Role CRUD ---
+    const handleOpenRoleModal = (record = null) => {
+      setFormData(record ? {
+        code: record.code || '',
+        title: record.title || '',
+        is_active: record.is_active ?? true,
+        description: record.description || ''
+      } : { 
+        code: '',
+        title: '',
+        is_active: true,
+        description: ''
+      });
+      setRoleModal({ isOpen: true, data: record });
+    };
+
     const handleSaveRole = async () => {
       if (!formData.code || !formData.title) return;
       setIsLoading(true);
@@ -212,7 +200,6 @@
       }
     };
 
-    // --- User Assignment ---
     const openUserModal = async (role) => {
         setIsLoading(true);
         setUserModal({ isOpen: true, role });
@@ -271,7 +258,6 @@
         );
     }, [userSearchTerm, allUsers, assignedUsers]);
 
-    // --- Permissions (3 Levels) ---
     const openPermModal = async (role) => {
         setIsLoading(true);
         setPermModal({ isOpen: true, role });
@@ -304,10 +290,8 @@
     const handleSavePermissions = async () => {
         setIsLoading(true);
         try {
-            // 1. Delete old
             await supabase.from('sec_permissions').delete().eq('role_id', permModal.role.id);
             
-            // 2. Insert new
             const inserts = [];
             Object.entries(tempPermissions).forEach(([resCode, data]) => {
                 if (data.actions.length > 0 || Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0)) {
@@ -384,7 +368,7 @@
             <div className="flex flex-col w-full">
                 {nodes.map(node => {
                     const hasChildren = resources.some(r => r.parent_code === node.code);
-                    const isExpanded = expandedNodes[node.code] !== false; // default expanded
+                    const isExpanded = expandedNodes[node.code] !== false; 
                     const isSelected = selectedResource?.code === node.code;
                     const hasPerms = tempPermissions[node.code]?.actions?.length > 0;
 
@@ -422,7 +406,6 @@
         );
     };
 
-    // --- Grid Configuration ---
     const columns = [
       { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="font-mono text-slate-600 dark:text-slate-400 text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{val}</span> },
       { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '250px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
@@ -452,7 +435,6 @@
       return res;
     }, [roles, filters]);
 
-    // Internal fallback for ChevronLeft (not extracted above)
     const ChevronLeft = ({size}) => React.createElement('svg', {width:size, height:size, viewBox:"0 0 24 24", fill:"none", stroke:"currentColor", strokeWidth:"2", strokeLinecap:"round", strokeLinejoin:"round"}, React.createElement('polyline', {points:"15 18 9 12 15 6"}));
 
     return (
@@ -464,14 +446,7 @@
           language={language}
           breadcrumbs={[{ label: t('امنیت', 'Security') }, { label: t('نقش‌ها', 'Roles') }]}
           viewConfig={viewConfig}
-        >
-            <Button variant="primary" size="sm" icon={Plus} onClick={() => {
-                setFormData({ code: '', title: '', is_active: true, description: '' });
-                setRoleModal({ isOpen: true, data: null });
-            }}>
-                {t('نقش جدید', 'New Role')}
-            </Button>
-        </PageHeader>
+        />
 
         <div className="flex-1 flex flex-col min-h-0 mt-3 animate-in fade-in duration-300">
           <AdvancedFilter 
@@ -497,11 +472,13 @@
               isLoading={isLoading}
               gridState={gridState}
               onGridStateChange={setGridState}
+              onAdd={() => handleOpenRoleModal()}
+              onRowDoubleClick={(row) => handleOpenRoleModal(row)}
               hideImport={true}
               actions={[
                 { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => openPermModal(row), className: 'text-amber-500 hover:text-amber-600 bg-amber-50 dark:bg-amber-900/30' },
                 { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: 'text-indigo-500 hover:text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' },
-                { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setFormData(row); setRoleModal({ isOpen: true, data: row }); }, className: 'text-slate-400 hover:text-slate-600' },
+                { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-slate-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, data: row }), className: 'text-rose-400 hover:text-rose-600' }
               ]}
             />
@@ -511,7 +488,7 @@
         {/* --- 1. Role Create/Edit Modal --- */}
         <Modal isOpen={roleModal.isOpen} onClose={() => setRoleModal({ isOpen: false, data: null })} title={roleModal.data ? t('ویرایش نقش', 'Edit Role') : t('تعریف نقش جدید', 'New Role')} width="max-w-md" language={language}>
           <div className="p-4 flex flex-col gap-4">
-            <TextField size="sm" label={t('کد سیستمی نقش *', 'Role Code *')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} dir="ltr" disabled={!!roleModal.data} placeholder="e.g. ROLE_ADMIN" />
+            <TextField size="sm" label={t('کد سیستمی نقش *', 'Role Code *')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} dir="ltr" disabled={!!roleModal.data} placeholder="ROLE_ADMIN" />
             <TextField size="sm" label={t('عنوان نقش *', 'Role Title *')} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} isRtl={isRtl} />
             <TextField size="sm" label={t('توضیحات', 'Description')} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} isRtl={isRtl} multiline rows={3} />
             <div className="mt-2">
@@ -642,7 +619,6 @@
                                     <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">{t('در صورت عدم انتخاب هیچ گزینه‌ای، دسترسی به کلیه داده‌ها در این بخش باز خواهد بود.', 'If no options are selected, access to all data in this scope is granted.')}</div>
                                     
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {/* Doc Types Scope */}
                                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col shadow-sm">
                                             <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-300">
                                                 {t('انواع سند مجاز', 'Allowed Document Types')}
@@ -657,11 +633,9 @@
                                                         </div>
                                                     )
                                                 })}
-                                                {scopesData.docTypes.length === 0 && <span className="text-[10px] text-slate-400">{t('اطلاعاتی یافت نشد', 'No data')}</span>}
                                             </div>
                                         </div>
 
-                                        {/* Branches Scope */}
                                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col shadow-sm">
                                             <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-300">
                                                 {t('شعب مجاز', 'Allowed Branches')}
@@ -676,7 +650,6 @@
                                                         </div>
                                                     )
                                                 })}
-                                                {scopesData.branches.length === 0 && <span className="text-[10px] text-slate-400">{t('اطلاعاتی یافت نشد', 'No data')}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -685,14 +658,13 @@
                         </div>
                     )}
                     
-                    {/* Bottom Action Bar */}
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
                         <div className="text-[10px] text-slate-500 font-medium">
                             {t('تغییرات دسترسی بلافاصله پس از ذخیره برای کاربران اعمال می‌گردد.', 'Permission changes apply immediately upon save.')}
                         </div>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" size="sm" onClick={() => setPermModal({ isOpen: false, role: null })}>{t('انصراف', 'Cancel')}</Button>
-                            <Button variant="primary" size="sm" icon={Save} onClick={handleSavePermissions} isLoading={isLoading}>{t('ذخیره تغییرات کلیه فرم‌ها', 'Save All Permissions')}</Button>
+                            <Button variant="primary" size="sm" icon={Save} onClick={handleSavePermissions} isLoading={isLoading}>{t('ذخیره کلیه تغییرات', 'Save All Changes')}</Button>
                         </div>
                     </div>
                 </div>
