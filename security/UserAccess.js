@@ -202,7 +202,8 @@
                     rPerms[p.role_id].push({ menu_id: p.menu_id, actions, scopes });
                 }
                 
-                if (p.user_id === user.id) {
+                // بررسی user_id جهت لود کردن دسترسی‌های مستقیم از دیتابیس
+                if (p.user_id && p.user_id === user.id) {
                     dPerms[p.menu_id] = { id: p.id, actions, scopes };
                 }
             });
@@ -320,8 +321,8 @@
     const handleSavePermissions = async () => {
       setIsLoading(true);
       try {
+          // ذخیره نقش‌های تخصیص یافته کاربر
           await supabase.from('sec_user_roles').delete().eq('user_id', user.id);
-          
           if (assignedRoles.length > 0) {
               const userRolesPayload = assignedRoles.map(rId => ({ user_id: user.id, role_id: rId }));
               await supabase.from('sec_user_roles').insert(userRolesPayload);
@@ -331,33 +332,46 @@
           const updates = [];
           const deletes = [...deletedPermIds];
 
+          // بررسی و ذخیره دسترسی‌های مستقیم
           Object.entries(directPerms).forEach(([menuId, data]) => {
-              const payload = { 
-                  user_id: user.id, 
-                  menu_id: menuId, 
-                  actions: JSON.stringify(data.actions || []), 
-                  data_scopes: JSON.stringify(data.scopes || {}) 
-              };
+              const hasActions = data.actions && data.actions.length > 0;
+              const hasScopes = data.scopes && Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0);
 
-              if (data.id) {
-                  updates.push({ id: data.id, ...payload });
-              } else {
-                  inserts.push(payload);
+              if (hasActions || hasScopes) {
+                  // ارسال بدون JSON.stringify اضافی، چون دیتابیس Supabase خودش jsonb را هندل می‌کند
+                  const payload = { 
+                      user_id: user.id, 
+                      menu_id: menuId, 
+                      actions: data.actions || [], 
+                      data_scopes: data.scopes || {} 
+                  };
+
+                  if (data.id) {
+                      updates.push({ id: data.id, ...payload });
+                  } else {
+                      inserts.push(payload);
+                  }
+              } else if (data.id) {
+                  deletes.push(data.id);
               }
           });
 
           if (deletes.length > 0) await supabase.from('sec_permissions').delete().in('id', deletes);
-          if (inserts.length > 0) await supabase.from('sec_permissions').insert(inserts);
+          if (inserts.length > 0) {
+              const { error } = await supabase.from('sec_permissions').insert(inserts);
+              if (error) throw error;
+          }
           if (updates.length > 0) {
               for (const u of updates) {
-                  await supabase.from('sec_permissions').update({ actions: u.actions, data_scopes: u.data_scopes }).eq('id', u.id);
+                  const { error } = await supabase.from('sec_permissions').update({ actions: u.actions, data_scopes: u.data_scopes }).eq('id', u.id);
+                  if (error) throw error;
               }
           }
           
           onClose();
       } catch (err) {
           console.error("Save perms error:", err);
-          alert(t('خطا در ذخیره دسترسی‌ها', 'Error saving permissions'));
+          alert(t('خطا در ذخیره دسترسی‌ها. مطمئن شوید جدول دیتابیس آپدیت شده است.', 'Error saving permissions. Ensure DB is updated.'));
       } finally {
           setIsLoading(false);
       }
@@ -613,7 +627,7 @@
                                         tooltip: t('حذف دسترسی مستقیم', 'Delete Direct Access'),
                                         show: (row) => row.breakdown.some(b => b.type === 'direct'),
                                         onClick: (row) => handleDeleteDirect(row.id),
-                                        className: 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
+                                        className: 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
                                     }
                                 ]}
                                 bulkActions={[
@@ -641,7 +655,7 @@
                                 <div className="text-[10px] text-slate-500 font-sans leading-tight">{currentDetailRow.path}</div>
                             </div>
 
-                            <div className="p-4 flex-1 overflow-y-auto space-y-5">
+                            <div className="p-4 flex-1 overflow-y-auto space-y-4">
                                 
                                 {currentDetailRow.breakdown.length > 1 && (
                                     <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -663,6 +677,18 @@
 
                                 {activeSource && (
                                     <>
+                                        {!isReadOnly && (
+                                            <div className="flex justify-between items-center bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 p-2.5 rounded shadow-sm">
+                                                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300">
+                                                    <Zap size={14} />
+                                                    <span className="font-bold text-[11px]">{t('شما در حال ویرایش دسترسی مستقیم هستید.', 'Editing Direct Access.')}</span>
+                                                </div>
+                                                <Button variant="danger-outline" size="sm" icon={Trash2} onClick={() => handleDeleteDirect(currentDetailRow.id)}>
+                                                    {t('حذف فرم', 'Delete Form')}
+                                                </Button>
+                                            </div>
+                                        )}
+
                                         {isReadOnly && (
                                             <div className="flex items-start gap-2 text-[10px] text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 p-2.5 rounded leading-relaxed border border-slate-200 dark:border-slate-700 shadow-sm">
                                                 <Info size={14} className="shrink-0 text-amber-500 mt-0.5"/>
