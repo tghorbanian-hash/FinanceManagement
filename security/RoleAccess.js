@@ -7,7 +7,8 @@
   const LucideIcons = window.LucideIcons || {};
   const { 
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
-    Check = FallbackIcon, AlertCircle = FallbackIcon
+    Check = FallbackIcon, Layers = FallbackIcon, AlertCircle = FallbackIcon,
+    CheckSquare = FallbackIcon, Trash2 = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -102,21 +103,84 @@
       }
     };
 
+    const getMenuLabel = useCallback((m) => {
+        if (!m) return '';
+        return isRtl 
+            ? (m.label_fa || m.title || m.name) 
+            : (m.label_en || m.title || m.name);
+    }, [isRtl]);
+
     const mappedTreeData = useMemo(() => {
-        return menusData.map(m => {
-            const hasActions = tempPermissions[m.id]?.actions?.length > 0;
-            const hasScopes = Object.keys(tempPermissions[m.id]?.scopes || {}).some(k => tempPermissions[m.id].scopes[k].length > 0);
-            const hasAccess = hasActions || hasScopes;
-            
-            const indicator = hasAccess ? '✔ ' : '';
-            const rawLabel = isRtl ? (m.label_fa || m.title || m.name || m.unique_code) : (m.label_en || m.title || m.name || m.unique_code);
-            
-            return {
-                ...m,
-                displayLabel: indicator + rawLabel
-            };
+        return menusData.map(m => ({
+            ...m,
+            displayLabel: getMenuLabel(m)
+        }));
+    }, [menusData, getMenuLabel]);
+
+    const getDescendantMenuIds = useCallback((parentId) => {
+        let ids = [];
+        const children = menusData.filter(m => m.parent_id === parentId);
+        children.forEach(child => {
+            ids.push(child.id);
+            ids = ids.concat(getDescendantMenuIds(child.id));
         });
-    }, [menusData, tempPermissions, isRtl]);
+        return ids;
+    }, [menusData]);
+
+    const handleGrantFullAccessRecursive = () => {
+        if (!selectedMenu) return;
+        
+        const targetIds = [selectedMenu.id, ...getDescendantMenuIds(selectedMenu.id)];
+        
+        setTempPermissions(prev => {
+            const nextPerms = { ...prev };
+            targetIds.forEach(id => {
+                const menuObj = menusData.find(m => m.id === id);
+                if (menuObj) {
+                    const availActions = typeof menuObj.available_actions === 'string' 
+                        ? JSON.parse(menuObj.available_actions || '[]') 
+                        : (menuObj.available_actions || []);
+                        
+                    nextPerms[id] = {
+                        id: prev[id]?.id || null,
+                        actions: [...availActions],
+                        scopes: prev[id]?.scopes || {}
+                    };
+                }
+            });
+            return nextPerms;
+        });
+        
+        showToastNotification(t('دسترسی کامل به این بخش و زیرمجموعه‌ها اعمال شد.', 'Full access granted to this section and descendants.'));
+    };
+
+    const handleRemoveAccessRecursive = () => {
+        if (!selectedMenu) return;
+        
+        const targetIds = [selectedMenu.id, ...getDescendantMenuIds(selectedMenu.id)];
+        
+        setTempPermissions(prev => {
+            const nextPerms = { ...prev };
+            targetIds.forEach(id => {
+                nextPerms[id] = {
+                    id: prev[id]?.id || null,
+                    actions: [],
+                    scopes: {}
+                };
+            });
+            return nextPerms;
+        });
+
+        showToastNotification(t('تمامی دسترسی‌های این بخش و زیرمجموعه‌ها حذف شد.', 'All access removed from this section and descendants.'));
+    };
+
+    const showToastNotification = (msg) => {
+        if (window.DesignSystem?.Toast || window.DSCore?.Toast) {
+            if (typeof alert !== 'undefined') {
+                console.log(msg);
+            }
+        }
+    };
 
     const handleSavePermissions = async () => {
       setIsLoading(true);
@@ -213,7 +277,6 @@
                             idField="id" 
                             parentField="parent_id" 
                             displayField="displayLabel" 
-                            secondaryField="unique_code" 
                             activeField="is_visible"
                             selectedId={selectedMenu?.id}
                             onSelect={setSelectedMenu}
@@ -231,12 +294,21 @@
                         </div>
                     ) : (
                         <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-200">
-                            <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
-                                <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                    {isRtl ? (selectedMenu.label_fa || selectedMenu.title || selectedMenu.name) : (selectedMenu.label_en || selectedMenu.title || selectedMenu.name)}
-                                </h3>
-                                {selectedMenu.unique_code && <p className="text-[10px] font-mono text-slate-400 mt-1 dir-ltr inline-block bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{selectedMenu.unique_code}</p>}
+                            <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                    <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                                        {getMenuLabel(selectedMenu)}
+                                    </h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Button size="sm" variant="outline" icon={CheckSquare} onClick={handleGrantFullAccessRecursive} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20 text-[11px] font-bold">
+                                        {t('دسترسی کامل شاخه', 'Full Branch Access')}
+                                    </Button>
+                                    <Button size="sm" variant="outline" icon={Trash2} onClick={handleRemoveAccessRecursive} className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 text-[11px] font-bold">
+                                        {t('حذف دسترسی شاخه', 'Remove Branch Access')}
+                                    </Button>
+                                </div>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-5 space-y-6">
