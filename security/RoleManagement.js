@@ -1,5 +1,4 @@
 /* Filename: security/RoleManagement.js */
-
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useCallback } = React;
@@ -23,7 +22,9 @@
     DataGrid = () => null, 
     TextField = () => null, 
     ToggleField = () => null, 
-    DatePicker = () => null
+    DatePicker = () => null,
+    useCalendarMode = () => 'jalali',
+    formatGlobalDate = (v) => v
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -32,6 +33,7 @@
   const RoleManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
+    const globalMode = useCalendarMode();
 
     const [roles, setRoles] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
@@ -86,10 +88,19 @@
       setIsLoading(true);
       try {
         const { data: rolesData } = await supabase.from('sec_roles').select('*').order('created_at', { ascending: false });
-        if (rolesData) setRoles(rolesData);
-
         const { data: pData } = await supabase.from('parties').select('id, first_name, last_name, company_name, party_type');
         const { data: uData } = await supabase.from('sec_users').select('id, username, is_active, party_id').eq('is_active', true);
+        const { data: userRolesData } = await supabase.from('sec_user_roles').select('role_id');
+        const { data: permsData } = await supabase.from('sec_permissions').select('role_id');
+
+        if (rolesData) {
+            const mappedRoles = rolesData.map(r => ({
+                ...r,
+                hasUsers: userRolesData ? userRolesData.some(ur => ur.role_id === r.id) : false,
+                hasPerms: permsData ? permsData.some(p => p.role_id === r.id) : false,
+            }));
+            setRoles(mappedRoles);
+        }
 
         if (uData) {
             const mappedUsers = uData.map(u => {
@@ -232,6 +243,8 @@
                 end_date: payload.end_date
             }]);
             
+            setRoles(prev => prev.map(r => r.id === userModal.role.id ? { ...r, hasUsers: true } : r));
+            
             setSelectedUserForAssign(null);
             setUserSearchTerm('');
             setAssignDates({ start_date: '', end_date: '' });
@@ -248,7 +261,14 @@
         try {
             const { error } = await supabase.from('sec_user_roles').delete().match({ user_id: row.id, role_id: userModal.role.id });
             if (error) throw error;
-            setAssignedUsers(prev => prev.filter(u => u.id !== row.id));
+            
+            setAssignedUsers(prev => {
+                const updated = prev.filter(u => u.id !== row.id);
+                if (updated.length === 0) {
+                    setRoles(rolesPrev => rolesPrev.map(r => r.id === userModal.role.id ? { ...r, hasUsers: false } : r));
+                }
+                return updated;
+            });
         } catch (err) {
             console.error(err);
         } finally {
@@ -273,16 +293,16 @@
     const columns = [
       { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
       { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '250px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
-      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span></div> : '-' },
-      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span></div> : '-' },
+      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' },
+      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' },
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '90px', type: 'toggle', onToggle: (row, val) => handleToggleActive(row, val) }
     ];
 
     const assignedUsersColumns = [
         { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
         { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: 'auto', render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px]">{val}</span> },
-        { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span></div> : '-' },
-        { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span></div> : '-' }
+        { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' },
+        { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' }
     ];
 
     const filteredRoles = useMemo(() => {
@@ -327,7 +347,6 @@
             language={language}
           />
 
-          {/* Gap exactly 4px (mt-1) below the Advanced Filter */}
           <div className="flex-1 min-h-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
             <DataGrid 
               data={filteredRoles}
@@ -340,8 +359,8 @@
               onRowDoubleClick={(row) => handleOpenRoleModal(row)}
               hideImport={true}
               actions={[
-                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: 'text-slate-400 hover:text-amber-600' },
-                { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: 'text-slate-400 hover:text-indigo-600' },
+                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: (row) => row.hasPerms ? 'text-emerald-500 hover:text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-emerald-600' },
+                { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: (row) => row.hasUsers ? 'text-indigo-500 hover:text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400 hover:text-indigo-600' },
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-blue-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
@@ -349,7 +368,7 @@
           </div>
         </div>
 
-        {RoleAccess && <RoleAccess isOpen={accessModal.isOpen} role={accessModal.role} onClose={() => setAccessModal({ isOpen: false, role: null })} language={language} />}
+        {RoleAccess && <RoleAccess isOpen={accessModal.isOpen} role={accessModal.role} onClose={() => { setAccessModal({ isOpen: false, role: null }); fetchInitialData(); }} language={language} />}
 
         <Modal isOpen={roleModal.isOpen} onClose={() => setRoleModal({ isOpen: false, data: null })} title={roleModal.data ? t('ویرایش نقش', 'Edit Role') : t('تعریف نقش جدید', 'New Role')} width="max-w-md" language={language}>
           <div className="p-4 flex flex-col gap-4">
@@ -379,14 +398,12 @@
         <Modal isOpen={userModal.isOpen} onClose={() => setUserModal({ isOpen: false, role: null })} title={`${t('تخصیص کاربران به نقش:', 'Assign Users to Role:')} ${userModal.role?.title || ''}`} width="max-w-3xl" language={language}>
             <div className="flex flex-col h-[550px]">
                 
-                {/* Form to Assign New User */}
                 <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 mx-4 mt-4 mb-3 relative z-[60]">
                     <label className="text-[12px] font-black text-indigo-800 dark:text-indigo-300 mb-3 block flex items-center gap-2">
                         <UserPlus size={16}/> {t('تخصیص کاربر جدید به نقش', 'Assign new user to role')}
                     </label>
                     
                     <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end relative">
-                        {/* User Selection Dropdown */}
                         <div className="md:col-span-5 relative">
                             <label className="block text-[10px] font-bold text-slate-500 mb-1">{t('انتخاب کاربر *', 'Select User *')}</label>
                             <div 
@@ -403,7 +420,6 @@
                                 <ChevronDown size={14} className="text-slate-400 shrink-0" />
                             </div>
 
-                            {/* Dropdown Menu */}
                             {isUserDropdownOpen && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-[100] flex flex-col">
                                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm z-10">
@@ -441,7 +457,6 @@
                             )}
                         </div>
 
-                        {/* Start Date */}
                         <div className="md:col-span-3">
                             <DatePicker 
                                 size="sm" 
@@ -453,7 +468,6 @@
                             />
                         </div>
                         
-                        {/* End Date */}
                         <div className="md:col-span-3">
                             <DatePicker 
                                 size="sm" 
@@ -465,7 +479,6 @@
                             />
                         </div>
 
-                        {/* Submit Button */}
                         <div className="md:col-span-1 flex justify-end">
                             <Button 
                                 variant="primary" 
@@ -478,17 +491,16 @@
                             />
                         </div>
                     </div>
-                    {/* Overlay to close custom dropdown when clicking outside */}
                     {isUserDropdownOpen && <div className="fixed inset-0 z-[90]" onClick={() => setIsUserDropdownOpen(false)}></div>}
                 </div>
 
-                {/* Assigned Users Grid */}
                 <div className="flex-1 overflow-hidden px-4 pb-4 bg-white dark:bg-slate-900 relative z-0 flex flex-col">
                     <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col">
                         <DataGrid 
                             columns={assignedUsersColumns} 
                             data={assignedUsers} 
                             isRtl={isRtl} 
+                            language={language}
                             isLoading={isLoading}
                             hideImport={true}
                             hideAdvancedSearch={true}
