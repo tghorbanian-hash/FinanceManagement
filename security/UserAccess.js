@@ -8,29 +8,30 @@
   const { 
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
     Check = FallbackIcon, AlertCircle = FallbackIcon, User = FallbackIcon,
-    Zap = FallbackIcon, X = FallbackIcon, Plus = FallbackIcon
+    Zap = FallbackIcon, X = FallbackIcon, Plus = FallbackIcon, ChevronLeft = FallbackIcon,
+    FileText = FallbackIcon, Info = FallbackIcon, Search = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
   const { 
       Modal = () => null, 
-      Button = () => null, 
-      Tree = () => null 
+      Button = () => null,
+      DataGrid = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
 
-  const ACTION_DICT = {
-    'read': { fa: 'مشاهده اطلاعات', en: 'Read' },
-    'create': { fa: 'ایجاد', en: 'Create' },
-    'update': { fa: 'ویرایش', en: 'Update' },
-    'delete': { fa: 'حذف', en: 'Delete' },
-    'print': { fa: 'چاپ اطلاعات', en: 'Print' },
-    'import': { fa: 'وارد نمودن اکسل', en: 'Excel Import' },
-    'export': { fa: 'خروجی اکسل', en: 'Excel Export' },
-    'approve': { fa: 'تغییر وضعیت / تایید', en: 'Approval' },
-    'assign_detail': { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' }
-  };
+  const AVAILABLE_ACTIONS = [
+    { id: 'read', label: { fa: 'مشاهده اطلاعات', en: 'Read' } },
+    { id: 'create', label: { fa: 'ایجاد', en: 'Create' } },
+    { id: 'update', label: { fa: 'ویرایش', en: 'Update' } },
+    { id: 'delete', label: { fa: 'حذف', en: 'Delete' } },
+    { id: 'print', label: { fa: 'چاپ اطلاعات', en: 'Print' } },
+    { id: 'import', label: { fa: 'وارد نمودن اکسل', en: 'Excel Import' } },
+    { id: 'export', label: { fa: 'خروجی اکسل', en: 'Excel Export' } },
+    { id: 'approve', label: { fa: 'تغییر وضعیت / تایید', en: 'Approval' } },
+    { id: 'assign_detail', label: { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' } }
+  ];
 
   const SCOPE_DICT = {
     'docTypes': { fa: 'انواع سند مجاز', en: 'Allowed Document Types' },
@@ -50,17 +51,22 @@
     const [globalRolePerms, setGlobalRolePerms] = useState({}); 
     const [directPerms, setDirectPerms] = useState({});
     
-    const [selectedMenu, setSelectedMenu] = useState(null);
-    const [activeSource, setActiveSource] = useState('direct');
+    const [selectedPermDetail, setSelectedPermDetail] = useState(null);
+    const [activeSourceId, setActiveSourceId] = useState(null);
+
+    const [formSearchTerm, setFormSearchTerm] = useState('');
+    const [showFormResults, setShowFormResults] = useState(false);
 
     useEffect(() => {
       if (isOpen && user) {
         fetchData();
       } else {
-        setSelectedMenu(null);
-        setActiveSource('direct');
+        setSelectedPermDetail(null);
+        setActiveSourceId(null);
         setAssignedRoles([]);
         setDirectPerms({});
+        setFormSearchTerm('');
+        setShowFormResults(false);
       }
     }, [isOpen, user]);
 
@@ -137,12 +143,74 @@
         return isRtl ? (m.label_fa || m.title || m.name) : (m.label_en || m.title || m.name);
     }, [isRtl]);
 
-    const mappedTreeData = useMemo(() => {
-        return menusData.map(m => ({
-            ...m,
-            displayLabel: getMenuLabel(m)
-        }));
+    const getMenuFullPath = useCallback((menuId) => {
+        const pathParts = [];
+        let current = menusData.find(m => m.id === menuId);
+        while (current) {
+            pathParts.unshift(getMenuLabel(current));
+            current = menusData.find(m => m.id === current.parent_id);
+        }
+        return pathParts.join(' / ');
     }, [menusData, getMenuLabel]);
+
+    const allSystemForms = useMemo(() => {
+        return menusData
+            .filter(m => !m.is_visible || m.route) 
+            .map(m => ({
+                id: m.id,
+                label: getMenuLabel(m),
+                fullPath: getMenuFullPath(m.id),
+                available_actions: typeof m.available_actions === 'string' ? JSON.parse(m.available_actions || '[]') : (m.available_actions || []),
+                available_scopes: typeof m.available_scopes === 'string' ? JSON.parse(m.available_scopes || '[]') : (m.available_scopes || [])
+            }));
+    }, [menusData, getMenuLabel, getMenuFullPath]);
+
+    const effectivePermissions = useMemo(() => {
+        const map = new Map();
+
+        assignedRoles.forEach(roleId => {
+            const rolePerms = globalRolePerms[roleId] || [];
+            const roleInfo = allRoles.find(r => r.id === roleId);
+            
+            rolePerms.forEach(p => {
+                const formInfo = allSystemForms.find(f => f.id === p.menu_id);
+                if (!formInfo) return; 
+                if (!map.has(p.menu_id)) {
+                    map.set(p.menu_id, { id: p.menu_id, path: formInfo.fullPath, name: formInfo.label, breakdown: [] });
+                }
+                map.get(p.menu_id).breakdown.push({ 
+                    sourceId: `role_${roleId}`, 
+                    type: 'role', 
+                    label: roleInfo?.title || roleId, 
+                    actions: p.actions, 
+                    scopes: p.scopes 
+                });
+            });
+        });
+
+        Object.entries(directPerms).forEach(([menuId, p]) => {
+            const formInfo = allSystemForms.find(f => f.id === menuId);
+            if (!formInfo) return;
+            if (!map.has(menuId)) {
+                map.set(menuId, { id: menuId, path: formInfo.fullPath, name: formInfo.label, breakdown: [] });
+            }
+            const existing = map.get(menuId).breakdown.find(b => b.type === 'direct');
+            if (existing) {
+                existing.actions = p.actions || []; 
+                existing.scopes = p.scopes || {};
+            } else {
+                map.get(menuId).breakdown.push({ 
+                    sourceId: 'direct', 
+                    type: 'direct', 
+                    label: t('دسترسی مستقیم', 'Direct Access'), 
+                    actions: p.actions || [], 
+                    scopes: p.scopes || {} 
+                });
+            }
+        });
+
+        return Array.from(map.values());
+    }, [assignedRoles, directPerms, allSystemForms, globalRolePerms, allRoles, t]);
 
     const handleSavePermissions = async () => {
       setIsLoading(true);
@@ -164,9 +232,20 @@
               
               if (hasActions || hasScopes) {
                   if (data.id) {
-                      updates.push({ id: data.id, user_id: user.id, menu_id: menuId, actions: data.actions, data_scopes: data.scopes });
+                      updates.push({ 
+                          id: data.id, 
+                          user_id: user.id, 
+                          menu_id: menuId, 
+                          actions: JSON.stringify(data.actions), 
+                          data_scopes: JSON.stringify(data.scopes) 
+                      });
                   } else {
-                      inserts.push({ user_id: user.id, menu_id: menuId, actions: data.actions, data_scopes: data.scopes });
+                      inserts.push({ 
+                          user_id: user.id, 
+                          menu_id: menuId, 
+                          actions: JSON.stringify(data.actions), 
+                          data_scopes: JSON.stringify(data.scopes) 
+                      });
                   }
               } else if (data.id) {
                   deletes.push(data.id);
@@ -197,71 +276,143 @@
 
     const handleRemoveRole = (roleId) => {
         setAssignedRoles(prev => prev.filter(id => id !== roleId));
-        if (activeSource === roleId) setActiveSource('direct');
     };
 
-    const toggleDirectAction = (actionId) => {
-        if (!selectedMenu || activeSource !== 'direct') return;
+    const handleAddDirectForm = (form) => {
+        if (directPerms[form.id]) {
+            alert(t('این فرم قبلاً در لیست دسترسی‌های مستقیم وجود دارد.', 'This form is already in direct permissions list.'));
+            return;
+        }
+        setDirectPerms(prev => ({
+            ...prev,
+            [form.id]: { id: null, actions: [], scopes: {} }
+        }));
+        setFormSearchTerm('');
+        setShowFormResults(false);
+        
+        const newRow = { id: form.id, path: form.fullPath, name: form.label, breakdown: [{ sourceId: 'direct', type: 'direct', label: t('دسترسی مستقیم', 'Direct Access'), actions: [], scopes: {} }] };
+        setSelectedPermDetail(newRow);
+        setActiveSourceId('direct');
+    };
+
+    const handleUpdateDirectPermission = (formId, type, key, value) => {
         setDirectPerms(prev => {
-            const current = prev[selectedMenu.id] || { actions: [], scopes: {} };
-            const hasAction = current.actions.includes(actionId);
+            const current = prev[formId] || { id: null, actions: [], scopes: {} };
+            let updatedActions = [...current.actions];
+            let updatedScopes = { ...current.scopes };
+
+            if (type === 'action') {
+                if (updatedActions.includes(key)) {
+                    updatedActions = updatedActions.filter(a => a !== key);
+                } else {
+                    updatedActions.push(key);
+                }
+            } else if (type === 'scope') {
+                let currentScopeArr = updatedScopes[key] || [];
+                if (currentScopeArr.includes(value)) {
+                    currentScopeArr = currentScopeArr.filter(v => v !== value);
+                } else {
+                    currentScopeArr.push(value);
+                }
+                updatedScopes[key] = currentScopeArr;
+            }
+
             return {
                 ...prev,
-                [selectedMenu.id]: {
+                [formId]: {
                     ...current,
-                    actions: hasAction ? current.actions.filter(a => a !== actionId) : [...current.actions, actionId]
+                    actions: updatedActions,
+                    scopes: updatedScopes
                 }
             };
         });
-    };
 
-    const toggleDirectScope = (scopeKey, valueId) => {
-        if (!selectedMenu || activeSource !== 'direct') return;
-        setDirectPerms(prev => {
-            const current = prev[selectedMenu.id] || { actions: [], scopes: {} };
-            const scopeArr = current.scopes[scopeKey] || [];
-            const hasVal = scopeArr.includes(valueId);
+        setSelectedPermDetail(prev => {
+            if (!prev || prev.id !== formId) return prev;
             return {
                 ...prev,
-                [selectedMenu.id]: {
-                    ...current,
-                    scopes: {
-                        ...current.scopes,
-                        [scopeKey]: hasVal ? scopeArr.filter(v => v !== valueId) : [...scopeArr, valueId]
+                breakdown: prev.breakdown.map(b => {
+                    if (b.sourceId !== 'direct') return b;
+                    let nextActions = [...b.actions];
+                    let nextScopes = { ...b.scopes };
+
+                    if (type === 'action') {
+                        if (nextActions.includes(key)) {
+                            nextActions = nextActions.filter(a => a !== key);
+                        } else {
+                            nextActions.push(key);
+                        }
+                    } else if (type === 'scope') {
+                        let arr = nextScopes[key] || [];
+                        if (arr.includes(value)) {
+                            arr = arr.filter(v => v !== value);
+                        } else {
+                            arr.push(value);
+                        }
+                        nextScopes[key] = arr;
                     }
-                }
+                    return { ...b, actions: nextActions, scopes: nextScopes };
+                })
             };
         });
     };
+
+    const formSearchResults = useMemo(() => {
+        if (!formSearchTerm) return [];
+        return allSystemForms.filter(f => f.fullPath.toLowerCase().includes(formSearchTerm.toLowerCase()));
+    }, [formSearchTerm, allSystemForms]);
+
+    const columns = [
+      { 
+        field: 'path', 
+        header_fa: 'مسیر و نام فرم', 
+        header_en: 'Form Path & Name', 
+        width: '45%',
+        render: (val, row) => (
+            <div className="flex flex-col py-0.5">
+                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{row.name}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{row.path}</span>
+            </div>
+        )
+      },
+      { 
+        field: 'source', 
+        header_fa: 'منابع دسترسی (برای جزییات کلیک کنید)', 
+        header_en: 'Access Sources (Click for details)', 
+        width: '55%',
+        render: (val, row) => (
+           <div className="flex flex-wrap gap-1">
+              {row.breakdown.map((s, idx) => {
+                 const isActive = selectedPermDetail?.id === row.id && activeSourceId === s.sourceId;
+                 return (
+                     <div 
+                        key={idx} 
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setSelectedPermDetail(row);
+                            setActiveSourceId(s.sourceId);
+                        }}
+                        className={`cursor-pointer px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all flex items-center gap-1 select-none
+                            ${isActive 
+                               ? (s.type === 'role' ? 'bg-purple-100 text-purple-700 border-purple-300 ring-1 ring-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-600' : 'bg-blue-100 text-blue-700 border-blue-300 ring-1 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-600')
+                               : (s.type === 'role' ? 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-slate-800 dark:border-slate-700 dark:text-purple-400' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-slate-800 dark:border-slate-700 dark:text-blue-400')}`}
+                     >
+                        {s.type === 'role' ? <Shield size={10}/> : <Zap size={10}/>} {s.label}
+                     </div>
+                 )
+              })}
+           </div>
+        )
+      }
+    ];
 
     if (!isOpen) return null;
 
-    const availActions = selectedMenu ? (typeof selectedMenu.available_actions === 'string' ? JSON.parse(selectedMenu.available_actions || '[]') : (selectedMenu.available_actions || [])) : [];
-    const availScopes = selectedMenu ? (typeof selectedMenu.available_scopes === 'string' ? JSON.parse(selectedMenu.available_scopes || '[]') : (selectedMenu.available_scopes || [])) : [];
-
-    const activeRolesForSelectedMenu = selectedMenu ? assignedRoles.filter(rId => {
-        const perms = globalRolePerms[rId] || [];
-        const menuPerm = perms.find(p => p.menu_id === selectedMenu.id);
-        return menuPerm && (menuPerm.actions.length > 0 || Object.keys(menuPerm.scopes).length > 0);
-    }) : [];
-
-    let currentViewActions = [];
-    let currentViewScopes = {};
-
-    if (selectedMenu) {
-        if (activeSource === 'direct') {
-            const dPerm = directPerms[selectedMenu.id] || { actions: [], scopes: {} };
-            currentViewActions = dPerm.actions;
-            currentViewScopes = dPerm.scopes;
-        } else {
-            const rPerms = globalRolePerms[activeSource] || [];
-            const menuPerm = rPerms.find(p => p.menu_id === selectedMenu.id);
-            if (menuPerm) {
-                currentViewActions = menuPerm.actions;
-                currentViewScopes = menuPerm.scopes;
-            }
-        }
-    }
+    const activeMenuInfo = selectedPermDetail ? allSystemForms.find(f => f.id === selectedPermDetail.id) : null;
+    const availActions = activeMenuInfo ? activeMenuInfo.available_actions : [];
+    const availScopes = activeMenuInfo ? activeMenuInfo.available_scopes : [];
+    const activeSource = selectedPermDetail ? selectedPermDetail.breakdown.find(b => b.sourceId === activeSourceId) : null;
+    const isReadOnly = activeSource ? activeSource.type === 'role' : true;
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`${t('مدیریت دسترسی‌های کاربر:', 'User Permissions Management:')} ${user?.username || ''}`} width="max-w-6xl" language={language}>
@@ -305,181 +456,185 @@
                 </div>
 
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-                    <div className="w-full md:w-1/3 border-r md:border-b-0 border-b border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/50 dark:bg-slate-900 overflow-hidden shrink-0 p-1">
-                        {menusData.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                                <AlertCircle size={24} className="opacity-50" />
-                                <span className="text-[11px]">{t('در حال دریافت یا منویی وجود ندارد.', 'Loading or no menus available.')}</span>
+                    
+                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border-r dark:border-slate-800 ${selectedPermDetail ? 'w-full md:w-7/12' : 'w-full'}`}>
+                        <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 relative z-[50]">
+                            <div className="relative">
+                                <input 
+                                    value={formSearchTerm} 
+                                    onChange={(e) => { setFormSearchTerm(e.target.value); setShowFormResults(true); }} 
+                                    placeholder={t('افزودن دسترسی مستقیم (نام فرم را جستجو کنید)...', 'Add direct perm (search form name)...')} 
+                                    className={`w-full h-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all ${isRtl ? 'pr-8 pl-2' : 'pl-8 pr-2'}`} 
+                                />
+                                <Search size={14} className={`absolute top-2.5 text-slate-400 ${isRtl ? 'right-2.5' : 'left-2.5'}`}/>
+                                {showFormResults && formSearchTerm && (
+                                   <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-xl max-h-48 overflow-y-auto z-[100]">
+                                      {formSearchResults.length > 0 ? formSearchResults.map(f => (
+                                         <div key={f.id} onClick={() => handleAddDirectForm(f)} className="p-2 hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer text-xs border-b border-slate-50 dark:border-slate-700 last:border-0">
+                                            <div className="font-bold text-slate-700 dark:text-slate-200">{f.label}</div>
+                                            <div className="text-[10px] text-slate-400">{f.fullPath}</div>
+                                         </div>
+                                      )) : <div className="p-2 text-xs text-slate-400 text-center">{t('موردی یافت نشد.', 'No items found.')}</div>}
+                                   </div>
+                                )}
+                                {showFormResults && formSearchTerm && <div className="fixed inset-0 z-[-1]" onClick={() => setShowFormResults(false)}></div>}
                             </div>
-                        ) : (
-                            <Tree 
-                                data={mappedTreeData}
-                                idField="id" 
-                                parentField="parent_id" 
-                                displayField="displayLabel" 
-                                activeField="is_visible"
-                                selectedId={selectedMenu?.id}
-                                onSelect={(menu) => {
-                                    setSelectedMenu(menu);
-                                    setActiveSource('direct');
-                                }}
+                        </div>
+
+                        <div className="flex-1 min-h-0">
+                            <DataGrid 
+                                data={effectivePermissions}
+                                columns={columns}
                                 language={language}
+                                selectable={false}
+                                onRowDoubleClick={(row) => {
+                                    setSelectedPermDetail(row);
+                                    if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
+                                }}
+                                actions={[
+                                    { 
+                                        icon: ChevronLeft, 
+                                        tooltip: t('مشاهده جزئیات', 'View Details'), 
+                                        onClick: (row) => {
+                                            setSelectedPermDetail(row);
+                                            if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
+                                        },
+                                        className: 'text-slate-400 hover:text-indigo-600'
+                                    }
+                                ]}
                             />
-                        )}
+                        </div>
                     </div>
 
-                    <div className="w-full md:w-2/3 flex flex-col overflow-hidden bg-white dark:bg-slate-900 relative">
-                        {!selectedMenu ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50/30 dark:bg-slate-900/50">
-                                <Shield size={48} className="opacity-10 mb-4 text-indigo-500" />
-                                <span className="text-[13px] font-bold text-slate-500">{t('برای بررسی یا تنظیم دسترسی، یک فرم از درخت انتخاب کنید.', 'Select a form from the tree to view or configure permissions.')}</span>
+                    {selectedPermDetail && (
+                        <div className="w-full md:w-5/12 border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10">
+                            <div className="absolute top-3 left-3">
+                                <button onClick={() => setSelectedPermDetail(null)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-500">
+                                    <X size={14}/>
+                                </button>
                             </div>
-                        ) : (
-                            <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-200">
-                                <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900 flex flex-col gap-3 shadow-sm z-10">
-                                    <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                        {getMenuLabel(selectedMenu)}
-                                    </h3>
-                                    
-                                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                                        <div 
-                                            onClick={() => setActiveSource('direct')}
-                                            className={`cursor-pointer px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all flex items-center gap-1.5
-                                            ${activeSource === 'direct' 
-                                                ? 'bg-blue-100 text-blue-700 border-blue-300 shadow-sm ring-1 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-600' 
-                                                : 'bg-white text-slate-600 border-slate-200 hover:bg-blue-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'}`}
-                                        >
-                                            <Zap size={12}/> {t('دسترسی مستقیم (قابل ویرایش)', 'Direct Access (Editable)')}
-                                        </div>
-                                        
-                                        {activeRolesForSelectedMenu.map(rId => {
-                                            const role = allRoles.find(r => r.id === rId);
-                                            const isActive = activeSource === rId;
-                                            return (
-                                                <div 
-                                                    key={rId}
-                                                    onClick={() => setActiveSource(rId)}
-                                                    className={`cursor-pointer px-3 py-1.5 rounded-md text-[11px] font-bold border transition-all flex items-center gap-1.5
-                                                    ${isActive 
-                                                        ? 'bg-purple-100 text-purple-700 border-purple-300 shadow-sm ring-1 ring-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-600' 
-                                                        : 'bg-white text-slate-600 border-slate-200 hover:bg-purple-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'}`}
-                                                >
-                                                    <Shield size={12}/> {t('نقش:', 'Role:')} {role?.title || rId}
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
+                            
+                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1">{selectedPermDetail.name}</h3>
+                                <div className="text-[10px] text-slate-500 font-mono leading-tight">{selectedPermDetail.path}</div>
+                            </div>
 
-                                <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-slate-50/30 dark:bg-slate-900/50">
-                                    {activeSource !== 'direct' && (
-                                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 px-3 py-2 rounded-lg text-[11px] flex items-center gap-2 shadow-sm font-medium">
-                                            <Lock size={14} className="shrink-0"/>
-                                            {t('شما در حال مشاهده دسترسی‌های به ارث رسیده از یک نقش هستید. این موارد فقط در بخش "مدیریت نقش‌ها" قابل تغییر است.', 'Viewing inherited role permissions. These can only be changed in Role Management.')}
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700">
-                                            <div className={`w-6 h-6 rounded flex items-center justify-center ${activeSource === 'direct' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400'}`}><Shield size={14}/></div>
-                                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('عملیات مجاز (Actions)', 'Allowed Actions')}</span>
-                                        </div>
-                                        
-                                        {availActions.length === 0 ? (
-                                            <div className="text-[11px] text-slate-400 italic bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm">
-                                                {t('هیچ عملیات خاصی برای این فرم تعریف نشده است.', 'No specific actions defined for this form.')}
+                            <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                                {activeSource ? (
+                                    <>
+                                        <div className={`p-2.5 rounded-lg border flex items-center gap-2 shadow-sm ${isReadOnly ? 'bg-purple-50 border-purple-100 text-purple-800 dark:bg-purple-950/20 dark:border-purple-900/50 dark:text-purple-400' : 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-950/20 dark:border-blue-900/50 dark:text-blue-400'}`}>
+                                            {isReadOnly ? <Shield size={14}/> : <Zap size={14}/>}
+                                            <div className="font-bold text-[11px]">
+                                                {t('منبع دسترسی فعلی:', 'Current Source:')} {activeSource.label}
                                             </div>
-                                        ) : (
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                {availActions.map(actionId => {
-                                                    const isChecked = currentViewActions.includes(actionId);
-                                                    const labelObj = ACTION_DICT[actionId];
-                                                    const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actionId;
-                                                    
-                                                    if (activeSource !== 'direct') {
-                                                        return (
-                                                            <div key={actionId} className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all select-none bg-white dark:bg-slate-800 shadow-sm ${isChecked ? 'border-purple-300 dark:border-purple-700 opacity-100' : 'border-slate-100 dark:border-slate-700 opacity-40'}`}>
-                                                                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-purple-500 border-purple-500 text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-transparent'}`}>
-                                                                    <Check size={12} strokeWidth={3}/>
-                                                                </div>
-                                                                <span className={`text-[12px] ${isChecked ? 'font-bold text-purple-900 dark:text-purple-300' : 'text-slate-500 font-medium'}`}>
-                                                                    {displayLabel}
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    }
+                                        </div>
 
-                                                    return (
-                                                        <label key={actionId} onClick={() => toggleDirectAction(actionId)} className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border transition-all select-none shadow-sm ${isChecked ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}>
-                                                            <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
-                                                                {isChecked && <Check size={12} strokeWidth={3}/>}
-                                                            </div>
-                                                            <span className={`text-[12px] ${isChecked ? 'font-bold text-blue-900 dark:text-blue-300' : 'text-slate-600 dark:text-slate-400 font-medium'}`}>
-                                                                {displayLabel}
-                                                            </span>
-                                                        </label>
-                                                    )
-                                                })}
+                                        {isReadOnly && (
+                                            <div className="flex items-start gap-2 text-[10px] text-slate-500 bg-slate-100 dark:bg-slate-800 p-2 rounded leading-relaxed">
+                                                <Info size={14} className="shrink-0 text-amber-500"/>
+                                                {t('این دسترسی‌ها از نقش به ارث رسیده‌اند و در اینجا قابل تغییر نیستند. برای ویرایش باید به فرم مدیریت نقش‌ها بروید.', 'Inherited from role. To edit, please use the Role Management screen.')}
                                             </div>
                                         )}
-                                    </div>
 
-                                    {availScopes.length > 0 && (
-                                        <div className="space-y-4 pt-2">
-                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-200 dark:border-slate-700">
-                                                <div className={`w-6 h-6 rounded flex items-center justify-center ${activeSource === 'direct' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400'}`}><Lock size={14}/></div>
-                                                <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('محدودیت دسترسی به داده‌ها', 'Data Scope Restrictions')}</span>
+                                        <div className="space-y-2">
+                                            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                                                {t('عملیات مجاز (Actions)', 'Allowed Actions')}
                                             </div>
-                                            
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                                            {availActions.length === 0 ? (
+                                                <div className="text-[10px] text-slate-400 italic p-2 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
+                                                    {t('عملیاتی برای این فرم تعریف نشده است.', 'No actions defined.')}
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {availActions.map(actId => {
+                                                        const isChecked = activeSource.actions.includes(actId);
+                                                        const lbl = AVAILABLE_ACTIONS.find(a => a.id === actId)?.label[isRtl ? 'fa' : 'en'] || actId;
+
+                                                        if (isReadOnly) {
+                                                            return (
+                                                                <div key={actId} className={`flex items-center gap-2 p-2 rounded-lg border bg-white dark:bg-slate-800 ${isChecked ? 'border-purple-200 opacity-100' : 'border-slate-100 dark:border-slate-800 opacity-40'}`}>
+                                                                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-purple-500 border-purple-500 text-white' : 'text-transparent'}`}>
+                                                                        <Check size={10} strokeWidth={3}/>
+                                                                    </div>
+                                                                    <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{lbl}</span>
+                                                                </div>
+                                                            );
+                                                        }
+
+                                                        return (
+                                                            <label 
+                                                                key={actId} 
+                                                                onClick={() => handleUpdateDirectPermission(selectedPermDetail.id, 'action', actId)}
+                                                                className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all bg-white dark:bg-slate-800 ${isChecked ? 'border-blue-400 ring-1 ring-blue-100 dark:ring-0' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
+                                                            >
+                                                                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                                    {isChecked && <Check size={10} strokeWidth={3}/>}
+                                                                </div>
+                                                                <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300">{lbl}</span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {availScopes.length > 0 && (
+                                            <div className="space-y-3 pt-2 border-t border-slate-200 dark:border-slate-800">
+                                                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                                                    {t('محدودیت دسترسی به داده‌ها', 'Data Scopes')}
+                                                </div>
+                                                
                                                 {availScopes.map(scopeId => {
                                                     const scopeDataList = scopesData[scopeId] || [];
-                                                    const labelObj = SCOPE_DICT[scopeId];
-                                                    const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : scopeId;
-                                                    
+                                                    const displayLabel = SCOPE_DICT[scopeId]?.[isRtl ? 'fa' : 'en'] || scopeId;
+
                                                     return (
-                                                        <div key={scopeId} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col shadow-sm">
-                                                            <div className="px-3 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-300 flex justify-between items-center">
-                                                                <span>{displayLabel}</span>
-                                                                {activeSource !== 'direct' && <Shield size={12} className="text-purple-400 opacity-50"/>}
+                                                        <div key={scopeId} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
+                                                            <div className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-400">
+                                                                {displayLabel}
                                                             </div>
-                                                            <div className="p-3 flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                                                            <div className="p-2 flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
                                                                 {scopeDataList.length > 0 ? scopeDataList.map(item => {
-                                                                    const isSelected = currentViewScopes[scopeId]?.includes(item.id);
-                                                                    
-                                                                    if (activeSource !== 'direct') {
-                                                                        if (!isSelected) return null; 
+                                                                    const isSelected = activeSource.scopes?.[scopeId]?.includes(item.id);
+
+                                                                    if (isReadOnly) {
+                                                                        if (!isSelected) return null;
                                                                         return (
-                                                                            <div key={item.id} className="px-2.5 py-1 text-[11px] rounded-full border border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300 select-none flex items-center gap-1.5 font-bold shadow-sm">
-                                                                                <Check size={10} strokeWidth={3}/> {item.title}
-                                                                            </div>
-                                                                        )
+                                                                            <span key={item.id} className="px-2 py-0.5 text-[10px] rounded bg-purple-50 text-purple-700 border border-purple-100 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-900/50 font-bold flex items-center gap-1">
+                                                                                <Check size={8} strokeWidth={3}/> {item.title}
+                                                                            </span>
+                                                                        );
                                                                     }
 
                                                                     return (
-                                                                        <div key={item.id} onClick={() => toggleDirectScope(scopeId, item.id)} className={`px-2.5 py-1 text-[11px] rounded-full border cursor-pointer select-none transition-all flex items-center gap-1.5 ${isSelected ? 'bg-blue-500 border-blue-500 text-white font-bold shadow-sm' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-blue-300'}`}>
-                                                                            {isSelected && <Check size={10} strokeWidth={3}/>}
+                                                                        <div 
+                                                                            key={item.id} 
+                                                                            onClick={() => handleUpdateDirectPermission(selectedPermDetail.id, 'scope', scopeId, item.id)}
+                                                                            className={`px-2 py-0.5 text-[10px] rounded border cursor-pointer select-none transition-all flex items-center gap-1 ${isSelected ? 'bg-blue-500 border-blue-500 text-white font-bold' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-300'}`}
+                                                                        >
+                                                                            {isSelected && <Check size={8} strokeWidth={3}/>}
                                                                             {item.title}
                                                                         </div>
-                                                                    )
+                                                                    );
                                                                 }) : (
                                                                     <span className="text-[10px] text-slate-400 italic">{t('داده‌ای یافت نشد.', 'No data found.')}</span>
                                                                 )}
-                                                                {activeSource !== 'direct' && (!currentViewScopes[scopeId] || currentViewScopes[scopeId].length === 0) && (
-                                                                    <span className="text-[10px] text-slate-400 italic">{t('محدودیتی اعمال نشده است.', 'No restrictions applied.')}</span>
-                                                                )}
                                                             </div>
                                                         </div>
-                                                    )
+                                                    );
                                                 })}
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="text-center text-slate-400 text-xs mt-10">
+                                        {t('لطفا یکی از منابع دسترسی (بج‌های رنگی) را از جدول انتخاب کنید.', 'Please select one of the access source badges from the grid.')}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
                 
                 <div className="p-3 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0">
