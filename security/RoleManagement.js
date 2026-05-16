@@ -1,4 +1,8 @@
-/* Filename: security/RoleManagement.js */
+/* * Filename: security/RoleManagement.js 
+ * * [DB Requirement]: Please ensure `sec_user_roles` table has `start_date` (DATE) and `end_date` (DATE) columns.
+ * ALTER TABLE public.sec_user_roles ADD COLUMN IF NOT EXISTS start_date DATE;
+ * ALTER TABLE public.sec_user_roles ADD COLUMN IF NOT EXISTS end_date DATE;
+ */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useCallback } = React;
@@ -9,7 +13,8 @@
     Shield = FallbackIcon, Users = FallbackIcon, Edit = FallbackIcon, 
     Trash2 = FallbackIcon, Save = FallbackIcon, Plus = FallbackIcon, 
     Search = FallbackIcon, AlertTriangle = FallbackIcon, UserPlus = FallbackIcon,
-    UserMinus = FallbackIcon, Calendar = FallbackIcon
+    UserMinus = FallbackIcon, Calendar = FallbackIcon, ChevronDown = FallbackIcon,
+    Check = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -41,10 +46,14 @@
     const [roleModal, setRoleModal] = useState({ isOpen: false, data: null });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, data: null });
     
+    // User Assignment States
     const [userModal, setUserModal] = useState({ isOpen: false, role: null });
     const [assignedUsers, setAssignedUsers] = useState([]);
+    
+    const [selectedUserForAssign, setSelectedUserForAssign] = useState(null);
+    const [assignDates, setAssignDates] = useState({ start_date: '', end_date: '' });
     const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [showUserResults, setShowUserResults] = useState(false);
+    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
     const [accessModal, setAccessModal] = useState({ isOpen: false, role: null });
 
@@ -82,8 +91,20 @@
         const { data: rolesData } = await supabase.from('sec_roles').select('*').order('created_at', { ascending: false });
         if (rolesData) setRoles(rolesData);
 
-        const { data: usersData } = await supabase.from('sec_users').select('id, username, is_active').eq('is_active', true);
-        if (usersData) setAllUsers(usersData);
+        const { data: pData } = await supabase.from('parties').select('id, first_name, last_name, company_name, party_type');
+        const { data: uData } = await supabase.from('sec_users').select('id, username, is_active, party_id').eq('is_active', true);
+
+        if (uData) {
+            const mappedUsers = uData.map(u => {
+                const p = pData?.find(x => x.id === u.party_id);
+                let fullName = '';
+                if (p) {
+                    fullName = p.party_type === 'legal' ? (p.company_name || '') : `${p.first_name || ''} ${p.last_name || ''}`.trim();
+                }
+                return { ...u, fullName: fullName || '-' };
+            });
+            setAllUsers(mappedUsers);
+        }
       } catch (err) {
         console.error('Fetch Roles Data Error:', err);
       } finally {
@@ -171,13 +192,19 @@
     const openUserModal = async (role) => {
         setIsLoading(true);
         setUserModal({ isOpen: true, role });
+        setSelectedUserForAssign(null);
+        setAssignDates({ start_date: '', end_date: '' });
         setUserSearchTerm('');
-        setShowUserResults(false);
+        setIsUserDropdownOpen(false);
+
         try {
-            const { data: userRoles } = await supabase.from('sec_user_roles').select('user_id').eq('role_id', role.id);
+            const { data: userRoles } = await supabase.from('sec_user_roles').select('user_id, start_date, end_date').eq('role_id', role.id);
             if (userRoles) {
-                const assignedIds = userRoles.map(ur => ur.user_id);
-                setAssignedUsers(allUsers.filter(u => assignedIds.includes(u.id)));
+                const assigned = userRoles.map(ur => {
+                    const u = allUsers.find(x => x.id === ur.user_id);
+                    return u ? { ...u, start_date: ur.start_date, end_date: ur.end_date } : null;
+                }).filter(Boolean);
+                setAssignedUsers(assigned);
             } else {
                 setAssignedUsers([]);
             }
@@ -188,14 +215,30 @@
         }
     };
 
-    const assignUser = async (userId) => {
+    const assignUser = async () => {
+        if (!selectedUserForAssign) return;
         setIsLoading(true);
         try {
-            const { error } = await supabase.from('sec_user_roles').insert([{ user_id: userId, role_id: userModal.role.id }]);
+            const payload = {
+                user_id: selectedUserForAssign.id,
+                role_id: userModal.role.id,
+                start_date: assignDates.start_date || null,
+                end_date: assignDates.end_date || null
+            };
+            
+            const { error } = await supabase.from('sec_user_roles').insert([payload]);
             if (error) throw error;
-            setAssignedUsers(prev => [...prev, allUsers.find(u => u.id === userId)]);
+            
+            setAssignedUsers(prev => [...prev, {
+                ...selectedUserForAssign,
+                start_date: payload.start_date,
+                end_date: payload.end_date
+            }]);
+            
+            setSelectedUserForAssign(null);
             setUserSearchTerm('');
-            setShowUserResults(false);
+            setAssignDates({ start_date: '', end_date: '' });
+            setIsUserDropdownOpen(false);
         } catch (err) {
             console.error(err);
         } finally {
@@ -216,15 +259,19 @@
         }
     };
 
-    const searchResults = useMemo(() => {
-        if (!userSearchTerm) return [];
-        const term = userSearchTerm.toLowerCase();
+    const unassignedUsers = useMemo(() => {
         const assignedIds = assignedUsers.map(u => u.id);
-        return allUsers.filter(u => 
-            !assignedIds.includes(u.id) && 
-            u.username.toLowerCase().includes(term)
+        return allUsers.filter(u => !assignedIds.includes(u.id));
+    }, [allUsers, assignedUsers]);
+
+    const searchResults = useMemo(() => {
+        if (!userSearchTerm) return unassignedUsers;
+        const term = userSearchTerm.toLowerCase();
+        return unassignedUsers.filter(u => 
+            (u.username && u.username.toLowerCase().includes(term)) || 
+            (u.fullName && u.fullName.toLowerCase().includes(term))
         );
-    }, [userSearchTerm, allUsers, assignedUsers]);
+    }, [userSearchTerm, unassignedUsers]);
 
     const columns = [
       { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
@@ -235,8 +282,10 @@
     ];
 
     const assignedUsersColumns = [
-        { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '150px', render: (val) => <span className="font-mono text-[11px] text-slate-700 dark:text-slate-300">{val}</span> },
-        { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '100px', render: (val) => <div className="flex justify-center"><input type="checkbox" checked={val} readOnly className="w-4 h-4 text-indigo-600 rounded border-slate-300 cursor-default" /></div> }
+        { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
+        { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: 'auto', render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px]">{val}</span> },
+        { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span></div> : '-' },
+        { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span></div> : '-' }
     ];
 
     const filteredRoles = useMemo(() => {
@@ -281,7 +330,8 @@
             language={language}
           />
 
-          <div className="flex-1 min-h-0 mt-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
+          {/* Gap exactly 4px (mt-1) below the Advanced Filter */}
+          <div className="flex-1 min-h-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
             <DataGrid 
               data={filteredRoles}
               columns={columns} 
@@ -328,32 +378,114 @@
           </div>
         </Modal>
 
-        <Modal isOpen={userModal.isOpen} onClose={() => setUserModal({ isOpen: false, role: null })} title={`${t('تخصیص کاربران به نقش:', 'Assign Users to Role:')} ${userModal.role?.title || ''}`} width="max-w-lg" language={language}>
-            <div className="flex flex-col h-[500px]">
-                <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-lg p-3 mx-4 mt-4 mb-3 relative z-[60]">
-                    <label className="text-[11px] font-bold text-indigo-800 dark:text-indigo-300 mb-2 block flex items-center gap-2"><UserPlus size={14}/> {t('افزودن کاربر جدید به این نقش', 'Add user to this role')}</label>
-                    <div className="relative">
-                        <input 
-                            value={userSearchTerm} 
-                            onChange={(e) => { setUserSearchTerm(e.target.value); setShowUserResults(true); }} 
-                            placeholder={t('جستجوی نام کاربری...', 'Search username...')} 
-                            className={`w-full h-9 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-700 rounded text-[11px] outline-none focus:ring-2 focus:ring-indigo-300 transition-all ${isRtl ? 'pr-9 pl-2' : 'pl-9 pr-2'} text-slate-800 dark:text-slate-200`} 
-                        />
-                        <Search size={16} className={`absolute top-2.5 text-indigo-400 ${isRtl ? 'right-2.5' : 'left-2.5'}`}/>
-                        
-                        {showUserResults && userSearchTerm && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl max-h-48 overflow-y-auto z-[100]">
-                                {searchResults.length > 0 ? searchResults.map(u => (
-                                    <div key={u.id} onClick={() => assignUser(u.id)} className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 cursor-pointer flex items-center justify-between border-b border-slate-50 dark:border-slate-700/50 last:border-0 group transition-colors">
-                                        <span className="text-[11px] font-mono font-medium text-slate-700 dark:text-slate-300 dir-ltr">{u.username}</span>
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/50 p-1 rounded"><Plus size={14}/></div>
+        {/* User Assignment Modal */}
+        <Modal isOpen={userModal.isOpen} onClose={() => setUserModal({ isOpen: false, role: null })} title={`${t('تخصیص کاربران به نقش:', 'Assign Users to Role:')} ${userModal.role?.title || ''}`} width="max-w-3xl" language={language}>
+            <div className="flex flex-col h-[550px]">
+                
+                {/* Form to Assign New User */}
+                <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 mx-4 mt-4 mb-3 relative z-[60]">
+                    <label className="text-[12px] font-black text-indigo-800 dark:text-indigo-300 mb-3 block flex items-center gap-2">
+                        <UserPlus size={16}/> {t('تخصیص کاربر جدید به نقش', 'Assign new user to role')}
+                    </label>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end relative">
+                        {/* User Selection Dropdown */}
+                        <div className="md:col-span-5 relative">
+                            <label className="block text-[10px] font-bold text-slate-500 mb-1">{t('انتخاب کاربر *', 'Select User *')}</label>
+                            <div 
+                                className={`w-full min-h-[36px] bg-white dark:bg-slate-900 border ${selectedUserForAssign ? 'border-emerald-400' : 'border-indigo-200 dark:border-indigo-700'} rounded-lg text-[11px] flex items-center justify-between cursor-pointer px-3`}
+                                onClick={() => setIsUserDropdownOpen(true)}
+                            >
+                                {selectedUserForAssign ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{selectedUserForAssign.fullName}</span>
                                     </div>
-                                )) : <div className="p-3 text-center text-[11px] text-slate-400">{t('کاربری یافت نشد.', 'No user found.')}</div>}
+                                ) : (
+                                    <span className="text-slate-400">{t('انتخاب یا جستجوی کاربر...', 'Select or search user...')}</span>
+                                )}
+                                <ChevronDown size={14} className="text-slate-400 shrink-0" />
                             </div>
-                        )}
-                        {showUserResults && userSearchTerm && <div className="fixed inset-0 z-[-1]" onClick={() => setShowUserResults(false)}></div>}
+
+                            {/* Dropdown Menu */}
+                            {isUserDropdownOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-[100] flex flex-col">
+                                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm z-10">
+                                        <div className="relative">
+                                            <input 
+                                                autoFocus
+                                                value={userSearchTerm} 
+                                                onChange={(e) => setUserSearchTerm(e.target.value)} 
+                                                placeholder={t('جستجوی نام یا نام کاربری...', 'Search name or username...')} 
+                                                className={`w-full h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-[11px] outline-none focus:border-indigo-400 px-2 ${isRtl ? 'pr-7' : 'pl-7'}`} 
+                                            />
+                                            <Search size={14} className={`absolute top-2 text-slate-400 ${isRtl ? 'right-2' : 'left-2'}`}/>
+                                        </div>
+                                    </div>
+                                    <div className="p-1">
+                                        {searchResults.length > 0 ? searchResults.map(u => (
+                                            <div 
+                                                key={u.id} 
+                                                onClick={() => {
+                                                    setSelectedUserForAssign(u);
+                                                    setIsUserDropdownOpen(false);
+                                                    setUserSearchTerm('');
+                                                }} 
+                                                className="px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 cursor-pointer rounded-lg flex items-center justify-between group transition-colors"
+                                            >
+                                                <div className="flex flex-col w-full">
+                                                    <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{u.fullName}</span>
+                                                    <span className="text-[10px] text-slate-400 dir-ltr text-left inline-block">{u.username}</span>
+                                                </div>
+                                                <Check size={14} className="text-indigo-500 opacity-0 group-hover:opacity-100 shrink-0" />
+                                            </div>
+                                        )) : <div className="p-3 text-center text-[11px] text-slate-400">{t('کاربری یافت نشد.', 'No user found.')}</div>}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Start Date */}
+                        <div className="md:col-span-3">
+                            <DatePicker 
+                                size="sm" 
+                                label={t('از تاریخ (اختیاری)', 'From Date (Optional)')} 
+                                value={assignDates.start_date} 
+                                onChange={val => setAssignDates({...assignDates, start_date: val})} 
+                                isRtl={isRtl} 
+                                language={language} 
+                            />
+                        </div>
+                        
+                        {/* End Date */}
+                        <div className="md:col-span-3">
+                            <DatePicker 
+                                size="sm" 
+                                label={t('تا تاریخ (اختیاری)', 'To Date (Optional)')} 
+                                value={assignDates.end_date} 
+                                onChange={val => setAssignDates({...assignDates, end_date: val})} 
+                                isRtl={isRtl} 
+                                language={language} 
+                            />
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="md:col-span-1 flex justify-end">
+                            <Button 
+                                variant="primary" 
+                                icon={Plus} 
+                                className="w-full h-[36px] flex justify-center items-center px-0" 
+                                disabled={!selectedUserForAssign}
+                                onClick={assignUser}
+                                isLoading={isLoading}
+                                title={t('افزودن', 'Add')}
+                            />
+                        </div>
                     </div>
+                    {/* Overlay to close custom dropdown when clicking outside */}
+                    {isUserDropdownOpen && <div className="fixed inset-0 z-[90]" onClick={() => setIsUserDropdownOpen(false)}></div>}
                 </div>
+
+                {/* Assigned Users Grid */}
                 <div className="flex-1 overflow-hidden px-4 pb-4 bg-white dark:bg-slate-900 relative z-0 flex flex-col">
                     <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col">
                         <DataGrid 
@@ -369,6 +501,7 @@
                         />
                     </div>
                 </div>
+                
                 <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end shrink-0">
                     <Button variant="outline" size="sm" onClick={() => setUserModal({ isOpen: false, role: null })}>{t('بستن', 'Close')}</Button>
                 </div>
