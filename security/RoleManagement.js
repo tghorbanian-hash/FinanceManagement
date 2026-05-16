@@ -13,6 +13,11 @@
     Check = FallbackIcon
   } = LucideIcons;
 
+  // استخراج توابع تقویم دقیقاً مطابق با استاندارد دیزاین سیستم
+  const Core = window.DSCore || window.DesignSystem || {};
+  const formatGlobalDate = Core.formatGlobalDate || ((v) => v);
+  const useCalendarMode = Core.useCalendarMode || (() => 'jalali');
+
   const DesignSystem = window.DesignSystem || window.DSCore || {};
   const { 
     Button = () => null, 
@@ -22,9 +27,7 @@
     DataGrid = () => null, 
     TextField = () => null, 
     ToggleField = () => null, 
-    DatePicker = () => null,
-    useCalendarMode = () => 'jalali',
-    formatGlobalDate = (v) => v
+    DatePicker = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -33,7 +36,9 @@
   const RoleManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
-    const globalMode = useCalendarMode();
+    
+    // دریافت مود تقویم از کاستوم هوک گلوبال سیستم
+    const globalCalendarMode = useCalendarMode();
 
     const [roles, setRoles] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
@@ -292,17 +297,18 @@
 
     const columns = [
       { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
-      { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '250px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
-      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' },
-      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' },
+      { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '200px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
+      { field: 'description', header_fa: 'توضیحات', header_en: 'Description', width: 'auto', minWidth: '180px', render: (val) => <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block w-full" title={val}>{val || '-'}</span> },
+      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
+      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '90px', type: 'toggle', onToggle: (row, val) => handleToggleActive(row, val) }
     ];
 
     const assignedUsersColumns = [
         { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
         { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: 'auto', render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px]">{val}</span> },
-        { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' },
-        { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalMode)}</span></div> : '-' }
+        { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
+        { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' }
     ];
 
     const filteredRoles = useMemo(() => {
@@ -349,7 +355,6 @@
 
           <div className="flex-1 min-h-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
             <DataGrid 
-              key={`roles_grid_${language}_${globalMode}`}
               data={filteredRoles}
               columns={columns} 
               language={language}
@@ -360,9 +365,9 @@
               onRowDoubleClick={(row) => handleOpenRoleModal(row)}
               hideImport={true}
               actions={[
-                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: (row) => row.hasPerms ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-400 hover:text-emerald-600' },
-                { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: (row) => row.hasUsers ? 'text-indigo-500 hover:text-indigo-600' : 'text-slate-400 hover:text-indigo-600' },
-                { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-blue-600' },
+                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: (row) => row.hasPerms ? 'text-emerald-500 hover:text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-emerald-600' },
+                { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: (row) => row.hasUsers ? 'text-blue-500 hover:text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'text-slate-400 hover:text-blue-600' },
+                { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
             />
@@ -395,7 +400,6 @@
           </div>
         </Modal>
 
-        {/* User Assignment Modal */}
         <Modal isOpen={userModal.isOpen} onClose={() => setUserModal({ isOpen: false, role: null })} title={`${t('تخصیص کاربران به نقش:', 'Assign Users to Role:')} ${userModal.role?.title || ''}`} width="max-w-3xl" language={language}>
             <div className="flex flex-col h-[550px]">
                 
@@ -498,7 +502,6 @@
                 <div className="flex-1 overflow-hidden px-4 pb-4 bg-white dark:bg-slate-900 relative z-0 flex flex-col">
                     <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col">
                         <DataGrid 
-                            key={`users_grid_${language}_${globalMode}`}
                             columns={assignedUsersColumns} 
                             data={assignedUsers} 
                             language={language}
