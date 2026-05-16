@@ -7,15 +7,14 @@
   const LucideIcons = window.LucideIcons || {};
   const { 
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
-    Check = FallbackIcon, Layers = FallbackIcon, Search = FallbackIcon, 
-    AlertCircle = FallbackIcon
+    Check = FallbackIcon, AlertCircle = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
   const { 
       Modal = () => null, 
       Button = () => null, 
-      TreeView = () => null 
+      Tree = () => null 
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -47,9 +46,6 @@
     
     const [selectedMenu, setSelectedMenu] = useState(null);
     const [tempPermissions, setTempPermissions] = useState({});
-    
-    const [searchTerm, setSearchTerm] = useState('');
-    const [expandAllToggle, setExpandAllToggle] = useState(false);
 
     useEffect(() => {
       if (isOpen && role) {
@@ -57,14 +53,13 @@
       } else {
         setSelectedMenu(null);
         setTempPermissions({});
-        setSearchTerm('');
       }
     }, [isOpen, role]);
 
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data: dbMenus, error: menuErr } = await supabase.from('menus').select('*').order('id', { ascending: true });
+        const { data: dbMenus, error: menuErr } = await supabase.from('menus').select('*').order('display_order', { ascending: true });
         if (!menuErr && dbMenus) setMenusData(dbMenus);
 
         const safeFetchDocTypes = async () => {
@@ -107,46 +102,21 @@
       }
     };
 
-    const getMenuLabel = useCallback((m) => {
-        if (!m) return '';
-        return isRtl 
-            ? (m.label_fa || m.title_fa || m.title || m.name || m.unique_code) 
-            : (m.label_en || m.title_en || m.title || m.name || m.unique_code);
-    }, [isRtl]);
-
-    const buildTree = (flatData, parentId = null) => {
-        return flatData
-            .filter(item => item.parent_id === parentId)
-            .map(item => ({
-                ...item,
-                label: getMenuLabel(item),
-                children: buildTree(flatData, item.id)
-            }))
-            .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-    };
-
-    const filterTree = (nodes, term) => {
-        if (!term) return nodes;
-        return nodes.reduce((acc, node) => {
-            const matches = node.label?.toLowerCase().includes(term.toLowerCase());
-            const filteredChildren = filterTree(node.children || [], term);
-            if (matches || filteredChildren.length > 0) {
-                acc.push({ ...node, children: filteredChildren });
-            }
-            return acc;
-        }, []);
-    };
-
-    const dynamicMenuTree = useMemo(() => {
-        const fullTree = buildTree(menusData, null);
-        const rootNodes = fullTree.length > 0 
-            ? fullTree 
-            : buildTree(menusData, undefined).length > 0 
-                ? buildTree(menusData, undefined) 
-                : menusData.map(m => ({...m, label: getMenuLabel(m), children: []}));
-                
-        return filterTree(rootNodes, searchTerm);
-    }, [menusData, searchTerm, isRtl, getMenuLabel]);
+    const mappedTreeData = useMemo(() => {
+        return menusData.map(m => {
+            const hasActions = tempPermissions[m.id]?.actions?.length > 0;
+            const hasScopes = Object.keys(tempPermissions[m.id]?.scopes || {}).some(k => tempPermissions[m.id].scopes[k].length > 0);
+            const hasAccess = hasActions || hasScopes;
+            
+            const indicator = hasAccess ? '✔ ' : '';
+            const rawLabel = isRtl ? (m.label_fa || m.title || m.name || m.unique_code) : (m.label_en || m.title || m.name || m.unique_code);
+            
+            return {
+                ...m,
+                displayLabel: indicator + rawLabel
+            };
+        });
+    }, [menusData, tempPermissions, isRtl]);
 
     const handleSavePermissions = async () => {
       setIsLoading(true);
@@ -221,61 +191,35 @@
         });
     };
 
-    const renderPermissionNode = (item) => {
-        const hasAccess = tempPermissions[item.id]?.actions?.length > 0;
-        return (
-            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 ${hasAccess ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
-                {hasAccess && <Check size={10} strokeWidth={3} />}
-            </div>
-        );
-    };
-
     if (!isOpen) return null;
+
+    const availActions = selectedMenu ? (typeof selectedMenu.available_actions === 'string' ? JSON.parse(selectedMenu.available_actions || '[]') : (selectedMenu.available_actions || [])) : [];
+    const availScopes = selectedMenu ? (typeof selectedMenu.available_scopes === 'string' ? JSON.parse(selectedMenu.available_scopes || '[]') : (selectedMenu.available_scopes || [])) : [];
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`${t('مدیریت دسترسی‌های نقش:', 'Role Permissions Management:')} ${role?.title || ''}`} width="max-w-6xl" language={language}>
             <div className="flex h-[600px] flex-col md:flex-row bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
                 
                 {/* Left Pane - Tree */}
-                <div className="w-full md:w-1/3 border-r md:border-b-0 border-b border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/50 dark:bg-slate-900 overflow-hidden shrink-0">
-                    <div className="p-3 border-b border-slate-200 dark:border-slate-700 space-y-3 z-10">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[12px] font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5"><Layers size={14} className="text-indigo-500"/> {t('درخت فرم‌ها و سیستم', 'System Forms Tree')}</span>
-                            <div className="flex items-center gap-1.5 px-1 select-none">
-                                <span onClick={() => setExpandAllToggle(true)} className="text-[10px] text-indigo-500 hover:text-indigo-600 cursor-pointer font-bold transition-colors">{t('باز کردن همه', 'Expand All')}</span>
-                                <span className="text-[10px] text-slate-300 dark:text-slate-600">|</span>
-                                <span onClick={() => setExpandAllToggle(false)} className="text-[10px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer font-bold transition-colors">{t('بستن همه', 'Collapse All')}</span>
-                            </div>
+                <div className="w-full md:w-1/3 border-r md:border-b-0 border-b border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/50 dark:bg-slate-900 overflow-hidden shrink-0 p-1">
+                    {menusData.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
+                            <AlertCircle size={24} className="opacity-50" />
+                            <span className="text-[11px]">{t('در حال دریافت یا منویی وجود ندارد.', 'Loading or no menus available.')}</span>
                         </div>
-                        <div className="relative">
-                            <input 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder={t('جستجوی فرم...', 'Search form...')}
-                                className={`w-full h-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[11px] outline-none focus:border-indigo-400 px-2 ${isRtl ? 'pr-7' : 'pl-7'} text-slate-700 dark:text-slate-300`}
-                            />
-                            <Search size={14} className={`absolute top-2 text-slate-400 ${isRtl ? 'right-2' : 'left-2'}`}/>
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
-                        {menusData.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
-                                <AlertCircle size={24} className="opacity-50" />
-                                <span className="text-[11px]">{t('در حال دریافت یا منویی وجود ندارد.', 'Loading or no menus available.')}</span>
-                            </div>
-                        ) : dynamicMenuTree.length > 0 ? (
-                            <TreeView 
-                                data={dynamicMenuTree} 
-                                selectedNodeId={selectedMenu?.id} 
-                                onSelectNode={setSelectedMenu} 
-                                renderNodeContent={renderPermissionNode} 
-                                isRtl={isRtl} 
-                                expandAll={expandAllToggle || !!searchTerm} 
-                            />
-                        ) : (
-                            <div className="text-center p-4 text-slate-400 text-[11px]">{t('موردی در جستجو یافت نشد.', 'No results found.')}</div>
-                        )}
-                    </div>
+                    ) : (
+                        <Tree 
+                            data={mappedTreeData}
+                            idField="id" 
+                            parentField="parent_id" 
+                            displayField="displayLabel" 
+                            secondaryField="unique_code" 
+                            activeField="is_visible"
+                            selectedId={selectedMenu?.id}
+                            onSelect={setSelectedMenu}
+                            language={language}
+                        />
+                    )}
                 </div>
 
                 {/* Right Pane - Config */}
@@ -290,7 +234,7 @@
                             <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
                                 <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                    {getMenuLabel(selectedMenu)}
+                                    {isRtl ? (selectedMenu.label_fa || selectedMenu.title || selectedMenu.name) : (selectedMenu.label_en || selectedMenu.title || selectedMenu.name)}
                                 </h3>
                                 {selectedMenu.unique_code && <p className="text-[10px] font-mono text-slate-400 mt-1 dir-ltr inline-block bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{selectedMenu.unique_code}</p>}
                             </div>
@@ -303,13 +247,13 @@
                                         <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('عملیات مجاز (Actions)', 'Allowed Actions')}</span>
                                     </div>
                                     
-                                    {(!selectedMenu.available_actions || selectedMenu.available_actions.length === 0) ? (
+                                    {availActions.length === 0 ? (
                                         <div className="text-[11px] text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
                                             {t('هیچ عملیات خاصی برای این فرم در دیتابیس تعریف نشده است.', 'No specific actions defined for this form in the database.')}
                                         </div>
                                     ) : (
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                            {(selectedMenu.available_actions).map(actionId => {
+                                            {availActions.map(actionId => {
                                                 const isChecked = tempPermissions[selectedMenu.id]?.actions?.includes(actionId);
                                                 const labelObj = ACTION_DICT[actionId];
                                                 const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actionId;
@@ -330,7 +274,7 @@
                                 </div>
 
                                 {/* Scopes Section */}
-                                {selectedMenu.available_scopes && selectedMenu.available_scopes.length > 0 && (
+                                {availScopes.length > 0 && (
                                     <div className="space-y-4 pt-2">
                                         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                                             <div className="w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><Lock size={14}/></div>
@@ -341,7 +285,7 @@
                                         </div>
                                         
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {selectedMenu.available_scopes.map(scopeId => {
+                                            {availScopes.map(scopeId => {
                                                 const scopeDataList = scopesData[scopeId] || [];
                                                 const labelObj = SCOPE_DICT[scopeId];
                                                 const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : scopeId;
