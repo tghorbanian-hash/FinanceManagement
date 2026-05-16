@@ -51,7 +51,7 @@
     const [directPerms, setDirectPerms] = useState({});
     
     const [selectedMenu, setSelectedMenu] = useState(null);
-    const [activeSource, setActiveSource] = useState('direct'); // 'direct' or role_id
+    const [activeSource, setActiveSource] = useState('direct');
 
     useEffect(() => {
       if (isOpen && user) {
@@ -67,6 +67,15 @@
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        const safeFetch = async (promise) => {
+            try {
+                const res = await promise;
+                return res.error ? { data: [] } : res;
+            } catch (e) {
+                return { data: [] };
+            }
+        };
+
         const [
             { data: dbMenus },
             { data: dtData },
@@ -76,8 +85,8 @@
             { data: allPerms }
         ] = await Promise.all([
             supabase.from('menus').select('*').order('display_order', { ascending: true }),
-            supabase.from('fm_doc_types').select('id, title').eq('is_active', true).catch(()=>({data:[]})),
-            supabase.from('fm_branches').select('id, title').eq('is_active', true).catch(()=>({data:[]})),
+            safeFetch(supabase.from('fm_doc_types').select('id, title').eq('is_active', true)),
+            safeFetch(supabase.from('fm_branches').select('id, title').eq('is_active', true)),
             supabase.from('sec_roles').select('*'),
             supabase.from('sec_user_roles').select('role_id').eq('user_id', user.id),
             supabase.from('sec_permissions').select('*')
