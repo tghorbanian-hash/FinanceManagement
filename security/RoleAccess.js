@@ -164,7 +164,7 @@
                     });
                     return nextPerms;
                 });
-                setConfirmModal({ isOpen: false });
+                setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null });
                 showToastNotification(t('دسترسی کامل به این بخش و زیرمجموعه‌ها اعمال شد.', 'Full access granted to this section and descendants.'));
             }
         });
@@ -190,7 +190,7 @@
                     });
                     return nextPerms;
                 });
-                setConfirmModal({ isOpen: false });
+                setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null });
                 showToastNotification(t('تمامی دسترسی‌های این بخش و زیرمجموعه‌ها حذف شد.', 'All access removed from this section and descendants.'));
             }
         });
@@ -278,7 +278,6 @@
         <Modal isOpen={isOpen} onClose={onClose} title={`${t('مدیریت دسترسی‌های نقش:', 'Role Permissions Management:')} ${role?.title || ''}`} width="max-w-6xl" language={language}>
             <div className="flex h-[600px] flex-col md:flex-row bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
                 
-                {/* Left Pane - Tree */}
                 <div className="w-full md:w-1/3 border-r md:border-b-0 border-b border-slate-200 dark:border-slate-800 flex flex-col bg-slate-50/50 dark:bg-slate-900 overflow-hidden shrink-0 p-1">
                     {menusData.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
@@ -299,7 +298,6 @@
                     )}
                 </div>
 
-                {/* Right Pane - Config */}
                 <div className="w-full md:w-2/3 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
                     {!selectedMenu ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
@@ -316,7 +314,7 @@
                                     </h3>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="outline" icon={CheckSquare} onClick={handleGrantFullAccessRecursive} className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-900/20 text-[11px] font-bold">
+                                    <Button size="sm" variant="outline" icon={CheckSquare} onClick={handleGrantFullAccessRecursive} className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20 text-[11px] font-bold">
                                         {t('دسترسی کامل شاخه', 'Full Branch Access')}
                                     </Button>
                                     <Button size="sm" variant="outline" icon={Trash2} onClick={handleRemoveAccessRecursive} className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 text-[11px] font-bold">
@@ -326,7 +324,6 @@
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-5 space-y-6">
-                                {/* Actions Section */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                                         <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><Shield size={14}/></div>
@@ -345,11 +342,11 @@
                                                 const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actionId;
                                                 
                                                 return (
-                                                    <label key={actionId} onClick={() => toggleAction(actionId)} className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border transition-all select-none ${isChecked ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
+                                                    <label key={actionId} onClick={() => toggleAction(actionId)} className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border transition-all select-none ${isChecked ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                                                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
                                                             {isChecked && <Check size={12} strokeWidth={3}/>}
                                                         </div>
-                                                        <span className={`text-[12px] ${isChecked ? 'font-bold text-emerald-900 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400 font-medium'}`}>
+                                                        <span className={`text-[12px] ${isChecked ? 'font-bold text-blue-900 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 font-medium'}`}>
                                                             {displayLabel}
                                                         </span>
                                                     </label>
@@ -359,11 +356,10 @@
                                     )}
                                 </div>
 
-                                {/* Scopes Section */}
                                 {availScopes.length > 0 && (
                                     <div className="space-y-4 pt-2">
                                         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                                            <div className="w-6 h-6 rounded bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center"><Lock size={14}/></div>
+                                            <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><Lock size={14}/></div>
                                             <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('محدودیت دسترسی به داده‌ها', 'Data Scope Restrictions')}</span>
                                         </div>
                                         <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
@@ -385,7 +381,7 @@
                                                             {scopeDataList.length > 0 ? scopeDataList.map(item => {
                                                                 const isSelected = tempPermissions[selectedMenu.id]?.scopes?.[scopeId]?.includes(item.id);
                                                                 return (
-                                                                    <div key={item.id} onClick={() => toggleScope(scopeId, item.id)} className={`px-2.5 py-1 text-[11px] rounded-full border cursor-pointer select-none transition-all flex items-center gap-1.5 ${isSelected ? 'bg-emerald-500 border-emerald-500 text-white font-bold shadow-sm' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-emerald-300 dark:hover:border-emerald-600'}`}>
+                                                                    <div key={item.id} onClick={() => toggleScope(scopeId, item.id)} className={`px-2.5 py-1 text-[11px] rounded-full border cursor-pointer select-none transition-all flex items-center gap-1.5 ${isSelected ? 'bg-blue-500 border-blue-500 text-white font-bold shadow-sm' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-600'}`}>
                                                                         {isSelected && <Check size={10} strokeWidth={3}/>}
                                                                         {item.title}
                                                                     </div>
@@ -404,7 +400,6 @@
                         </div>
                     )}
                     
-                    {/* Bottom Action Bar */}
                     <div className="p-3 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
                         <div className="text-[10px] text-slate-500 font-medium hidden sm:block">
                             {t('تغییرات دسترسی بلافاصله پس از ذخیره برای کاربران اعمال می‌گردد.', 'Permission changes apply immediately upon save.')}
@@ -417,11 +412,10 @@
                 </div>
             </div>
 
-            {/* Confirm Modal */}
             {confirmModal.isOpen && (
                 <Modal isOpen={true} onClose={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })} title={confirmModal.title} width="max-w-sm" language={language}>
                     <div className="p-4 flex flex-col gap-3 items-center text-center">
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center mb-1 ${confirmModal.type === 'remove' ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-500' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500'}`}>
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center mb-1 ${confirmModal.type === 'remove' ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-500' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-500'}`}>
                             <AlertTriangle size={22} />
                         </div>
                         <p className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed font-bold">
@@ -429,7 +423,7 @@
                         </p>
                         <div className="flex gap-2 mt-4 w-full">
                             <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })}>{t('انصراف', 'Cancel')}</Button>
-                            <Button variant="primary" size="sm" onClick={confirmModal.onConfirm} className={`flex-1 ${confirmModal.type === 'remove' ? 'bg-rose-600 dark:bg-rose-500 hover:bg-rose-700 border-rose-600' : 'bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 border-emerald-600'}`}>
+                            <Button variant="primary" size="sm" onClick={confirmModal.onConfirm} className={`flex-1 ${confirmModal.type === 'remove' ? 'bg-rose-600 dark:bg-rose-500 hover:bg-rose-700 border-rose-600' : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 border-blue-600'}`}>
                                 {t('تایید عملیات', 'Confirm')}
                             </Button>
                         </div>
