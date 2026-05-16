@@ -134,6 +134,7 @@
     
     const [selectedMenuId, setSelectedMenuId] = useState(null);
     const [activeSourceId, setActiveSourceId] = useState(null);
+    const [gridSelectedIds, setGridSelectedIds] = useState([]);
 
     const [isInlineAdding, setIsInlineAdding] = useState(false);
     const [inlineSearchTerm, setInlineSearchTerm] = useState('');
@@ -147,6 +148,7 @@
         setAssignedRoles([]);
         setDirectPerms({});
         setDeletedPermIds([]);
+        setGridSelectedIds([]);
         setIsInlineAdding(false);
         setInlineSearchTerm('');
         setHasChanges(false);
@@ -205,7 +207,6 @@
                     rPerms[p.role_id].push({ menu_id: p.menu_id, actions, scopes });
                 }
                 
-                // بررسی user_id جهت لود کردن دسترسی‌های مستقیم از دیتابیس
                 if (p.user_id && p.user_id === user.id) {
                     dPerms[p.menu_id] = { id: p.id, actions, scopes };
                 }
@@ -327,7 +328,6 @@
       setIsLoading(true);
       
       try {
-          // ذخیره نقش‌های تخصیص یافته کاربر
           await supabase.from('sec_user_roles').delete().eq('user_id', user.id);
           if (assignedRoles.length > 0) {
               const userRolesPayload = assignedRoles.map(rId => ({ user_id: user.id, role_id: rId }));
@@ -338,7 +338,6 @@
           const updates = [];
           const deletes = [...deletedPermIds];
 
-          // بررسی و ذخیره دسترسی‌های مستقیم
           Object.entries(directPerms).forEach(([menuId, data]) => {
               const hasActions = data.actions && data.actions.length > 0;
               const hasScopes = data.scopes && Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0);
@@ -373,7 +372,6 @@
               }
           }
           
-          // بعد از ذخیره موفق، مودال را نمی‌بندیم بلکه اطلاعات جدید را دریافت می‌کنیم
           await fetchData();
           
       } catch (err) {
@@ -408,6 +406,7 @@
         setIsInlineAdding(false);
         setInlineSearchTerm('');
         setSelectedMenuId(form.id);
+        setGridSelectedIds([form.id]);
         setActiveSourceId('direct');
         setHasChanges(true);
     };
@@ -423,6 +422,8 @@
             delete next[menuId];
             return next;
         });
+
+        setGridSelectedIds(prev => prev.filter(id => id !== menuId));
 
         if (selectedMenuId === menuId) {
             if (activeSourceId === 'direct') {
@@ -456,6 +457,8 @@
             menuIds.forEach(id => delete next[id]);
             return next;
         });
+
+        setGridSelectedIds(prev => prev.filter(id => !menuIds.includes(id)));
 
         if (menuIds.includes(selectedMenuId) && activeSourceId === 'direct') {
             setSelectedMenuId(null);
@@ -533,9 +536,6 @@
         width: '250px',
         render: (val, row) => {
            if (row.isNewRow) return <span className="text-slate-400 text-[10px] italic">{t('نام فرم را جستجو و انتخاب کنید...', 'Search and select form...')}</span>;
-           
-           const hasDirect = row.breakdown.some(b => b.type === 'direct');
-           
            return (
               <div className="flex items-center w-full min-h-[24px]">
                  <div className="flex flex-wrap gap-1 flex-1 items-center">
@@ -554,16 +554,6 @@
                         )
                      })}
                  </div>
-                 {/* آیکون حذف مستقیما فقط برای فرم های دارای دسترسی مستقیم در همین ستون رندر می‌شود */}
-                 {hasDirect && (
-                     <button
-                        onClick={(e) => { e.stopPropagation(); handleDeleteDirect(row.id); }}
-                        title={t('حذف دسترسی مستقیم', 'Delete Direct Access')}
-                        className="mr-auto ml-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors"
-                     >
-                        <Trash2 size={14}/>
-                     </button>
-                 )}
               </div>
            )
         }
@@ -628,7 +618,8 @@
                                 columns={columns}
                                 language={language}
                                 selectable={true}
-                                selectedIds={currentDetailRow && !currentDetailRow.isNewRow ? [currentDetailRow.id] : []}
+                                selectedIds={gridSelectedIds}
+                                onSelectChange={setGridSelectedIds}
                                 onAdd={() => {
                                     setIsInlineAdding(true);
                                     setInlineSearchTerm('');
@@ -636,6 +627,7 @@
                                 onRowDoubleClick={(row) => {
                                     if (row.isNewRow) return;
                                     setSelectedMenuId(row.id);
+                                    setGridSelectedIds([row.id]);
                                     if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                 }}
                                 actions={[
@@ -645,11 +637,18 @@
                                         onClick: (row) => {
                                             if (row.isNewRow) return;
                                             setSelectedMenuId(row.id);
+                                            setGridSelectedIds([row.id]);
                                             if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                         },
                                         className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1.5 rounded transition-colors'
+                                    },
+                                    {
+                                        icon: Trash2,
+                                        tooltip: t('حذف دسترسی مستقیم', 'Delete Direct Access'),
+                                        show: (row) => !row.isNewRow && row.breakdown.some(b => b.type === 'direct'),
+                                        onClick: (row) => handleDeleteDirect(row.id),
+                                        className: 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
                                     }
-                                    // حذف کلی دکمه سطل زباله از لیست اکشن های عمومی
                                 ]}
                                 bulkActions={[
                                     {
@@ -704,7 +703,6 @@
                                                 <span className="font-bold text-[11px] text-blue-800 dark:text-blue-300">
                                                     {t('شما در حال ویرایش دسترسی مستقیم هستید.', 'Editing Direct Access.')}
                                                 </span>
-                                                {/* دکمه حذف فرم از اینجا کاملاً برداشته شد */}
                                             </div>
                                         )}
 
