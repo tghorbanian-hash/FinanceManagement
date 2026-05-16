@@ -1,7 +1,8 @@
 /* Filename: security/UserAccess.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useCallback, useMemo } = React;
+  const ReactDOM = window.ReactDOM;
+  const { useState, useEffect, useCallback, useMemo, useRef } = React;
   
   const FallbackIcon = ({ size = 16, className = '' }) => React.createElement('span', { className: `inline-block ${className}`, style: { width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
@@ -36,6 +37,82 @@
   const SCOPE_DICT = {
     'docTypes': { fa: 'انواع سند مجاز', en: 'Allowed Document Types' },
     'branches': { fa: 'شعب مجاز', en: 'Allowed Branches' }
+  };
+
+  const InlineSearch = ({ term, setTerm, results, onSelect, onCancel, t, isRtl }) => {
+      const [rect, setRect] = useState(null);
+      const inputRef = useRef(null);
+
+      const updateRect = useCallback(() => {
+          if (inputRef.current) {
+              setRect(inputRef.current.getBoundingClientRect());
+          }
+      }, []);
+
+      useEffect(() => {
+          updateRect();
+          window.addEventListener('resize', updateRect);
+          window.addEventListener('scroll', updateRect, true);
+          return () => {
+              window.removeEventListener('resize', updateRect);
+              window.removeEventListener('scroll', updateRect, true);
+          };
+      }, [updateRect]);
+
+      const dropdownContent = (
+          <div 
+              style={{ 
+                  position: 'fixed', 
+                  top: rect ? rect.bottom + 4 : 0, 
+                  left: rect ? rect.left : 0, 
+                  width: rect ? rect.width : 'auto', 
+                  zIndex: 999999 
+              }}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-lg max-h-56 overflow-y-auto custom-scrollbar"
+          >
+              {results.length > 0 ? results.map(f => (
+                  <div 
+                      key={f.id} 
+                      onClick={() => onSelect(f)} 
+                      className="p-3 hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer text-[12px] border-b border-slate-50 dark:border-slate-700 last:border-0 transition-colors"
+                  >
+                      <div className="font-bold text-slate-800 dark:text-slate-200">{f.label}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{f.fullPath}</div>
+                  </div>
+              )) : (
+                  <div className="p-4 text-[11px] text-slate-400 text-center">{t('موردی یافت نشد.', 'No items found.')}</div>
+              )}
+          </div>
+      );
+
+      return (
+          <div className="relative w-full flex items-center gap-2" onClick={e => e.stopPropagation()}>
+              <div className="relative flex-1">
+                  <div className={`absolute inset-y-0 flex items-center pointer-events-none text-slate-400 ${isRtl ? 'right-2' : 'left-2'}`}>
+                      <Search size={14}/>
+                  </div>
+                  <input
+                      ref={inputRef}
+                      autoFocus
+                      value={term}
+                      onChange={(e) => {
+                          setTerm(e.target.value);
+                          updateRect();
+                      }}
+                      placeholder={t('جستجوی نام فرم جهت افزودن...', 'Search form name...')}
+                      className={`w-full h-8 text-[11px] font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border-2 border-blue-400 dark:border-blue-500 rounded outline-none focus:ring-2 focus:ring-blue-500 shadow-inner ${isRtl ? 'pr-8 pl-2' : 'pl-8 pr-2'}`}
+                  />
+                  {term && rect && (ReactDOM ? ReactDOM.createPortal(dropdownContent, document.body) : <div className="absolute top-full left-0 right-0 z-50">{dropdownContent}</div>)}
+              </div>
+              <button 
+                  className="text-slate-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                  onClick={onCancel}
+                  title={t('انصراف', 'Cancel')}
+              >
+                  <X size={16}/>
+              </button>
+          </div>
+      );
   };
 
   const UserAccess = ({ isOpen, onClose, user, language = 'fa' }) => {
@@ -387,50 +464,25 @@
         field: 'path', 
         header_fa: 'مسیر و نام فرم', 
         header_en: 'Form Path & Name', 
-        width: '50%',
+        width: '350px',
         render: (val, row) => {
             if (row.isNewRow) {
                 return (
-                    <div className="relative w-full h-8 flex items-center" onClick={e => e.stopPropagation()}>
-                        <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none text-slate-400">
-                            <Search size={14}/>
-                        </div>
-                        <input
-                            autoFocus
-                            value={inlineSearchTerm}
-                            onChange={(e) => setInlineSearchTerm(e.target.value)}
-                            placeholder={t('جستجوی نام فرم جهت افزودن...', 'Search form name...')}
-                            className="w-full h-7 text-[11px] bg-white dark:bg-slate-800 border border-blue-300 dark:border-blue-600 rounded pr-7 pl-2 outline-none focus:ring-1 focus:ring-blue-500 shadow-inner"
-                        />
-                        {inlineSearchTerm && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded z-50 max-h-48 overflow-y-auto custom-scrollbar">
-                                {inlineFilteredForms.length > 0 ? inlineFilteredForms.map(f => (
-                                    <div 
-                                        key={f.id} 
-                                        onClick={() => handleAddDirectForm(f)} 
-                                        className="p-2 hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer text-[11px] border-b border-slate-50 dark:border-slate-700 last:border-0 transition-colors"
-                                    >
-                                        <div className="font-bold text-slate-800 dark:text-slate-200">{f.label}</div>
-                                        <div className="text-[10px] text-slate-500">{f.fullPath}</div>
-                                    </div>
-                                )) : (
-                                    <div className="p-3 text-[11px] text-slate-400 text-center">{t('موردی یافت نشد.', 'No items found.')}</div>
-                                )}
-                            </div>
-                        )}
-                        <button 
-                            className="mr-2 text-slate-400 hover:text-red-500 p-1"
-                            onClick={() => { setIsInlineAdding(false); setInlineSearchTerm(''); }}
-                        >
-                            <X size={14}/>
-                        </button>
-                    </div>
+                    <InlineSearch 
+                        term={inlineSearchTerm} 
+                        setTerm={setInlineSearchTerm} 
+                        results={inlineFilteredForms} 
+                        onSelect={handleAddDirectForm} 
+                        onCancel={() => { setIsInlineAdding(false); setInlineSearchTerm(''); }} 
+                        t={t} 
+                        isRtl={isRtl} 
+                    />
                 );
             }
             return (
-                <div className="flex flex-col py-0.5">
+                <div className="flex flex-col py-0.5 w-full">
                     <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{row.name}</span>
-                    <span className="text-[10px] text-slate-400 font-sans">{row.path}</span>
+                    <span className="text-[10px] text-slate-400 font-sans truncate">{row.path}</span>
                 </div>
             )
         }
@@ -439,7 +491,7 @@
         field: 'source', 
         header_fa: 'نوع دسترسی', 
         header_en: 'Access Type', 
-        width: '50%',
+        width: '200px',
         render: (val, row) => {
            if (row.isNewRow) return <span className="text-slate-400 text-[10px] italic">{t('نام فرم را جستجو و انتخاب کنید...', 'Search and select form...')}</span>;
            return (
@@ -474,7 +526,7 @@
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`${t('مدیریت دسترسی‌های کاربر:', 'User Permissions Management:')} ${user?.username || ''}`} width="max-w-6xl" language={language}>
-            <div className="flex flex-col h-[600px] bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col h-[650px] bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
                 
                 <div className="p-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between shrink-0">
                     <div className="flex items-center gap-2 overflow-x-auto w-full">
@@ -513,9 +565,9 @@
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-4 gap-4">
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-5 gap-5">
                     
-                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm ${selectedPermDetail ? 'w-full md:w-7/12' : 'w-full'}`}>
+                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${selectedPermDetail ? 'w-full md:w-7/12' : 'w-full'}`}>
                         <div className="flex-1 min-h-0 relative">
                             <DataGrid 
                                 data={effectivePermissions}
@@ -541,7 +593,7 @@
                                             setSelectedPermDetail(row);
                                             if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                         },
-                                        className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1 rounded transition-colors'
+                                        className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1.5 rounded transition-colors'
                                     }
                                 ]}
                             />
@@ -549,22 +601,22 @@
                     </div>
 
                     {selectedPermDetail && !selectedPermDetail.isNewRow && (
-                        <div className="w-full md:w-5/12 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10 shadow-sm">
+                        <div className="w-full md:w-5/12 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10 shadow-sm">
                             <div className="absolute top-3 left-3">
-                                <button onClick={() => setSelectedPermDetail(null)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 transition-colors">
+                                <button onClick={() => setSelectedPermDetail(null)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-500 transition-colors">
                                     <X size={14}/>
                                 </button>
                             </div>
                             
                             <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
-                                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 pr-6">{selectedPermDetail.name}</h3>
+                                <h3 className="font-black text-slate-800 dark:text-slate-100 text-[13px] mb-1.5 pr-6">{selectedPermDetail.name}</h3>
                                 <div className="text-[10px] text-slate-500 font-sans leading-tight">{selectedPermDetail.path}</div>
                             </div>
 
-                            <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                            <div className="p-4 flex-1 overflow-y-auto space-y-5">
                                 
                                 {selectedPermDetail.breakdown.length > 1 && (
-                                    <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-2 mb-2">
+                                    <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                                         {selectedPermDetail.breakdown.map((s, idx) => (
                                             <button 
                                                 key={idx}
@@ -590,28 +642,28 @@
                                             </div>
                                         )}
 
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                                                 {t('عملیات مجاز (Actions)', 'Allowed Actions')}
                                             </div>
 
                                             {availActions.length === 0 ? (
-                                                <div className="text-[10px] text-slate-400 italic p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
+                                                <div className="text-[10px] text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
                                                     {t('عملیاتی برای این فرم تعریف نشده است.', 'No actions defined.')}
                                                 </div>
                                             ) : (
-                                                <div className="grid grid-cols-2 gap-2">
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                                     {availActions.map(actId => {
                                                         const isChecked = activeSource.actions.includes(actId);
                                                         const lbl = AVAILABLE_ACTIONS.find(a => a.id === actId)?.label[isRtl ? 'fa' : 'en'] || actId;
 
                                                         if (isReadOnly) {
                                                             return (
-                                                                <div key={actId} className={`flex items-center gap-2 p-2 rounded border bg-slate-50 dark:bg-slate-800 ${isChecked ? 'border-blue-200 dark:border-blue-800 opacity-100' : 'border-slate-100 dark:border-slate-800 opacity-40'}`}>
-                                                                    <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'text-transparent border-slate-300'}`}>
-                                                                        <Check size={10} strokeWidth={3}/>
+                                                                <div key={actId} className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 rounded border bg-slate-50 dark:bg-slate-800 ${isChecked ? 'border-blue-200 dark:border-blue-800 opacity-100 shadow-sm' : 'border-slate-100 dark:border-slate-800 opacity-50'}`}>
+                                                                    <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'text-transparent border-slate-300'}`}>
+                                                                        <Check size={12} strokeWidth={3}/>
                                                                     </div>
-                                                                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{lbl}</span>
+                                                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{lbl}</span>
                                                                 </div>
                                                             );
                                                         }
@@ -620,12 +672,12 @@
                                                             <label 
                                                                 key={actId} 
                                                                 onClick={() => handleUpdateDirectPermission(selectedPermDetail.id, 'action', actId)}
-                                                                className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-all bg-white dark:bg-slate-800 ${isChecked ? 'border-blue-400 ring-1 ring-blue-100 dark:ring-0 dark:border-blue-500' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
+                                                                className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 rounded border cursor-pointer transition-all bg-white dark:bg-slate-800 ${isChecked ? 'border-blue-400 ring-1 ring-blue-100 dark:ring-0 dark:border-blue-500 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
                                                             >
-                                                                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
-                                                                    {isChecked && <Check size={10} strokeWidth={3}/>}
+                                                                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
+                                                                    {isChecked && <Check size={12} strokeWidth={3}/>}
                                                                 </div>
-                                                                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">{lbl}</span>
+                                                                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{lbl}</span>
                                                             </label>
                                                         );
                                                     })}
@@ -634,7 +686,7 @@
                                         </div>
 
                                         {availScopes.length > 0 && (
-                                            <div className="space-y-3 pt-3 mt-3 border-t border-slate-200 dark:border-slate-800">
+                                            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
                                                 <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                                                     {t('محدودیت دسترسی به داده‌ها', 'Data Scopes')}
                                                 </div>
@@ -645,18 +697,18 @@
 
                                                     return (
                                                         <div key={scopeId} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded overflow-hidden flex flex-col shadow-sm">
-                                                            <div className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-400">
+                                                            <div className="px-3 py-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-400">
                                                                 {displayLabel}
                                                             </div>
-                                                            <div className="p-2 flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                                                            <div className="p-2.5 flex flex-wrap gap-2 max-h-40 overflow-y-auto">
                                                                 {scopeDataList.length > 0 ? scopeDataList.map(item => {
                                                                     const isSelected = activeSource.scopes?.[scopeId]?.includes(item.id);
 
                                                                     if (isReadOnly) {
                                                                         if (!isSelected) return null;
                                                                         return (
-                                                                            <span key={item.id} className="px-2 py-0.5 text-[10px] rounded bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 font-bold flex items-center gap-1 shadow-sm">
-                                                                                <Check size={8} strokeWidth={3}/> {item.title}
+                                                                            <span key={item.id} className="px-2.5 py-1 text-[10px] rounded bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 font-bold flex items-center gap-1 shadow-sm">
+                                                                                <Check size={10} strokeWidth={3}/> {item.title}
                                                                             </span>
                                                                         );
                                                                     }
@@ -665,9 +717,9 @@
                                                                         <div 
                                                                             key={item.id} 
                                                                             onClick={() => handleUpdateDirectPermission(selectedPermDetail.id, 'scope', scopeId, item.id)}
-                                                                            className={`px-2 py-0.5 text-[10px] rounded border cursor-pointer select-none transition-all flex items-center gap-1 shadow-sm ${isSelected ? 'bg-blue-600 border-blue-600 text-white font-bold' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400'}`}
+                                                                            className={`px-2.5 py-1 text-[10px] rounded border cursor-pointer select-none transition-all flex items-center gap-1 shadow-sm ${isSelected ? 'bg-blue-600 border-blue-600 text-white font-bold' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400'}`}
                                                                         >
-                                                                            {isSelected && <Check size={8} strokeWidth={3}/>}
+                                                                            {isSelected && <Check size={10} strokeWidth={3}/>}
                                                                             {item.title}
                                                                         </div>
                                                                     );
