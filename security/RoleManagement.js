@@ -9,10 +9,9 @@
     Shield = FallbackIcon, Users = FallbackIcon, Lock = FallbackIcon, 
     Edit = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon, 
     Plus = FallbackIcon, Search = FallbackIcon, Check = FallbackIcon, 
-    X = FallbackIcon, AlertTriangle = FallbackIcon, ChevronRight = FallbackIcon, 
+    AlertTriangle = FallbackIcon, ChevronRight = FallbackIcon, 
     ChevronDown = FallbackIcon, Layers = FallbackIcon, UserPlus = FallbackIcon,
-    UserMinus = FallbackIcon, RefreshCw = FallbackIcon, Hash = FallbackIcon,
-    Calendar = FallbackIcon
+    UserMinus = FallbackIcon, Calendar = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -25,7 +24,8 @@
     TextField = () => null, 
     ToggleField = () => null, 
     Badge = () => null,
-    SelectField = () => null
+    SelectField = () => null,
+    DatePicker = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -101,17 +101,15 @@
       fetchInitialData();
     }, []);
 
-    // Safe fetch helper to prevent 404s from crashing the UI
     const safeFetch = async (query) => {
       try {
         const { data, error } = await query;
         if (error) {
-          console.warn('Supabase fetch error (might be missing table/404):', error);
+          if (error.code !== 'PGRST205') console.warn('Supabase fetch warning:', error);
           return null;
         }
         return data;
       } catch (err) {
-        console.warn('Network/Unexpected error:', err);
         return null;
       }
     };
@@ -119,20 +117,16 @@
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-        // Fetch Roles
         const rolesData = await safeFetch(supabase.from('sec_roles').select('*').order('created_at', { ascending: false }));
         if (rolesData) setRoles(rolesData);
 
-        // Fetch Users for Assignment
         const usersData = await safeFetch(supabase.from('sec_users').select('id, username, is_active').eq('is_active', true));
         if (usersData) setAllUsers(usersData);
 
-        // Fetch Resources
         const dbResData = await safeFetch(supabase.from('sec_resources').select('*'));
         if (dbResData && dbResData.length > 0) {
             setResources(dbResData);
         } else {
-            // Mock resources if table is empty/missing
             setResources([
                 { code: 'sys', title_fa: 'مدیریت سیستم', title_en: 'System Management', parent_code: null },
                 { code: 'sys_users', title_fa: 'مدیریت کاربران', title_en: 'User Management', parent_code: 'sys' },
@@ -142,7 +136,6 @@
             ]);
         }
 
-        // Fetch Data Scopes (DocTypes & Branches)
         const dtRes = await safeFetch(supabase.from('fm_doc_types').select('id, title').eq('is_active', true));
         const brRes = await safeFetch(supabase.from('fm_branches').select('id, title').eq('is_active', true));
 
@@ -204,8 +197,8 @@
         fetchInitialData();
       } catch (err) {
         console.error('Save Role Error:', err);
-        if (err.message?.includes('404') || err.code === '42P01' || err.message?.includes('not found')) {
-            alert(t('خطا: جداول مربوط به نقش‌ها در دیتابیس یافت نشد (خطای ۴۰۴). لطفاً ابتدا جداول را در Supabase ایجاد کنید.', 'Error: Role tables not found in database (404). Please create tables in Supabase first.'));
+        if (err.code === 'PGRST205' || err.message?.includes('404')) {
+            alert(t('خطا: جداول مربوط به نقش‌ها در دیتابیس یافت نشد. لطفاً جدول sec_roles را در Supabase بسازید.', 'Error: Role tables not found in database. Please create sec_roles.'));
         } else {
             alert(t('خطا در ذخیره نقش. ممکن است کد تکراری باشد.', 'Error saving role. Code might be duplicate.'));
         }
@@ -224,9 +217,7 @@
         fetchInitialData();
       } catch (err) {
         console.error('Delete Role Error:', err);
-        if (err.message?.includes('404') || err.code === '42P01') {
-            alert(t('خطا: جدول در دیتابیس یافت نشد.', 'Error: Table not found in DB.'));
-        }
+        if (err.code === 'PGRST205') alert(t('جدول در دیتابیس یافت نشد.', 'Table not found in DB.'));
       } finally {
         setIsLoading(false);
       }
@@ -264,9 +255,7 @@
             setUserSearchTerm('');
         } catch (err) {
             console.error(err);
-            if (err.message?.includes('404') || err.code === '42P01') {
-                alert(t('خطا: جدول sec_user_roles یافت نشد.', 'Error: sec_user_roles table not found.'));
-            }
+            if (err.code === 'PGRST205') alert(t('جدول sec_user_roles یافت نشد.', 'Table sec_user_roles not found.'));
         } finally {
             setIsLoading(false);
         }
@@ -350,8 +339,8 @@
             setPermModal({ isOpen: false, role: null });
         } catch (err) {
             console.error("Save perms error:", err);
-            if (err.message?.includes('404') || err.code === '42P01') {
-                alert(t('خطا: جدول sec_permissions یافت نشد.', 'Error: sec_permissions table not found.'));
+            if (err.code === 'PGRST205') {
+                alert(t('خطا: جدول sec_permissions در دیتابیس یافت نشد.', 'Error: sec_permissions table not found.'));
             } else {
                 alert(t('خطا در ذخیره دسترسی‌ها', 'Error saving permissions'));
             }
@@ -533,11 +522,11 @@
         <Modal isOpen={roleModal.isOpen} onClose={() => setRoleModal({ isOpen: false, data: null })} title={roleModal.data ? t('ویرایش نقش', 'Edit Role') : t('تعریف نقش جدید', 'New Role')} width="max-w-md" language={language}>
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <TextField size="sm" label={t('کد سیستمی نقش *', 'Role Code *')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} dir="ltr" disabled={!!roleModal.data} placeholder="ROLE_ADMIN" />
+                <TextField size="sm" label={t('کد نقش *', 'Role Code *')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} dir="ltr" disabled={!!roleModal.data} placeholder="ROLE_ADMIN" />
                 <TextField size="sm" label={t('عنوان نقش *', 'Role Title *')} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} isRtl={isRtl} />
                 
-                <TextField size="sm" type="date" label={t('تاریخ شروع موثر', 'Effective Start Date')} value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} isRtl={isRtl} dir="ltr" />
-                <TextField size="sm" type="date" label={t('تاریخ پایان موثر', 'Effective End Date')} value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} isRtl={isRtl} dir="ltr" />
+                <DatePicker size="sm" label={t('تاریخ شروع', 'Start Date')} value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target ? e.target.value : e})} isRtl={isRtl} />
+                <DatePicker size="sm" label={t('تاریخ پایان', 'End Date')} value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target ? e.target.value : e})} isRtl={isRtl} />
                 
                 <div className="md:col-span-2">
                     <TextField size="sm" label={t('توضیحات', 'Description')} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} isRtl={isRtl} multiline rows={2} />
