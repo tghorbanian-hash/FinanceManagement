@@ -3,7 +3,7 @@
   const React = window.React;
   const { useState, useEffect, useCallback, useMemo } = React;
   
-  const FallbackIcon = ({ size = 16, className = '' }) => React.createElement('span', { className: `inline-block ${className}`, style: { width: size, height: size } });
+  const FallbackIcon = ({ size = 16, className = '', strokeWidth = 2 }) => React.createElement('span', { className: `inline-block ${className}`, style: { width: size, height: size, borderWidth: strokeWidth } });
   const LucideIcons = window.LucideIcons || {};
   const { 
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
@@ -11,6 +11,9 @@
     Layers = FallbackIcon, Search = FallbackIcon, Maximize2 = FallbackIcon, Minimize2 = FallbackIcon,
     AlertCircle = FallbackIcon
   } = LucideIcons;
+
+  const ThinMaximize = (props) => React.createElement(Maximize2, { ...props, strokeWidth: 1.5 });
+  const ThinMinimize = (props) => React.createElement(Minimize2, { ...props, strokeWidth: 1.5 });
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
   const { 
@@ -68,10 +71,25 @@
         const { data: dbMenus, error: menuErr } = await supabase.from('menus').select('*').order('id', { ascending: true });
         if (!menuErr && dbMenus) setMenusData(dbMenus);
 
-        const [dtRes, brRes] = await Promise.all([
-            supabase.from('fm_doc_types').select('id, title').eq('is_active', true).catch(() => ({ data: [] })),
-            supabase.from('fm_branches').select('id, title').eq('is_active', true).catch(() => ({ data: [] }))
-        ]);
+        const safeFetchDocTypes = async () => {
+            try {
+                const res = await supabase.from('fm_doc_types').select('id, title').eq('is_active', true);
+                return res.error ? { data: [] } : res;
+            } catch (e) {
+                return { data: [] };
+            }
+        };
+
+        const safeFetchBranches = async () => {
+            try {
+                const res = await supabase.from('fm_branches').select('id, title').eq('is_active', true);
+                return res.error ? { data: [] } : res;
+            } catch (e) {
+                return { data: [] };
+            }
+        };
+
+        const [dtRes, brRes] = await Promise.all([safeFetchDocTypes(), safeFetchBranches()]);
 
         setScopesData({
             docTypes: dtRes.data || [],
@@ -120,7 +138,6 @@
     };
 
     const dynamicMenuTree = useMemo(() => {
-        // Handle different structural formats in your DB (e.g. parent_id is null vs undefined)
         const fullTree = buildTree(menusData, null);
         const rootNodes = fullTree.length > 0 ? fullTree : buildTree(menusData, undefined).length > 0 ? buildTree(menusData, undefined) : menusData.map(m => ({...m, label: isRtl ? (m.title_fa || m.title || m.name) : (m.title_en || m.title || m.name), children: []}));
         return filterTree(rootNodes, searchTerm);
@@ -220,8 +237,8 @@
                         <div className="flex items-center justify-between">
                             <span className="text-[12px] font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5"><Layers size={14} className="text-indigo-500"/> {t('درخت فرم‌ها و سیستم', 'System Forms Tree')}</span>
                             <div className="flex gap-1">
-                                <Button variant="ghost" size="iconSm" icon={Maximize2} onClick={() => setExpandAllToggle(true)} title={t('باز کردن همه', 'Expand All')} className="text-slate-500"/>
-                                <Button variant="ghost" size="iconSm" icon={Minimize2} onClick={() => setExpandAllToggle(false)} title={t('بستن همه', 'Collapse All')} className="text-slate-500"/>
+                                <Button variant="ghost" size="iconSm" icon={ThinMaximize} onClick={() => setExpandAllToggle(true)} title={t('باز کردن همه', 'Expand All')} className="text-slate-500"/>
+                                <Button variant="ghost" size="iconSm" icon={ThinMinimize} onClick={() => setExpandAllToggle(false)} title={t('بستن همه', 'Collapse All')} className="text-slate-500"/>
                             </div>
                         </div>
                         <div className="relative">
