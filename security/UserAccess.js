@@ -10,7 +10,7 @@
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
     Check = FallbackIcon, AlertCircle = FallbackIcon, User = FallbackIcon,
     Zap = FallbackIcon, X = FallbackIcon, Plus = FallbackIcon, ChevronLeft = FallbackIcon,
-    FileText = FallbackIcon, Info = FallbackIcon, Search = FallbackIcon
+    FileText = FallbackIcon, Info = FallbackIcon, Search = FallbackIcon, Trash2 = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -126,9 +126,11 @@
     const [allRoles, setAllRoles] = useState([]);
     const [assignedRoles, setAssignedRoles] = useState([]);
     const [globalRolePerms, setGlobalRolePerms] = useState({}); 
-    const [directPerms, setDirectPerms] = useState({});
     
-    const [selectedPermDetail, setSelectedPermDetail] = useState(null);
+    const [directPerms, setDirectPerms] = useState({});
+    const [deletedPermIds, setDeletedPermIds] = useState([]);
+    
+    const [selectedMenuId, setSelectedMenuId] = useState(null);
     const [activeSourceId, setActiveSourceId] = useState(null);
 
     const [isInlineAdding, setIsInlineAdding] = useState(false);
@@ -138,10 +140,11 @@
       if (isOpen && user) {
         fetchData();
       } else {
-        setSelectedPermDetail(null);
+        setSelectedMenuId(null);
         setActiveSourceId(null);
         setAssignedRoles([]);
         setDirectPerms({});
+        setDeletedPermIds([]);
         setIsInlineAdding(false);
         setInlineSearchTerm('');
       }
@@ -207,6 +210,7 @@
         
         setGlobalRolePerms(rPerms);
         setDirectPerms(dPerms);
+        setDeletedPermIds([]);
 
       } catch (err) {
         console.error('Fetch Access Data Error:', err);
@@ -300,6 +304,12 @@
         return list;
     }, [assignedRoles, directPerms, allSystemForms, globalRolePerms, allRoles, t, isInlineAdding]);
 
+    const currentDetailRow = useMemo(() => {
+        if (!selectedMenuId) return null;
+        if (selectedMenuId === 'INLINE_NEW') return { id: 'INLINE_NEW', isNewRow: true, breakdown: [] };
+        return effectivePermissions.find(r => r.id === selectedMenuId) || null;
+    }, [selectedMenuId, effectivePermissions]);
+
     const inlineFilteredForms = useMemo(() => {
         if (!inlineSearchTerm) return [];
         return allSystemForms
@@ -319,31 +329,20 @@
 
           const inserts = [];
           const updates = [];
-          const deletes = [];
+          const deletes = [...deletedPermIds];
 
           Object.entries(directPerms).forEach(([menuId, data]) => {
-              const hasActions = data.actions.length > 0;
-              const hasScopes = Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0);
-              
-              if (hasActions || hasScopes) {
-                  if (data.id) {
-                      updates.push({ 
-                          id: data.id, 
-                          user_id: user.id, 
-                          menu_id: menuId, 
-                          actions: data.actions, 
-                          data_scopes: data.scopes 
-                      });
-                  } else {
-                      inserts.push({ 
-                          user_id: user.id, 
-                          menu_id: menuId, 
-                          actions: data.actions, 
-                          data_scopes: data.scopes 
-                      });
-                  }
-              } else if (data.id) {
-                  deletes.push(data.id);
+              const payload = { 
+                  user_id: user.id, 
+                  menu_id: menuId, 
+                  actions: JSON.stringify(data.actions || []), 
+                  data_scopes: JSON.stringify(data.scopes || {}) 
+              };
+
+              if (data.id) {
+                  updates.push({ id: data.id, ...payload });
+              } else {
+                  inserts.push(payload);
               }
           });
 
@@ -386,15 +385,58 @@
         
         setIsInlineAdding(false);
         setInlineSearchTerm('');
-        
-        const newRow = { 
-            id: form.id, 
-            path: form.fullPath, 
-            name: form.label, 
-            breakdown: [{ sourceId: 'direct', type: 'direct', label: t('مستقیم', 'Direct'), actions: [], scopes: {} }] 
-        };
-        setSelectedPermDetail(newRow);
+        setSelectedMenuId(form.id);
         setActiveSourceId('direct');
+    };
+
+    const handleDeleteDirect = (menuId) => {
+        const perm = directPerms[menuId];
+        if (perm && perm.id) {
+            setDeletedPermIds(prev => [...prev, perm.id]);
+        }
+        
+        setDirectPerms(prev => {
+            const next = { ...prev };
+            delete next[menuId];
+            return next;
+        });
+
+        if (selectedMenuId === menuId) {
+            if (activeSourceId === 'direct') {
+                const current = effectivePermissions.find(r => r.id === menuId);
+                const roleSources = current?.breakdown.filter(b => b.type === 'role') || [];
+                if (roleSources.length > 0) {
+                    setActiveSourceId(roleSources[0].sourceId);
+                } else {
+                    setSelectedMenuId(null);
+                    setActiveSourceId(null);
+                }
+            }
+        }
+    };
+
+    const handleBulkDeleteDirect = (menuIds) => {
+        const idsToDelete = [];
+        menuIds.forEach(id => {
+            if (directPerms[id] && directPerms[id].id) {
+                idsToDelete.push(directPerms[id].id);
+            }
+        });
+        
+        if (idsToDelete.length > 0) {
+            setDeletedPermIds(prev => [...prev, ...idsToDelete]);
+        }
+
+        setDirectPerms(prev => {
+            const next = { ...prev };
+            menuIds.forEach(id => delete next[id]);
+            return next;
+        });
+
+        if (menuIds.includes(selectedMenuId) && activeSourceId === 'direct') {
+            setSelectedMenuId(null);
+            setActiveSourceId(null);
+        }
     };
 
     const handleUpdateDirectPermission = (formId, type, key, value) => {
@@ -426,35 +468,6 @@
                     actions: updatedActions,
                     scopes: updatedScopes
                 }
-            };
-        });
-
-        setSelectedPermDetail(prev => {
-            if (!prev || prev.id !== formId) return prev;
-            return {
-                ...prev,
-                breakdown: prev.breakdown.map(b => {
-                    if (b.sourceId !== 'direct') return b;
-                    let nextActions = [...b.actions];
-                    let nextScopes = { ...b.scopes };
-
-                    if (type === 'action') {
-                        if (nextActions.includes(key)) {
-                            nextActions = nextActions.filter(a => a !== key);
-                        } else {
-                            nextActions.push(key);
-                        }
-                    } else if (type === 'scope') {
-                        let arr = nextScopes[key] || [];
-                        if (arr.includes(value)) {
-                            arr = arr.filter(v => v !== value);
-                        } else {
-                            arr.push(value);
-                        }
-                        nextScopes[key] = arr;
-                    }
-                    return { ...b, actions: nextActions, scopes: nextScopes };
-                })
             };
         });
     };
@@ -491,7 +504,7 @@
         field: 'source', 
         header_fa: 'نوع دسترسی', 
         header_en: 'Access Type', 
-        width: '200px',
+        width: '250px',
         render: (val, row) => {
            if (row.isNewRow) return <span className="text-slate-400 text-[10px] italic">{t('نام فرم را جستجو و انتخاب کنید...', 'Search and select form...')}</span>;
            return (
@@ -518,10 +531,10 @@
 
     if (!isOpen) return null;
 
-    const activeMenuInfo = selectedPermDetail ? allSystemForms.find(f => f.id === selectedPermDetail.id) : null;
+    const activeMenuInfo = currentDetailRow ? allSystemForms.find(f => f.id === currentDetailRow.id) : null;
     const availActions = activeMenuInfo ? activeMenuInfo.available_actions : [];
     const availScopes = activeMenuInfo ? activeMenuInfo.available_scopes : [];
-    const activeSource = selectedPermDetail ? selectedPermDetail.breakdown.find(b => b.sourceId === activeSourceId) : null;
+    const activeSource = currentDetailRow ? currentDetailRow.breakdown.find(b => b.sourceId === activeSourceId) : null;
     const isReadOnly = activeSource ? activeSource.type === 'role' : true;
 
     return (
@@ -567,21 +580,21 @@
 
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-5 gap-5">
                     
-                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${selectedPermDetail ? 'w-full md:w-7/12' : 'w-full'}`}>
+                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${currentDetailRow ? 'w-full md:w-7/12' : 'w-full'}`}>
                         <div className="flex-1 min-h-0 relative">
                             <DataGrid 
                                 data={effectivePermissions}
                                 columns={columns}
                                 language={language}
                                 selectable={true}
-                                selectedIds={selectedPermDetail && !selectedPermDetail.isNewRow ? [selectedPermDetail.id] : []}
+                                selectedIds={currentDetailRow && !currentDetailRow.isNewRow ? [currentDetailRow.id] : []}
                                 onAdd={() => {
                                     setIsInlineAdding(true);
                                     setInlineSearchTerm('');
                                 }}
                                 onRowDoubleClick={(row) => {
                                     if (row.isNewRow) return;
-                                    setSelectedPermDetail(row);
+                                    setSelectedMenuId(row.id);
                                     if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                 }}
                                 actions={[
@@ -590,34 +603,49 @@
                                         tooltip: t('مشاهده جزئیات', 'View Details'), 
                                         onClick: (row) => {
                                             if (row.isNewRow) return;
-                                            setSelectedPermDetail(row);
+                                            setSelectedMenuId(row.id);
                                             if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                         },
                                         className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1.5 rounded transition-colors'
+                                    },
+                                    {
+                                        icon: Trash2,
+                                        tooltip: t('حذف دسترسی مستقیم', 'Delete Direct Access'),
+                                        show: (row) => row.breakdown.some(b => b.type === 'direct'),
+                                        onClick: (row) => handleDeleteDirect(row.id),
+                                        className: 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
+                                    }
+                                ]}
+                                bulkActions={[
+                                    {
+                                        label: t('حذف دسترسی‌های مستقیم', 'Delete Direct Accesses'),
+                                        icon: Trash2,
+                                        variant: 'danger-outline',
+                                        onClick: (ids) => handleBulkDeleteDirect(ids)
                                     }
                                 ]}
                             />
                         </div>
                     </div>
 
-                    {selectedPermDetail && !selectedPermDetail.isNewRow && (
+                    {currentDetailRow && !currentDetailRow.isNewRow && (
                         <div className="w-full md:w-5/12 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10 shadow-sm">
                             <div className="absolute top-3 left-3">
-                                <button onClick={() => setSelectedPermDetail(null)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-500 transition-colors">
+                                <button onClick={() => setSelectedMenuId(null)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-500 transition-colors">
                                     <X size={14}/>
                                 </button>
                             </div>
                             
                             <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
-                                <h3 className="font-black text-slate-800 dark:text-slate-100 text-[13px] mb-1.5 pr-6">{selectedPermDetail.name}</h3>
-                                <div className="text-[10px] text-slate-500 font-sans leading-tight">{selectedPermDetail.path}</div>
+                                <h3 className="font-black text-slate-800 dark:text-slate-100 text-[13px] mb-1.5 pr-6">{currentDetailRow.name}</h3>
+                                <div className="text-[10px] text-slate-500 font-sans leading-tight">{currentDetailRow.path}</div>
                             </div>
 
                             <div className="p-4 flex-1 overflow-y-auto space-y-5">
                                 
-                                {selectedPermDetail.breakdown.length > 1 && (
+                                {currentDetailRow.breakdown.length > 1 && (
                                     <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                                        {selectedPermDetail.breakdown.map((s, idx) => (
+                                        {currentDetailRow.breakdown.map((s, idx) => (
                                             <button 
                                                 key={idx}
                                                 onClick={() => setActiveSourceId(s.sourceId)}
@@ -671,7 +699,7 @@
                                                         return (
                                                             <label 
                                                                 key={actId} 
-                                                                onClick={() => handleUpdateDirectPermission(selectedPermDetail.id, 'action', actId)}
+                                                                onClick={() => handleUpdateDirectPermission(currentDetailRow.id, 'action', actId)}
                                                                 className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 rounded border cursor-pointer transition-all bg-white dark:bg-slate-800 ${isChecked ? 'border-blue-400 ring-1 ring-blue-100 dark:ring-0 dark:border-blue-500 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
                                                             >
                                                                 <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
@@ -716,7 +744,7 @@
                                                                     return (
                                                                         <div 
                                                                             key={item.id} 
-                                                                            onClick={() => handleUpdateDirectPermission(selectedPermDetail.id, 'scope', scopeId, item.id)}
+                                                                            onClick={() => handleUpdateDirectPermission(currentDetailRow.id, 'scope', scopeId, item.id)}
                                                                             className={`px-2.5 py-1 text-[10px] rounded border cursor-pointer select-none transition-all flex items-center gap-1 shadow-sm ${isSelected ? 'bg-blue-600 border-blue-600 text-white font-bold' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400'}`}
                                                                         >
                                                                             {isSelected && <Check size={10} strokeWidth={3}/>}
