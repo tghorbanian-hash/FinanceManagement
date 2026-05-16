@@ -3,17 +3,13 @@
   const React = window.React;
   const { useState, useEffect, useCallback, useMemo } = React;
   
-  const FallbackIcon = ({ size = 16, className = '', strokeWidth = 2 }) => React.createElement('span', { className: `inline-block ${className}`, style: { width: size, height: size, borderWidth: strokeWidth } });
+  const FallbackIcon = ({ size = 16, className = '' }) => React.createElement('span', { className: `inline-block ${className}`, style: { width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
-    Check = FallbackIcon, ChevronRight = FallbackIcon, ChevronDown = FallbackIcon, 
-    Layers = FallbackIcon, Search = FallbackIcon, Maximize2 = FallbackIcon, Minimize2 = FallbackIcon,
+    Check = FallbackIcon, Layers = FallbackIcon, Search = FallbackIcon, 
     AlertCircle = FallbackIcon
   } = LucideIcons;
-
-  const ThinMaximize = (props) => React.createElement(Maximize2, { ...props, strokeWidth: 1.5 });
-  const ThinMinimize = (props) => React.createElement(Minimize2, { ...props, strokeWidth: 1.5 });
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
   const { 
@@ -75,18 +71,14 @@
             try {
                 const res = await supabase.from('fm_doc_types').select('id, title').eq('is_active', true);
                 return res.error ? { data: [] } : res;
-            } catch (e) {
-                return { data: [] };
-            }
+            } catch (e) { return { data: [] }; }
         };
 
         const safeFetchBranches = async () => {
             try {
                 const res = await supabase.from('fm_branches').select('id, title').eq('is_active', true);
                 return res.error ? { data: [] } : res;
-            } catch (e) {
-                return { data: [] };
-            }
+            } catch (e) { return { data: [] }; }
         };
 
         const [dtRes, brRes] = await Promise.all([safeFetchDocTypes(), safeFetchBranches()]);
@@ -115,14 +107,22 @@
       }
     };
 
+    const getMenuLabel = useCallback((m) => {
+        if (!m) return '';
+        return isRtl 
+            ? (m.label_fa || m.title_fa || m.title || m.name || m.unique_code) 
+            : (m.label_en || m.title_en || m.title || m.name || m.unique_code);
+    }, [isRtl]);
+
     const buildTree = (flatData, parentId = null) => {
         return flatData
             .filter(item => item.parent_id === parentId)
             .map(item => ({
                 ...item,
-                label: isRtl ? (item.title_fa || item.title || item.name) : (item.title_en || item.title || item.name),
+                label: getMenuLabel(item),
                 children: buildTree(flatData, item.id)
-            }));
+            }))
+            .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
     };
 
     const filterTree = (nodes, term) => {
@@ -139,9 +139,14 @@
 
     const dynamicMenuTree = useMemo(() => {
         const fullTree = buildTree(menusData, null);
-        const rootNodes = fullTree.length > 0 ? fullTree : buildTree(menusData, undefined).length > 0 ? buildTree(menusData, undefined) : menusData.map(m => ({...m, label: isRtl ? (m.title_fa || m.title || m.name) : (m.title_en || m.title || m.name), children: []}));
+        const rootNodes = fullTree.length > 0 
+            ? fullTree 
+            : buildTree(menusData, undefined).length > 0 
+                ? buildTree(menusData, undefined) 
+                : menusData.map(m => ({...m, label: getMenuLabel(m), children: []}));
+                
         return filterTree(rootNodes, searchTerm);
-    }, [menusData, searchTerm, isRtl]);
+    }, [menusData, searchTerm, isRtl, getMenuLabel]);
 
     const handleSavePermissions = async () => {
       setIsLoading(true);
@@ -236,9 +241,10 @@
                     <div className="p-3 border-b border-slate-200 dark:border-slate-700 space-y-3 z-10">
                         <div className="flex items-center justify-between">
                             <span className="text-[12px] font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5"><Layers size={14} className="text-indigo-500"/> {t('درخت فرم‌ها و سیستم', 'System Forms Tree')}</span>
-                            <div className="flex gap-1">
-                                <Button variant="ghost" size="iconSm" icon={ThinMaximize} onClick={() => setExpandAllToggle(true)} title={t('باز کردن همه', 'Expand All')} className="text-slate-500"/>
-                                <Button variant="ghost" size="iconSm" icon={ThinMinimize} onClick={() => setExpandAllToggle(false)} title={t('بستن همه', 'Collapse All')} className="text-slate-500"/>
+                            <div className="flex items-center gap-1.5 px-1 select-none">
+                                <span onClick={() => setExpandAllToggle(true)} className="text-[10px] text-indigo-500 hover:text-indigo-600 cursor-pointer font-bold transition-colors">{t('باز کردن همه', 'Expand All')}</span>
+                                <span className="text-[10px] text-slate-300 dark:text-slate-600">|</span>
+                                <span onClick={() => setExpandAllToggle(false)} className="text-[10px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 cursor-pointer font-bold transition-colors">{t('بستن همه', 'Collapse All')}</span>
                             </div>
                         </div>
                         <div className="relative">
@@ -284,9 +290,9 @@
                             <div className="p-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
                                 <h3 className="text-[14px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                    {isRtl ? (selectedMenu.title_fa || selectedMenu.title || selectedMenu.name) : (selectedMenu.title_en || selectedMenu.title || selectedMenu.name)}
+                                    {getMenuLabel(selectedMenu)}
                                 </h3>
-                                {(selectedMenu.path || selectedMenu.url) && <p className="text-[10px] font-mono text-slate-400 mt-1 dir-ltr inline-block">{selectedMenu.path || selectedMenu.url}</p>}
+                                {selectedMenu.unique_code && <p className="text-[10px] font-mono text-slate-400 mt-1 dir-ltr inline-block bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{selectedMenu.unique_code}</p>}
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-5 space-y-6">
