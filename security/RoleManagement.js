@@ -295,10 +295,10 @@
     const columns = [
       { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
       { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '200px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
-      { field: 'description', header_fa: 'توضیحات', header_en: 'Description', width: 'auto', minWidth: '180px', render: (val) => <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block w-full" title={val}>{val || '-'}</span> },
       { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
       { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
-      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '90px', type: 'toggle', onToggle: (row, val) => handleToggleActive(row, val) }
+      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '90px', type: 'toggle', onToggle: (row, val) => handleToggleActive(row, val) },
+      { field: 'description', header_fa: 'توضیحات', header_en: 'Description', width: 'auto', minWidth: '180px', render: (val) => <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block w-full" title={val}>{val || '-'}</span> }
     ];
 
     const assignedUsersColumns = [
