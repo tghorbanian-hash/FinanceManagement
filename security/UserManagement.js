@@ -10,7 +10,7 @@
   
   const { 
     Users, Edit, Trash2, Save, 
-    AlertTriangle, Lock, RefreshCw
+    AlertTriangle, Lock, RefreshCw, Shield
   } = window.LucideIcons || {};
   const supabase = window.supabase;
 
@@ -30,6 +30,7 @@
     
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
     const [resetConfirm, setResetConfirm] = useState({ isOpen: false, data: null });
+    const [accessModal, setAccessModal] = useState({ isOpen: false, user: null });
     
     const [formData, setFormData] = useState({
       username: '',
@@ -400,6 +401,7 @@
               onImport={handleImportFile}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
+                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, user: row }), className: 'text-slate-400 hover:text-purple-600' },
                 { icon: RefreshCw, tooltip: t('بازنشانی رمز عبور', 'Reset Password'), onClick: (row) => setResetConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-amber-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
@@ -527,6 +529,15 @@
             </div>
           </div>
         </Modal>
+        
+        {window.UserAccess && (
+          <window.UserAccess 
+             isOpen={accessModal.isOpen} 
+             onClose={() => setAccessModal({ isOpen: false, user: null })} 
+             user={accessModal.user} 
+             language={language} 
+          />
+        )}
       </div>
     );
   };
