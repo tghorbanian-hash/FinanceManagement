@@ -120,6 +120,8 @@
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
     const [isLoading, setIsLoading] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
+    
     const [menusData, setMenusData] = useState([]);
     const [scopesData, setScopesData] = useState({ docTypes: [], branches: [] });
     
@@ -147,6 +149,7 @@
         setDeletedPermIds([]);
         setIsInlineAdding(false);
         setInlineSearchTerm('');
+        setHasChanges(false);
       }
     }, [isOpen, user]);
 
@@ -217,6 +220,7 @@
         console.error('Fetch Access Data Error:', err);
       } finally {
         setIsLoading(false);
+        setHasChanges(false);
       }
     };
 
@@ -319,7 +323,9 @@
     }, [allSystemForms, directPerms, inlineSearchTerm]);
 
     const handleSavePermissions = async () => {
+      if (!hasChanges) return;
       setIsLoading(true);
+      
       try {
           // ذخیره نقش‌های تخصیص یافته کاربر
           await supabase.from('sec_user_roles').delete().eq('user_id', user.id);
@@ -338,7 +344,6 @@
               const hasScopes = data.scopes && Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0);
 
               if (hasActions || hasScopes) {
-                  // ارسال بدون JSON.stringify اضافی، چون دیتابیس Supabase خودش jsonb را هندل می‌کند
                   const payload = { 
                       user_id: user.id, 
                       menu_id: menuId, 
@@ -368,11 +373,12 @@
               }
           }
           
-          onClose();
+          // بعد از ذخیره موفق، مودال را نمی‌بندیم بلکه اطلاعات جدید را دریافت می‌کنیم
+          await fetchData();
+          
       } catch (err) {
           console.error("Save perms error:", err);
           alert(t('خطا در ذخیره دسترسی‌ها. مطمئن شوید جدول دیتابیس آپدیت شده است.', 'Error saving permissions. Ensure DB is updated.'));
-      } finally {
           setIsLoading(false);
       }
     };
@@ -380,10 +386,12 @@
     const handleAddRole = (roleId) => {
         if (!roleId || assignedRoles.includes(roleId)) return;
         setAssignedRoles(prev => [...prev, roleId]);
+        setHasChanges(true);
     };
 
     const handleRemoveRole = (roleId) => {
         setAssignedRoles(prev => prev.filter(id => id !== roleId));
+        setHasChanges(true);
     };
 
     const handleAddDirectForm = (form) => {
@@ -401,6 +409,7 @@
         setInlineSearchTerm('');
         setSelectedMenuId(form.id);
         setActiveSourceId('direct');
+        setHasChanges(true);
     };
 
     const handleDeleteDirect = (menuId) => {
@@ -427,6 +436,7 @@
                 }
             }
         }
+        setHasChanges(true);
     };
 
     const handleBulkDeleteDirect = (menuIds) => {
@@ -451,6 +461,7 @@
             setSelectedMenuId(null);
             setActiveSourceId(null);
         }
+        setHasChanges(true);
     };
 
     const handleUpdateDirectPermission = (formId, type, key, value) => {
@@ -484,6 +495,7 @@
                 }
             };
         });
+        setHasChanges(true);
     };
 
     const columns = [
@@ -521,22 +533,37 @@
         width: '250px',
         render: (val, row) => {
            if (row.isNewRow) return <span className="text-slate-400 text-[10px] italic">{t('نام فرم را جستجو و انتخاب کنید...', 'Search and select form...')}</span>;
+           
+           const hasDirect = row.breakdown.some(b => b.type === 'direct');
+           
            return (
-              <div className="flex flex-wrap gap-1">
-                 {row.breakdown.map((s, idx) => {
-                    const isDirect = s.type === 'direct';
-                    return (
-                        <span 
-                           key={idx} 
-                           className={`px-1.5 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1
-                               ${isDirect 
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' 
-                                  : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}
-                        >
-                           {isDirect ? <Zap size={10}/> : <Shield size={10}/>} {s.label}
-                        </span>
-                    )
-                 })}
+              <div className="flex items-center w-full min-h-[24px]">
+                 <div className="flex flex-wrap gap-1 flex-1 items-center">
+                     {row.breakdown.map((s, idx) => {
+                        const isDirect = s.type === 'direct';
+                        return (
+                            <span 
+                               key={idx} 
+                               className={`px-1.5 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1
+                                   ${isDirect 
+                                      ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' 
+                                      : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}
+                            >
+                               {isDirect ? <Zap size={10}/> : <Shield size={10}/>} {s.label}
+                            </span>
+                        )
+                     })}
+                 </div>
+                 {/* آیکون حذف مستقیما فقط برای فرم های دارای دسترسی مستقیم در همین ستون رندر می‌شود */}
+                 {hasDirect && (
+                     <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteDirect(row.id); }}
+                        title={t('حذف دسترسی مستقیم', 'Delete Direct Access')}
+                        className="mr-auto ml-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors"
+                     >
+                        <Trash2 size={14}/>
+                     </button>
+                 )}
               </div>
            )
         }
@@ -621,14 +648,8 @@
                                             if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                         },
                                         className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1.5 rounded transition-colors'
-                                    },
-                                    {
-                                        icon: Trash2,
-                                        tooltip: t('حذف دسترسی مستقیم', 'Delete Direct Access'),
-                                        show: (row) => row.breakdown.some(b => b.type === 'direct'),
-                                        onClick: (row) => handleDeleteDirect(row.id),
-                                        className: 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
                                     }
+                                    // حذف کلی دکمه سطل زباله از لیست اکشن های عمومی
                                 ]}
                                 bulkActions={[
                                     {
@@ -678,14 +699,12 @@
                                 {activeSource && (
                                     <>
                                         {!isReadOnly && (
-                                            <div className="flex justify-between items-center bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 p-2.5 rounded shadow-sm">
-                                                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300">
-                                                    <Zap size={14} />
-                                                    <span className="font-bold text-[11px]">{t('شما در حال ویرایش دسترسی مستقیم هستید.', 'Editing Direct Access.')}</span>
-                                                </div>
-                                                <Button variant="danger-outline" size="sm" icon={Trash2} onClick={() => handleDeleteDirect(currentDetailRow.id)}>
-                                                    {t('حذف فرم', 'Delete Form')}
-                                                </Button>
+                                            <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 p-2.5 rounded shadow-sm">
+                                                <Zap size={14} className="text-blue-600 dark:text-blue-400" />
+                                                <span className="font-bold text-[11px] text-blue-800 dark:text-blue-300">
+                                                    {t('شما در حال ویرایش دسترسی مستقیم هستید.', 'Editing Direct Access.')}
+                                                </span>
+                                                {/* دکمه حذف فرم از اینجا کاملاً برداشته شد */}
                                             </div>
                                         )}
 
@@ -798,8 +817,17 @@
                         {t('تمامی دسترسی‌های مستقیم و نقش‌های اختصاص یافته پس از ذخیره، برای کاربر فعال می‌شوند.', 'All direct permissions and role assignments will be applied upon saving.')}
                     </div>
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={onClose}>{t('انصراف', 'Cancel')}</Button>
-                        <Button variant="primary" size="sm" className="flex-1 sm:flex-none" icon={Save} onClick={handleSavePermissions} isLoading={isLoading}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
+                        <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={onClose}>{t('بستن', 'Close')}</Button>
+                        <Button 
+                            variant="primary" 
+                            size="sm" 
+                            className={`flex-1 sm:flex-none transition-opacity ${!hasChanges ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                            icon={Save} 
+                            onClick={hasChanges ? handleSavePermissions : undefined} 
+                            isLoading={isLoading}
+                        >
+                            {t('ذخیره تغییرات', 'Save Changes')}
+                        </Button>
                     </div>
                 </div>
             </div>
