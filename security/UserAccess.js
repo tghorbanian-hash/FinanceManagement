@@ -155,7 +155,6 @@
 
     const allSystemForms = useMemo(() => {
         return menusData
-            .filter(m => !m.is_visible || m.route) 
             .map(m => ({
                 id: m.id,
                 label: getMenuLabel(m),
@@ -236,15 +235,15 @@
                           id: data.id, 
                           user_id: user.id, 
                           menu_id: menuId, 
-                          actions: JSON.stringify(data.actions), 
-                          data_scopes: JSON.stringify(data.scopes) 
+                          actions: data.actions, 
+                          data_scopes: data.scopes 
                       });
                   } else {
                       inserts.push({ 
                           user_id: user.id, 
                           menu_id: menuId, 
-                          actions: JSON.stringify(data.actions), 
-                          data_scopes: JSON.stringify(data.scopes) 
+                          actions: data.actions, 
+                          data_scopes: data.scopes 
                       });
                   }
               } else if (data.id) {
