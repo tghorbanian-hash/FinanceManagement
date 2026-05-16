@@ -8,7 +8,7 @@
   const { 
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
     Check = FallbackIcon, Layers = FallbackIcon, AlertCircle = FallbackIcon,
-    CheckSquare = FallbackIcon, Trash2 = FallbackIcon
+    CheckSquare = FallbackIcon, Trash2 = FallbackIcon, AlertTriangle = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -47,6 +47,8 @@
     
     const [selectedMenu, setSelectedMenu] = useState(null);
     const [tempPermissions, setTempPermissions] = useState({});
+    
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', title: '', message: '', onConfirm: null });
 
     useEffect(() => {
       if (isOpen && role) {
@@ -127,59 +129,71 @@
         return ids;
     }, [menusData]);
 
-    const handleGrantFullAccessRecursive = () => {
-        if (!selectedMenu) return;
-        
-        const targetIds = [selectedMenu.id, ...getDescendantMenuIds(selectedMenu.id)];
-        
-        setTempPermissions(prev => {
-            const nextPerms = { ...prev };
-            targetIds.forEach(id => {
-                const menuObj = menusData.find(m => m.id === id);
-                if (menuObj) {
-                    const availActions = typeof menuObj.available_actions === 'string' 
-                        ? JSON.parse(menuObj.available_actions || '[]') 
-                        : (menuObj.available_actions || []);
-                        
-                    nextPerms[id] = {
-                        id: prev[id]?.id || null,
-                        actions: [...availActions],
-                        scopes: prev[id]?.scopes || {}
-                    };
-                }
-            });
-            return nextPerms;
-        });
-        
-        showToastNotification(t('دسترسی کامل به این بخش و زیرمجموعه‌ها اعمال شد.', 'Full access granted to this section and descendants.'));
-    };
-
-    const handleRemoveAccessRecursive = () => {
-        if (!selectedMenu) return;
-        
-        const targetIds = [selectedMenu.id, ...getDescendantMenuIds(selectedMenu.id)];
-        
-        setTempPermissions(prev => {
-            const nextPerms = { ...prev };
-            targetIds.forEach(id => {
-                nextPerms[id] = {
-                    id: prev[id]?.id || null,
-                    actions: [],
-                    scopes: {}
-                };
-            });
-            return nextPerms;
-        });
-
-        showToastNotification(t('تمامی دسترسی‌های این بخش و زیرمجموعه‌ها حذف شد.', 'All access removed from this section and descendants.'));
-    };
-
     const showToastNotification = (msg) => {
         if (window.DesignSystem?.Toast || window.DSCore?.Toast) {
             if (typeof alert !== 'undefined') {
                 console.log(msg);
             }
         }
+    };
+
+    const handleGrantFullAccessRecursive = () => {
+        if (!selectedMenu) return;
+        setConfirmModal({
+            isOpen: true,
+            type: 'grant',
+            title: t('تایید دسترسی کامل', 'Confirm Full Access'),
+            message: t('آیا از اختصاص تمامی دسترسی‌های این فرم و زیرمجموعه‌های آن اطمینان دارید؟', 'Are you sure you want to grant all permissions for this node and its descendants?'),
+            onConfirm: () => {
+                const targetIds = [selectedMenu.id, ...getDescendantMenuIds(selectedMenu.id)];
+                setTempPermissions(prev => {
+                    const nextPerms = { ...prev };
+                    targetIds.forEach(id => {
+                        const menuObj = menusData.find(m => m.id === id);
+                        if (menuObj) {
+                            const availActions = typeof menuObj.available_actions === 'string' 
+                                ? JSON.parse(menuObj.available_actions || '[]') 
+                                : (menuObj.available_actions || []);
+                                
+                            nextPerms[id] = {
+                                id: prev[id]?.id || null,
+                                actions: [...availActions],
+                                scopes: prev[id]?.scopes || {}
+                            };
+                        }
+                    });
+                    return nextPerms;
+                });
+                setConfirmModal({ isOpen: false });
+                showToastNotification(t('دسترسی کامل به این بخش و زیرمجموعه‌ها اعمال شد.', 'Full access granted to this section and descendants.'));
+            }
+        });
+    };
+
+    const handleRemoveAccessRecursive = () => {
+        if (!selectedMenu) return;
+        setConfirmModal({
+            isOpen: true,
+            type: 'remove',
+            title: t('تایید حذف دسترسی', 'Confirm Remove Access'),
+            message: t('آیا از حذف تمامی دسترسی‌های این فرم و زیرمجموعه‌های آن اطمینان دارید؟', 'Are you sure you want to remove all permissions for this node and its descendants?'),
+            onConfirm: () => {
+                const targetIds = [selectedMenu.id, ...getDescendantMenuIds(selectedMenu.id)];
+                setTempPermissions(prev => {
+                    const nextPerms = { ...prev };
+                    targetIds.forEach(id => {
+                        nextPerms[id] = {
+                            id: prev[id]?.id || null,
+                            actions: [],
+                            scopes: {}
+                        };
+                    });
+                    return nextPerms;
+                });
+                setConfirmModal({ isOpen: false });
+                showToastNotification(t('تمامی دسترسی‌های این بخش و زیرمجموعه‌ها حذف شد.', 'All access removed from this section and descendants.'));
+            }
+        });
     };
 
     const handleSavePermissions = async () => {
@@ -315,7 +329,7 @@
                                 {/* Actions Section */}
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                                        <div className="w-6 h-6 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center"><Shield size={14}/></div>
+                                        <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><Shield size={14}/></div>
                                         <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('عملیات مجاز (Actions)', 'Allowed Actions')}</span>
                                     </div>
                                     
@@ -324,18 +338,18 @@
                                             {t('هیچ عملیات خاصی برای این فرم در دیتابیس تعریف نشده است.', 'No specific actions defined for this form in the database.')}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                             {availActions.map(actionId => {
                                                 const isChecked = tempPermissions[selectedMenu.id]?.actions?.includes(actionId);
                                                 const labelObj = ACTION_DICT[actionId];
                                                 const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actionId;
                                                 
                                                 return (
-                                                    <label key={actionId} onClick={() => toggleAction(actionId)} className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border transition-all select-none ${isChecked ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-amber-500 border-amber-500 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
+                                                    <label key={actionId} onClick={() => toggleAction(actionId)} className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border transition-all select-none ${isChecked ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
+                                                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
                                                             {isChecked && <Check size={12} strokeWidth={3}/>}
                                                         </div>
-                                                        <span className={`text-[12px] ${isChecked ? 'font-bold text-amber-900 dark:text-amber-400' : 'text-slate-600 dark:text-slate-400 font-medium'}`}>
+                                                        <span className={`text-[12px] ${isChecked ? 'font-bold text-emerald-900 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-400 font-medium'}`}>
                                                             {displayLabel}
                                                         </span>
                                                     </label>
@@ -402,6 +416,26 @@
                     </div>
                 </div>
             </div>
+
+            {/* Confirm Modal */}
+            {confirmModal.isOpen && (
+                <Modal isOpen={true} onClose={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })} title={confirmModal.title} width="max-w-sm" language={language}>
+                    <div className="p-4 flex flex-col gap-3 items-center text-center">
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center mb-1 ${confirmModal.type === 'remove' ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-500' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500'}`}>
+                            <AlertTriangle size={22} />
+                        </div>
+                        <p className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed font-bold">
+                            {confirmModal.message}
+                        </p>
+                        <div className="flex gap-2 mt-4 w-full">
+                            <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })}>{t('انصراف', 'Cancel')}</Button>
+                            <Button variant="primary" size="sm" onClick={confirmModal.onConfirm} className={`flex-1 ${confirmModal.type === 'remove' ? 'bg-rose-600 dark:bg-rose-500 hover:bg-rose-700 border-rose-600' : 'bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 border-emerald-600'}`}>
+                                {t('تایید عملیات', 'Confirm')}
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
         </Modal>
     );
   };
