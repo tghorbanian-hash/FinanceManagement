@@ -11,7 +11,8 @@
     Plus = FallbackIcon, Search = FallbackIcon, Check = FallbackIcon, 
     X = FallbackIcon, AlertTriangle = FallbackIcon, ChevronRight = FallbackIcon, 
     ChevronDown = FallbackIcon, Layers = FallbackIcon, UserPlus = FallbackIcon,
-    UserMinus = FallbackIcon, RefreshCw = FallbackIcon, Hash = FallbackIcon
+    UserMinus = FallbackIcon, RefreshCw = FallbackIcon, Hash = FallbackIcon,
+    Calendar = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -77,7 +78,9 @@
       code: '',
       title: '',
       is_active: true,
-      description: ''
+      description: '',
+      start_date: '',
+      end_date: ''
     });
 
     const viewConfig = {
@@ -98,38 +101,54 @@
       fetchInitialData();
     }, []);
 
+    // Safe fetch helper to prevent 404s from crashing the UI
+    const safeFetch = async (query) => {
+      try {
+        const { data, error } = await query;
+        if (error) {
+          console.warn('Supabase fetch error (might be missing table/404):', error);
+          return null;
+        }
+        return data;
+      } catch (err) {
+        console.warn('Network/Unexpected error:', err);
+        return null;
+      }
+    };
+
     const fetchInitialData = async () => {
       setIsLoading(true);
       try {
         // Fetch Roles
-        const { data: rolesData, error: rolesError } = await supabase
-          .from('sec_roles')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (!rolesError && rolesData) setRoles(rolesData);
+        const rolesData = await safeFetch(supabase.from('sec_roles').select('*').order('created_at', { ascending: false }));
+        if (rolesData) setRoles(rolesData);
 
         // Fetch Users for Assignment
-        const { data: usersData } = await supabase
-          .from('sec_users')
-          .select('id, username, is_active')
-          .eq('is_active', true);
+        const usersData = await safeFetch(supabase.from('sec_users').select('id, username, is_active').eq('is_active', true));
         if (usersData) setAllUsers(usersData);
 
         // Fetch Resources
-        const { data: dbResData, error: resError } = await supabase.from('sec_resources').select('*');
-        if (!resError && dbResData) {
+        const dbResData = await safeFetch(supabase.from('sec_resources').select('*'));
+        if (dbResData && dbResData.length > 0) {
             setResources(dbResData);
+        } else {
+            // Mock resources if table is empty/missing
+            setResources([
+                { code: 'sys', title_fa: 'مدیریت سیستم', title_en: 'System Management', parent_code: null },
+                { code: 'sys_users', title_fa: 'مدیریت کاربران', title_en: 'User Management', parent_code: 'sys' },
+                { code: 'sys_roles', title_fa: 'مدیریت نقش‌ها', title_en: 'Role Management', parent_code: 'sys' },
+                { code: 'fin', title_fa: 'مالی و حسابداری', title_en: 'Finance & Accounting', parent_code: null },
+                { code: 'fin_voucher', title_fa: 'اسناد حسابداری', title_en: 'Vouchers', parent_code: 'fin' },
+            ]);
         }
 
         // Fetch Data Scopes (DocTypes & Branches)
-        const [dtRes, brRes] = await Promise.all([
-            supabase.from('fm_doc_types').select('id, title').eq('is_active', true),
-            supabase.from('fm_branches').select('id, title').eq('is_active', true)
-        ]);
+        const dtRes = await safeFetch(supabase.from('fm_doc_types').select('id, title').eq('is_active', true));
+        const brRes = await safeFetch(supabase.from('fm_branches').select('id, title').eq('is_active', true));
 
         setScopesData({
-            docTypes: dtRes.data || [],
-            branches: brRes.data || [],
+            docTypes: dtRes || [],
+            branches: brRes || [],
             ledgers: []
         });
 
@@ -145,12 +164,16 @@
         code: record.code || '',
         title: record.title || '',
         is_active: record.is_active ?? true,
-        description: record.description || ''
+        description: record.description || '',
+        start_date: record.start_date || '',
+        end_date: record.end_date || ''
       } : { 
         code: '',
         title: '',
         is_active: true,
-        description: ''
+        description: '',
+        start_date: '',
+        end_date: ''
       });
       setRoleModal({ isOpen: true, data: record });
     };
@@ -164,6 +187,8 @@
           title: formData.title,
           is_active: formData.is_active,
           description: formData.description,
+          start_date: formData.start_date || null,
+          end_date: formData.end_date || null,
           updated_at: new Date().toISOString()
         };
 
@@ -179,7 +204,11 @@
         fetchInitialData();
       } catch (err) {
         console.error('Save Role Error:', err);
-        alert(t('خطا در ذخیره نقش. ممکن است کد تکراری باشد.', 'Error saving role. Code might be duplicate.'));
+        if (err.message?.includes('404') || err.code === '42P01' || err.message?.includes('not found')) {
+            alert(t('خطا: جداول مربوط به نقش‌ها در دیتابیس یافت نشد (خطای ۴۰۴). لطفاً ابتدا جداول را در Supabase ایجاد کنید.', 'Error: Role tables not found in database (404). Please create tables in Supabase first.'));
+        } else {
+            alert(t('خطا در ذخیره نقش. ممکن است کد تکراری باشد.', 'Error saving role. Code might be duplicate.'));
+        }
       } finally {
         setIsLoading(false);
       }
@@ -195,6 +224,9 @@
         fetchInitialData();
       } catch (err) {
         console.error('Delete Role Error:', err);
+        if (err.message?.includes('404') || err.code === '42P01') {
+            alert(t('خطا: جدول در دیتابیس یافت نشد.', 'Error: Table not found in DB.'));
+        }
       } finally {
         setIsLoading(false);
       }
@@ -226,11 +258,15 @@
     const assignUser = async (userId) => {
         setIsLoading(true);
         try {
-            await supabase.from('sec_user_roles').insert([{ user_id: userId, role_id: userModal.role.id }]);
+            const { error } = await supabase.from('sec_user_roles').insert([{ user_id: userId, role_id: userModal.role.id }]);
+            if (error) throw error;
             setAssignedUsers(prev => [...prev, allUsers.find(u => u.id === userId)]);
             setUserSearchTerm('');
         } catch (err) {
             console.error(err);
+            if (err.message?.includes('404') || err.code === '42P01') {
+                alert(t('خطا: جدول sec_user_roles یافت نشد.', 'Error: sec_user_roles table not found.'));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -239,7 +275,8 @@
     const removeUser = async (userId) => {
         setIsLoading(true);
         try {
-            await supabase.from('sec_user_roles').delete().match({ user_id: userId, role_id: userModal.role.id });
+            const { error } = await supabase.from('sec_user_roles').delete().match({ user_id: userId, role_id: userModal.role.id });
+            if (error) throw error;
             setAssignedUsers(prev => prev.filter(u => u.id !== userId));
         } catch (err) {
             console.error(err);
@@ -265,12 +302,12 @@
         setTempPermissions({});
         
         try {
-            const { data: perms } = await supabase
+            const { data: perms, error } = await supabase
                 .from('sec_permissions')
                 .select('*')
                 .eq('role_id', role.id);
                 
-            if (perms) {
+            if (!error && perms) {
                 const mapped = {};
                 perms.forEach(p => {
                     mapped[p.resource_code] = {
@@ -290,7 +327,8 @@
     const handleSavePermissions = async () => {
         setIsLoading(true);
         try {
-            await supabase.from('sec_permissions').delete().eq('role_id', permModal.role.id);
+            const { error: delError } = await supabase.from('sec_permissions').delete().eq('role_id', permModal.role.id);
+            if (delError) throw delError;
             
             const inserts = [];
             Object.entries(tempPermissions).forEach(([resCode, data]) => {
@@ -305,13 +343,18 @@
             });
 
             if (inserts.length > 0) {
-                await supabase.from('sec_permissions').insert(inserts);
+                const { error: insError } = await supabase.from('sec_permissions').insert(inserts);
+                if (insError) throw insError;
             }
             
             setPermModal({ isOpen: false, role: null });
         } catch (err) {
             console.error("Save perms error:", err);
-            alert(t('خطا در ذخیره دسترسی‌ها', 'Error saving permissions'));
+            if (err.message?.includes('404') || err.code === '42P01') {
+                alert(t('خطا: جدول sec_permissions یافت نشد.', 'Error: sec_permissions table not found.'));
+            } else {
+                alert(t('خطا در ذخیره دسترسی‌ها', 'Error saving permissions'));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -409,7 +452,8 @@
     const columns = [
       { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="font-mono text-slate-600 dark:text-slate-400 text-[11px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{val}</span> },
       { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '250px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
-      { field: 'description', header_fa: 'توضیحات', header_en: 'Description', width: 'auto' },
+      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 dir-ltr">{val}</span></div> : '-' },
+      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="font-mono text-[11px] text-slate-600 dark:text-slate-400 dir-ltr">{val}</span></div> : '-' },
       { 
         field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '100px', 
         render: (val) => (
@@ -488,13 +532,22 @@
         {/* --- 1. Role Create/Edit Modal --- */}
         <Modal isOpen={roleModal.isOpen} onClose={() => setRoleModal({ isOpen: false, data: null })} title={roleModal.data ? t('ویرایش نقش', 'Edit Role') : t('تعریف نقش جدید', 'New Role')} width="max-w-md" language={language}>
           <div className="p-4 flex flex-col gap-4">
-            <TextField size="sm" label={t('کد سیستمی نقش *', 'Role Code *')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} dir="ltr" disabled={!!roleModal.data} placeholder="ROLE_ADMIN" />
-            <TextField size="sm" label={t('عنوان نقش *', 'Role Title *')} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} isRtl={isRtl} />
-            <TextField size="sm" label={t('توضیحات', 'Description')} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} isRtl={isRtl} multiline rows={3} />
-            <div className="mt-2">
-                <ToggleField size="sm" label={t('وضعیت فعالیت نقش', 'Role Is Active')} checked={formData.is_active} onChange={v => setFormData({...formData, is_active: v})} isRtl={isRtl} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <TextField size="sm" label={t('کد سیستمی نقش *', 'Role Code *')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} dir="ltr" disabled={!!roleModal.data} placeholder="ROLE_ADMIN" />
+                <TextField size="sm" label={t('عنوان نقش *', 'Role Title *')} value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} isRtl={isRtl} />
+                
+                <TextField size="sm" type="date" label={t('تاریخ شروع موثر', 'Effective Start Date')} value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} isRtl={isRtl} dir="ltr" />
+                <TextField size="sm" type="date" label={t('تاریخ پایان موثر', 'Effective End Date')} value={formData.end_date} onChange={e => setFormData({...formData, end_date: e.target.value})} isRtl={isRtl} dir="ltr" />
+                
+                <div className="md:col-span-2">
+                    <TextField size="sm" label={t('توضیحات', 'Description')} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} isRtl={isRtl} multiline rows={2} />
+                </div>
+                <div className="md:col-span-2 mt-1">
+                    <ToggleField size="sm" label={t('فعال', 'Active')} checked={formData.is_active} onChange={v => setFormData({...formData, is_active: v})} isRtl={isRtl} />
+                </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+            
+            <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
               <Button variant="outline" size="sm" onClick={() => setRoleModal({ isOpen: false, data: null })}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSaveRole} isLoading={isLoading}>{t('ذخیره', 'Save')}</Button>
             </div>
