@@ -16,7 +16,8 @@
   const { 
       Modal = () => null, 
       Button = () => null,
-      DataGrid = () => null
+      DataGrid = () => null,
+      SelectField = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -54,8 +55,8 @@
     const [selectedPermDetail, setSelectedPermDetail] = useState(null);
     const [activeSourceId, setActiveSourceId] = useState(null);
 
-    const [formSearchTerm, setFormSearchTerm] = useState('');
-    const [showFormResults, setShowFormResults] = useState(false);
+    const [isInlineAdding, setIsInlineAdding] = useState(false);
+    const [inlineSelectedMenuId, setInlineSelectedMenuId] = useState('');
 
     useEffect(() => {
       if (isOpen && user) {
@@ -65,8 +66,8 @@
         setActiveSourceId(null);
         setAssignedRoles([]);
         setDirectPerms({});
-        setFormSearchTerm('');
-        setShowFormResults(false);
+        setIsInlineAdding(false);
+        setInlineSelectedMenuId('');
       }
     }, [isOpen, user]);
 
@@ -180,7 +181,7 @@
                 map.get(p.menu_id).breakdown.push({ 
                     sourceId: `role_${roleId}`, 
                     type: 'role', 
-                    label: roleInfo?.title || roleId, 
+                    label: `${t('نقش:', 'Role:')} ${roleInfo?.title || roleId}`, 
                     actions: p.actions, 
                     scopes: p.scopes 
                 });
@@ -208,8 +209,20 @@
             }
         });
 
-        return Array.from(map.values());
-    }, [assignedRoles, directPerms, allSystemForms, globalRolePerms, allRoles, t]);
+        const list = Array.from(map.values());
+
+        if (isInlineAdding) {
+            list.unshift({
+                id: 'INLINE_NEW',
+                path: '',
+                name: '',
+                isNewRow: true,
+                breakdown: []
+            });
+        }
+
+        return list;
+    }, [assignedRoles, directPerms, allSystemForms, globalRolePerms, allRoles, t, isInlineAdding]);
 
     const handleSavePermissions = async () => {
       setIsLoading(true);
@@ -277,19 +290,30 @@
         setAssignedRoles(prev => prev.filter(id => id !== roleId));
     };
 
-    const handleAddDirectForm = (form) => {
+    const handleInlineAddSelect = (selectedMenuId) => {
+        if (!selectedMenuId) return;
+        const form = allSystemForms.find(f => f.id === selectedMenuId);
+        if (!form) return;
+
         if (directPerms[form.id]) {
             alert(t('این فرم قبلاً در لیست دسترسی‌های مستقیم وجود دارد.', 'This form is already in direct permissions list.'));
             return;
         }
+
         setDirectPerms(prev => ({
             ...prev,
             [form.id]: { id: null, actions: [], scopes: {} }
         }));
-        setFormSearchTerm('');
-        setShowFormResults(false);
         
-        const newRow = { id: form.id, path: form.fullPath, name: form.label, breakdown: [{ sourceId: 'direct', type: 'direct', label: t('دسترسی مستقیم', 'Direct Access'), actions: [], scopes: {} }] };
+        setIsInlineAdding(false);
+        setInlineSelectedMenuId('');
+        
+        const newRow = { 
+            id: form.id, 
+            path: form.fullPath, 
+            name: form.label, 
+            breakdown: [{ sourceId: 'direct', type: 'direct', label: t('دسترسی مستقیم', 'Direct Access'), actions: [], scopes: {} }] 
+        };
         setSelectedPermDetail(newRow);
         setActiveSourceId('direct');
     };
@@ -356,10 +380,9 @@
         });
     };
 
-    const formSearchResults = useMemo(() => {
-        if (!formSearchTerm) return [];
-        return allSystemForms.filter(f => f.fullPath.toLowerCase().includes(formSearchTerm.toLowerCase()));
-    }, [formSearchTerm, allSystemForms]);
+    const filteredDropdownForms = useMemo(() => {
+        return allSystemForms.filter(f => !directPerms[f.id]);
+    }, [allSystemForms, directPerms]);
 
     const columns = [
       { 
@@ -367,41 +390,75 @@
         header_fa: 'مسیر و نام فرم', 
         header_en: 'Form Path & Name', 
         width: '45%',
-        render: (val, row) => (
-            <div className="flex flex-col py-0.5">
-                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{row.name}</span>
-                <span className="text-[10px] text-slate-400 font-mono">{row.path}</span>
-            </div>
-        )
+        render: (val, row) => {
+            if (row.isNewRow) {
+                return (
+                    <div className="p-1 w-full flex items-center gap-2">
+                        <SelectField
+                            size="sm"
+                            value={inlineSelectedMenuId}
+                            onChange={(e) => {
+                                setInlineSelectedMenuId(e.target.value);
+                                handleInlineAddSelect(e.target.value);
+                            }}
+                            options={[
+                                { value: '', label: t('-- انتخاب فرم جهت دسترسی مستقیم --', '-- Select form for direct access --') },
+                                ...filteredDropdownForms.map(f => ({ value: f.id, label: f.fullPath }))
+                            ]}
+                            isRtl={isRtl}
+                        />
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                                setIsInlineAdding(false);
+                                setInlineSelectedMenuId('');
+                            }}
+                        >
+                            <X size={14}/>
+                        </Button>
+                    </div>
+                );
+            }
+            return (
+                <div className="flex flex-col py-0.5">
+                    <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{row.name}</span>
+                    <span className="text-[10px] text-slate-400 font-sans">{row.path}</span>
+                </div>
+            )
+        }
       },
       { 
         field: 'source', 
-        header_fa: 'منابع دسترسی (برای جزییات کلیک کنید)', 
-        header_en: 'Access Sources (Click for details)', 
+        header_fa: 'نوع و منبع دسترسی (جهت مشاهده جزییات کلیک کنید)', 
+        header_en: 'Access Type & Source (Click for details)', 
         width: '55%',
-        render: (val, row) => (
-           <div className="flex flex-wrap gap-1">
-              {row.breakdown.map((s, idx) => {
-                 const isActive = selectedPermDetail?.id === row.id && activeSourceId === s.sourceId;
-                 return (
-                     <div 
-                        key={idx} 
-                        onClick={(e) => { 
-                            e.stopPropagation(); 
-                            setSelectedPermDetail(row);
-                            setActiveSourceId(s.sourceId);
-                        }}
-                        className={`cursor-pointer px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all flex items-center gap-1 select-none
-                            ${isActive 
-                               ? (s.type === 'role' ? 'bg-purple-100 text-purple-700 border-purple-300 ring-1 ring-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-600' : 'bg-blue-100 text-blue-700 border-blue-300 ring-1 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-600')
-                               : (s.type === 'role' ? 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-slate-800 dark:border-slate-700 dark:text-purple-400' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-slate-800 dark:border-slate-700 dark:text-blue-400')}`}
-                     >
-                        {s.type === 'role' ? <Shield size={10}/> : <Zap size={10}/>} {s.label}
-                     </div>
-                 )
-              })}
-           </div>
-        )
+        render: (val, row) => {
+           if (row.isNewRow) return <span className="text-slate-400 text-[11px] italic">{t('لطفا ابتدا فرم را انتخاب کنید', 'Please select a form first')}</span>;
+           return (
+              <div className="flex flex-wrap gap-1">
+                 {row.breakdown.map((s, idx) => {
+                    const isActive = selectedPermDetail?.id === row.id && activeSourceId === s.sourceId;
+                    return (
+                        <div 
+                           key={idx} 
+                           onClick={(e) => { 
+                               e.stopPropagation(); 
+                               setSelectedPermDetail(row);
+                               setActiveSourceId(s.sourceId);
+                           }}
+                           className={`cursor-pointer px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all flex items-center gap-1 select-none
+                               ${isActive 
+                                  ? (s.type === 'role' ? 'bg-purple-100 text-purple-700 border-purple-300 ring-1 ring-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-600' : 'bg-blue-100 text-blue-700 border-blue-300 ring-1 ring-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-600')
+                                  : (s.type === 'role' ? 'bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100 dark:bg-slate-800 dark:border-slate-700 dark:text-purple-400' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 dark:bg-slate-800 dark:border-slate-700 dark:text-blue-400')}`}
+                        >
+                           {s.type === 'role' ? <Shield size={10}/> : <Zap size={10}/>} {s.label}
+                        </div>
+                    )
+                 })}
+              </div>
+           )
+        }
       }
     ];
 
@@ -454,39 +511,18 @@
                     </div>
                 </div>
 
-                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-4 gap-4">
                     
-                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border-r dark:border-slate-800 ${selectedPermDetail ? 'w-full md:w-7/12' : 'w-full'}`}>
-                        <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 relative z-[50]">
-                            <div className="relative">
-                                <input 
-                                    value={formSearchTerm} 
-                                    onChange={(e) => { setFormSearchTerm(e.target.value); setShowFormResults(true); }} 
-                                    placeholder={t('افزودن دسترسی مستقیم (نام فرم را جستجو کنید)...', 'Add direct perm (search form name)...')} 
-                                    className={`w-full h-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-xs outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-100 transition-all ${isRtl ? 'pr-8 pl-2' : 'pl-8 pr-2'}`} 
-                                />
-                                <Search size={14} className={`absolute top-2.5 text-slate-400 ${isRtl ? 'right-2.5' : 'left-2.5'}`}/>
-                                {showFormResults && formSearchTerm && (
-                                   <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-xl max-h-48 overflow-y-auto z-[100]">
-                                      {formSearchResults.length > 0 ? formSearchResults.map(f => (
-                                         <div key={f.id} onClick={() => handleAddDirectForm(f)} className="p-2 hover:bg-indigo-50 dark:hover:bg-slate-700 cursor-pointer text-xs border-b border-slate-50 dark:border-slate-700 last:border-0">
-                                            <div className="font-bold text-slate-700 dark:text-slate-200">{f.label}</div>
-                                            <div className="text-[10px] text-slate-400">{f.fullPath}</div>
-                                         </div>
-                                      )) : <div className="p-2 text-xs text-slate-400 text-center">{t('موردی یافت نشد.', 'No items found.')}</div>}
-                                   </div>
-                                )}
-                                {showFormResults && formSearchTerm && <div className="fixed inset-0 z-[-1]" onClick={() => setShowFormResults(false)}></div>}
-                            </div>
-                        </div>
-
-                        <div className="flex-1 min-h-0">
+                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${selectedPermDetail ? 'w-full md:w-7/12' : 'w-full'}`}>
+                        <div className="flex-1 min-h-0 relative">
                             <DataGrid 
                                 data={effectivePermissions}
                                 columns={columns}
                                 language={language}
                                 selectable={false}
+                                onAdd={() => setIsInlineAdding(true)}
                                 onRowDoubleClick={(row) => {
+                                    if (row.isNewRow) return;
                                     setSelectedPermDetail(row);
                                     if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                 }}
@@ -495,6 +531,7 @@
                                         icon: ChevronLeft, 
                                         tooltip: t('مشاهده جزئیات', 'View Details'), 
                                         onClick: (row) => {
+                                            if (row.isNewRow) return;
                                             setSelectedPermDetail(row);
                                             if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                         },
@@ -506,16 +543,16 @@
                     </div>
 
                     {selectedPermDetail && (
-                        <div className="w-full md:w-5/12 border-l border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10">
+                        <div className="w-full md:w-5/12 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10 shadow-sm">
                             <div className="absolute top-3 left-3">
-                                <button onClick={() => setSelectedPermDetail(null)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-500">
+                                <button onClick={() => setSelectedPermDetail(null)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-500 transition-colors">
                                     <X size={14}/>
                                 </button>
                             </div>
                             
-                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
                                 <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1">{selectedPermDetail.name}</h3>
-                                <div className="text-[10px] text-slate-500 font-mono leading-tight">{selectedPermDetail.path}</div>
+                                <div className="text-[10px] text-slate-500 font-sans leading-tight">{selectedPermDetail.path}</div>
                             </div>
 
                             <div className="p-4 flex-1 overflow-y-auto space-y-4">
@@ -541,7 +578,7 @@
                                             </div>
 
                                             {availActions.length === 0 ? (
-                                                <div className="text-[10px] text-slate-400 italic p-2 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
+                                                <div className="text-[10px] text-slate-400 italic p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
                                                     {t('عملیاتی برای این فرم تعریف نشده است.', 'No actions defined.')}
                                                 </div>
                                             ) : (
@@ -552,7 +589,7 @@
 
                                                         if (isReadOnly) {
                                                             return (
-                                                                <div key={actId} className={`flex items-center gap-2 p-2 rounded-lg border bg-white dark:bg-slate-800 ${isChecked ? 'border-purple-200 opacity-100' : 'border-slate-100 dark:border-slate-800 opacity-40'}`}>
+                                                                <div key={actId} className={`flex items-center gap-2 p-2 rounded-lg border bg-slate-50 dark:bg-slate-800 ${isChecked ? 'border-purple-200 opacity-100' : 'border-slate-100 dark:border-slate-800 opacity-40'}`}>
                                                                     <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-purple-500 border-purple-500 text-white' : 'text-transparent'}`}>
                                                                         <Check size={10} strokeWidth={3}/>
                                                                     </div>
@@ -589,8 +626,8 @@
                                                     const displayLabel = SCOPE_DICT[scopeId]?.[isRtl ? 'fa' : 'en'] || scopeId;
 
                                                     return (
-                                                        <div key={scopeId} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
-                                                            <div className="px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-400">
+                                                        <div key={scopeId} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col shadow-sm">
+                                                            <div className="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-400">
                                                                 {displayLabel}
                                                             </div>
                                                             <div className="p-2 flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
