@@ -1,8 +1,5 @@
-/* * Filename: security/RoleManagement.js 
- * * [DB Requirement]: Please ensure `sec_user_roles` table has `start_date` (DATE) and `end_date` (DATE) columns.
- * ALTER TABLE public.sec_user_roles ADD COLUMN IF NOT EXISTS start_date DATE;
- * ALTER TABLE public.sec_user_roles ADD COLUMN IF NOT EXISTS end_date DATE;
- */
+/* Filename: security/RoleManagement.js */
+
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useCallback } = React;
