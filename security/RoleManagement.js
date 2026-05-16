@@ -13,7 +13,6 @@
     Check = FallbackIcon
   } = LucideIcons;
 
-  // استخراج توابع تقویم دقیقاً مطابق با استاندارد دیزاین سیستم
   const Core = window.DSCore || window.DesignSystem || {};
   const formatGlobalDate = Core.formatGlobalDate || ((v) => v);
   const useCalendarMode = Core.useCalendarMode || (() => 'jalali');
@@ -37,7 +36,6 @@
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
     
-    // دریافت مود تقویم از کاستوم هوک گلوبال سیستم
     const globalCalendarMode = useCalendarMode();
 
     const [roles, setRoles] = useState([]);
@@ -50,7 +48,6 @@
     const [roleModal, setRoleModal] = useState({ isOpen: false, data: null });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, data: null });
     
-    // User Assignment States
     const [userModal, setUserModal] = useState({ isOpen: false, role: null });
     const [assignedUsers, setAssignedUsers] = useState([]);
     
@@ -355,6 +352,7 @@
 
           <div className="flex-1 min-h-0 mt-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
             <DataGrid 
+              key={`roles_grid_${language}_${globalCalendarMode}`}
               data={filteredRoles}
               columns={columns} 
               language={language}
@@ -365,10 +363,10 @@
               onRowDoubleClick={(row) => handleOpenRoleModal(row)}
               hideImport={true}
               actions={[
-                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: (row) => row.hasPerms ? 'text-emerald-500 hover:text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' : 'text-slate-400 hover:text-emerald-600' },
-                { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: (row) => row.hasUsers ? 'text-blue-500 hover:text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'text-slate-400 hover:text-blue-600' },
-                { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-indigo-600' },
-                { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-red-600' }
+                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: (row) => row.hasPerms ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-400 hover:text-emerald-500' },
+                { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: (row) => row.hasUsers ? 'text-blue-500 hover:text-blue-600' : 'text-slate-400 hover:text-blue-500' },
+                { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-indigo-500' },
+                { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-rose-500' }
               ]}
             />
           </div>
@@ -502,6 +500,7 @@
                 <div className="flex-1 overflow-hidden px-4 pb-4 bg-white dark:bg-slate-900 relative z-0 flex flex-col">
                     <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col">
                         <DataGrid 
+                            key={`users_grid_${language}_${globalCalendarMode}`}
                             columns={assignedUsersColumns} 
                             data={assignedUsers} 
                             language={language}
