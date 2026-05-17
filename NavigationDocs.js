@@ -15,7 +15,7 @@
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const { Modal, Button } = window.DesignSystem || window.DSCore || {};
-    const { toast } = window.DSFeedback || {};
+    const { Toast } = window.DSFeedback || {};
     const supabase = window.supabase;
     
     const [loading, setLoading] = useState(false);
@@ -23,17 +23,16 @@
     const [docs, setDocs] = useState([]);
     const [hasFile, setHasFile] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, doc: null });
+    const [toastState, setToastState] = useState({ isVisible: false, message: '', type: 'success' });
     const fileInputRef = useRef(null);
 
-    const showSuccess = (msg) => {
-      if (toast && toast.success) toast.success(msg);
-      else console.log("SUCCESS:", msg);
+    const showToast = (message, type = 'success') => {
+      setToastState({ isVisible: true, message, type });
+      setTimeout(() => setToastState(prev => ({ ...prev, isVisible: false })), 4000);
     };
-    
-    const showError = (msg) => {
-      if (toast && toast.error) toast.error(msg);
-      else console.error("ERROR:", msg);
-    };
+
+    const showSuccess = (msg) => showToast(msg, 'success');
+    const showError = (msg) => showToast(msg, 'error');
 
     useEffect(() => {
       if (isOpen && pageKey) {
@@ -322,6 +321,8 @@
             </div>
           </div>
         </Modal>
+
+        {Toast && <Toast isVisible={toastState.isVisible} message={toastState.message} type={toastState.type} onClose={() => setToastState(prev => ({ ...prev, isVisible: false }))} />}
       </>
     );
   };

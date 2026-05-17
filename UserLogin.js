@@ -19,18 +19,17 @@
   }) => {
     const [resetData, setResetData] = useState({ identifier: '', otp: '', newPassword: '', confirmPassword: '' });
     const [isLoading, setIsLoading] = useState(false);
+    const [toastState, setToastState] = useState({ isVisible: false, message: '', type: 'success' });
     
-    const { toast } = window.DSFeedback || {};
+    const { Toast } = window.DSFeedback || {};
     
-    const showSuccess = (msg) => {
-      if (toast && toast.success) toast.success(msg);
-      else alert(msg);
+    const showToast = (message, type = 'success') => {
+      setToastState({ isVisible: true, message, type });
+      setTimeout(() => setToastState(prev => ({ ...prev, isVisible: false })), 4000);
     };
-    
-    const showError = (msg) => {
-      if (toast && toast.error) toast.error(msg);
-      else alert(msg);
-    };
+
+    const showSuccess = (msg) => showToast(msg, 'success');
+    const showError = (msg) => showToast(msg, 'error');
 
     const handleResetNext = (e, nextView) => {
       e.preventDefault();
@@ -387,6 +386,8 @@
             {isRtl ? 'تمامی حقوق برای شرکت توسعه نرم‌افزار محفوظ است. © ۲۰۲۶' : 'All rights reserved © 2026'}
           </div>
         </div>
+
+        {Toast && <Toast isVisible={toastState.isVisible} message={toastState.message} type={toastState.type} onClose={() => setToastState(prev => ({ ...prev, isVisible: false }))} />}
       </div>
     );
   };
