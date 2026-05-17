@@ -5,12 +5,12 @@
   
   const { 
     Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, SelectField, ToggleField, Badge
+    TextField, SelectField, ToggleField, Badge, CheckboxField
   } = window.DesignSystem || {};
   
   const { 
     Users, Edit, Trash2, Save, 
-    AlertTriangle, Lock, RefreshCw, Shield
+    AlertTriangle, Lock, RefreshCw, Shield, Plus
   } = window.LucideIcons || {};
   const supabase = window.supabase;
 
@@ -41,6 +41,26 @@
       email: '',
       mobile: ''
     });
+
+    const [isQuickPartyModalOpen, setIsQuickPartyModalOpen] = useState(false);
+    const [isSavingParty, setIsSavingParty] = useState(false);
+    const [quickPartyData, setQuickPartyData] = useState({
+      code: '',
+      firstName: '',
+      lastName: '',
+      nationalId: '',
+      mobile: '',
+      email: '',
+      roles: ['system_user']
+    });
+
+    const PARTY_ROLES = [
+      { id: 'system_user', label: t('کاربر سیستم', 'System User') },
+      { id: 'employee', label: t('پرسنل / کارمند', 'Employee') },
+      { id: 'customer', label: t('مشتری', 'Customer') },
+      { id: 'supplier', label: t('تامین‌کننده', 'Supplier') },
+      { id: 'shareholder', label: t('سهامدار', 'Shareholder') }
+    ];
 
     const [gridState, setGridState] = useState(null);
 
@@ -146,6 +166,69 @@
         console.error('Save Error:', err);
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const handleSaveQuickParty = async () => {
+      if (!quickPartyData.firstName || !quickPartyData.lastName || !quickPartyData.code) {
+         alert(t('لطفاً فیلدهای ستاره‌دار (کد، نام، نام خانوادگی) را تکمیل کنید.', 'Please fill required fields.'));
+         return;
+      }
+      
+      setIsSavingParty(true);
+      try {
+        const payload = {
+          party_type: 'real',
+          code: quickPartyData.code,
+          first_name: quickPartyData.firstName,
+          last_name: quickPartyData.lastName,
+          national_id: quickPartyData.nationalId,
+          mobile: quickPartyData.mobile,
+          email: quickPartyData.email,
+          roles: quickPartyData.roles,
+          is_active: true,
+          created_at: new Date().toISOString()
+        };
+
+        const { data: newPartyData, error } = await supabase.from('parties').insert([payload]).select().single();
+        
+        if (error) {
+           if (error.code === '23505') {
+             alert(t('کد شخص یا کد ملی تکراری است.', 'Duplicate party code or national ID.'));
+           } else {
+             throw error;
+           }
+           return;
+        }
+
+        const partyLabel = `${newPartyData.first_name} ${newPartyData.last_name} (${newPartyData.code})`;
+        const newDropdownItem = {
+          id: newPartyData.id,
+          label: partyLabel,
+          mobile: newPartyData.mobile,
+          email: newPartyData.email
+        };
+
+        setAllParties(prev => [...prev, newPartyData]);
+        
+        if (newPartyData.roles && newPartyData.roles.includes('system_user')) {
+            setPartiesDropdown(prev => [...prev, newDropdownItem]);
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          partyId: newPartyData.id,
+          mobile: newPartyData.mobile || prev.mobile,
+          email: newPartyData.email || prev.email
+        }));
+
+        setIsQuickPartyModalOpen(false);
+        setQuickPartyData({ code: '', firstName: '', lastName: '', nationalId: '', mobile: '', email: '', roles: ['system_user'] });
+      } catch (err) {
+        console.error('Save Quick Party Error:', err);
+        alert(t('خطا در ذخیره اطلاعات شخص.', 'Error saving party.'));
+      } finally {
+        setIsSavingParty(false);
       }
     };
 
@@ -441,18 +524,31 @@
                 ]}
               />
 
-              <SelectField 
-                size="sm" 
-                label={t('اتصال به شخص / پرسنل *', 'Link to Party *')} 
-                value={formData.partyId} 
-                onChange={handlePartyChange} 
-                isRtl={isRtl}
-                required
-                options={[
-                  { value: '', label: `-- ${t('انتخاب کنید', 'Select')} --` },
-                  ...partiesDropdown.map(p => ({ value: p.id, label: p.label }))
-                ]}
-              />
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <SelectField 
+                    size="sm" 
+                    label={t('اتصال به شخص / پرسنل *', 'Link to Party *')} 
+                    value={formData.partyId} 
+                    onChange={handlePartyChange} 
+                    isRtl={isRtl}
+                    required
+                    options={[
+                      { value: '', label: `-- ${t('انتخاب کنید', 'Select')} --` },
+                      ...partiesDropdown.map(p => ({ value: p.id, label: p.label }))
+                    ]}
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  icon={Plus} 
+                  onClick={() => setIsQuickPartyModalOpen(true)} 
+                  className="h-8 w-8 px-0 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/40 mb-[1px]" 
+                  title={t('تعریف شخص جدید', 'Add New Party')}
+                />
+              </div>
+
               <TextField 
                 size="sm" 
                 label={currentRecord ? t('رمز عبور جدید (اختیاری)', 'New Password (Optional)') : t('رمز عبور *', 'Password *')} 
@@ -490,6 +586,51 @@
             <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
               <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSave} isLoading={isLoading}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
+            </div>
+          </div>
+        </Modal>
+
+        <Modal
+          isOpen={isQuickPartyModalOpen}
+          onClose={() => setIsQuickPartyModalOpen(false)}
+          title={t('تعریف سریع شخص حقیقی', 'Quick Add Real Person')}
+          width="max-w-3xl"
+          language={language}
+        >
+          <div className="p-4 flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <TextField size="sm" label={t('کد شخص *', 'Party Code *')} value={quickPartyData.code} onChange={e => setQuickPartyData({...quickPartyData, code: e.target.value})} isRtl={isRtl} required dir="ltr" />
+              <TextField size="sm" label={t('نام *', 'First Name *')} value={quickPartyData.firstName} onChange={e => setQuickPartyData({...quickPartyData, firstName: e.target.value})} isRtl={isRtl} required />
+              <TextField size="sm" label={t('نام خانوادگی *', 'Last Name *')} value={quickPartyData.lastName} onChange={e => setQuickPartyData({...quickPartyData, lastName: e.target.value})} isRtl={isRtl} required />
+              <TextField size="sm" label={t('کد ملی', 'National ID')} value={quickPartyData.nationalId} onChange={e => setQuickPartyData({...quickPartyData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" />
+              <TextField size="sm" label={t('موبایل', 'Mobile')} value={quickPartyData.mobile} onChange={e => setQuickPartyData({...quickPartyData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
+              <TextField size="sm" label={t('ایمیل', 'Email')} value={quickPartyData.email} onChange={e => setQuickPartyData({...quickPartyData, email: e.target.value})} isRtl={isRtl} dir="ltr" />
+            </div>
+            
+            <div className="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+               <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-3 block">{t('نقش‌های شخص', 'Party Roles')}</label>
+               <div className="flex flex-wrap gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                 {PARTY_ROLES.map(role => (
+                   <CheckboxField 
+                     key={role.id} 
+                     size="sm" 
+                     label={role.label} 
+                     checked={quickPartyData.roles.includes(role.id)} 
+                     onChange={(checked) => {
+                       setQuickPartyData(prev => ({
+                         ...prev,
+                         roles: checked ? [...prev.roles, role.id] : prev.roles.filter(r => r !== role.id)
+                       }));
+                     }} 
+                     isRtl={isRtl} 
+                   />
+                 ))}
+               </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+              <Button variant="outline" size="sm" onClick={() => setIsQuickPartyModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+              <Button variant="primary" size="sm" icon={Save} onClick={handleSaveQuickParty} isLoading={isSavingParty}>{t('ذخیره و انتخاب', 'Save & Select')}</Button>
             </div>
           </div>
         </Modal>
