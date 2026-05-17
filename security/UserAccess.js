@@ -10,7 +10,8 @@
     Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
     Check = FallbackIcon, AlertCircle = FallbackIcon, User = FallbackIcon,
     Zap = FallbackIcon, X = FallbackIcon, Plus = FallbackIcon, ChevronLeft = FallbackIcon,
-    FileText = FallbackIcon, Info = FallbackIcon, Search = FallbackIcon, Trash2 = FallbackIcon
+    FileText = FallbackIcon, Info = FallbackIcon, Search = FallbackIcon, Trash2 = FallbackIcon,
+    Eye = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
@@ -620,6 +621,18 @@
                                 selectable={true}
                                 selectedIds={gridSelectedIds}
                                 onSelectChange={setGridSelectedIds}
+                                activeRowId={selectedMenuId}
+                                onRowClick={(row) => {
+                                    if (row.isNewRow) return;
+                                    setSelectedMenuId(row.id);
+                                    if (row.breakdown && row.breakdown.length > 0) {
+                                        if (!activeSourceId || !row.breakdown.find(b => b.sourceId === activeSourceId)) {
+                                            setActiveSourceId(row.breakdown[0].sourceId);
+                                        }
+                                    } else {
+                                        setActiveSourceId(null);
+                                    }
+                                }}
                                 onAdd={() => {
                                     setIsInlineAdding(true);
                                     setInlineSearchTerm('');
@@ -627,17 +640,15 @@
                                 onRowDoubleClick={(row) => {
                                     if (row.isNewRow) return;
                                     setSelectedMenuId(row.id);
-                                    setGridSelectedIds([row.id]);
                                     if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                 }}
                                 actions={[
                                     { 
-                                        icon: ChevronLeft, 
+                                        icon: Eye, 
                                         tooltip: t('مشاهده جزئیات', 'View Details'), 
                                         onClick: (row) => {
                                             if (row.isNewRow) return;
                                             setSelectedMenuId(row.id);
-                                            setGridSelectedIds([row.id]);
                                             if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
                                         },
                                         className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1.5 rounded transition-colors'
@@ -645,7 +656,7 @@
                                     {
                                         icon: Trash2,
                                         tooltip: t('حذف دسترسی مستقیم', 'Delete Direct Access'),
-                                        show: (row) => !row.isNewRow && row.breakdown.some(b => b.type === 'direct'),
+                                        hidden: (row) => row.isNewRow || !row.breakdown.some(b => b.type === 'direct'),
                                         onClick: (row) => handleDeleteDirect(row.id),
                                         className: 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
                                     }
