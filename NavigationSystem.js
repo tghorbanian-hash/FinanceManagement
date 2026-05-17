@@ -38,6 +38,7 @@
 
   const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     const supabase = window.supabase;
+    const { Dialog } = window.DSFeedback || {};
 
     const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
     const isRtl = currentLanguage === 'fa';
@@ -65,6 +66,7 @@
     const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
     const [docModalInfo, setDocModalInfo] = useState({ isOpen: false, type: 'user' });
+    const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
     const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     const theme = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
@@ -152,11 +154,13 @@
       }
     };
 
-    const handleLogout = () => {
-      if (window.confirm(t('آیا از خروج از سیستم اطمینان دارید؟', 'Are you sure you want to logout?'))) {
-        localStorage.removeItem('fm_user_session');
-        window.location.reload();
-      }
+    const handleLogoutClick = () => {
+      setLogoutConfirmOpen(true);
+    };
+
+    const executeLogout = () => {
+      localStorage.removeItem('fm_user_session');
+      window.location.reload();
     };
 
     const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
@@ -495,7 +499,7 @@
             </button>
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
-            <button onClick={handleLogout} title={t('خروج از سیستم', 'Logout')} className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><LogOut size={18} /></button>
+            <button onClick={handleLogoutClick} title={t('خروج از سیستم', 'Logout')} className="text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"><LogOut size={18} /></button>
             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">PM</div>
           </div>
         </nav>
@@ -636,6 +640,21 @@
             isAdmin={isAdmin}
             language={currentLanguage}
           />
+        )}
+
+        {Dialog && (
+          <Dialog
+            isOpen={logoutConfirmOpen}
+            title={t('خروج از سیستم', 'Logout')}
+            type="warning"
+            language={currentLanguage}
+            confirmLabel={t('بله، خارج می‌شوم', 'Yes, Logout')}
+            cancelLabel={t('انصراف', 'Cancel')}
+            onConfirm={executeLogout}
+            onCancel={() => setLogoutConfirmOpen(false)}
+          >
+            {t('آیا از خروج از سیستم اطمینان دارید؟', 'Are you sure you want to logout?')}
+          </Dialog>
         )}
       </div>
     );
