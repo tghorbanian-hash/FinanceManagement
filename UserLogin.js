@@ -37,6 +37,13 @@
       setAuthView(nextView);
     };
 
+    const hashPassword = async (pass) => {
+      const msgBuffer = new TextEncoder().encode(pass);
+      const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    };
+
     const handleResetPasswordSubmit = async (e) => {
       e.preventDefault();
       if(resetData.newPassword !== resetData.confirmPassword) {
@@ -59,10 +66,12 @@
            setIsLoading(false);
            return;
         }
+
+        const hashedPassword = await hashPassword(resetData.newPassword);
         
         const { error: resetErr } = await supabase.rpc('reset_user_password', {
            p_user_id: userData.id,
-           p_new_password: resetData.newPassword
+           p_new_password: hashedPassword
         });
         
         if (resetErr) {
@@ -361,9 +370,14 @@
                     <Lock size={18} className={`absolute top-3.5 ${isRtl ? 'right-3.5' : 'left-3.5'} text-slate-400`} />
                   </div>
                 </div>
-                <button type="submit" className="w-full h-12 mt-6 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-bold text-[13px] shadow-lg shadow-indigo-200 transition-all flex items-center justify-center">
-                  {t.savePassword || (isRtl ? 'ذخیره کلمه عبور' : 'Save Password')}
-                </button>
+                <div className="flex gap-3 pt-2 mt-4">
+                  <button type="button" onClick={() => {setAuthView('login'); setResetData({ identifier: '', otp: '', newPassword: '', confirmPassword: '' });}} className="flex-1 h-11 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-[12px] transition-all">
+                    {t.cancel || (isRtl ? 'انصراف' : 'Cancel')}
+                  </button>
+                  <button type="submit" className="flex-1 h-11 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-xl font-bold text-[12px] shadow-lg shadow-indigo-200 transition-all flex items-center justify-center">
+                    {t.savePassword || (isRtl ? 'ذخیره' : 'Save')}
+                  </button>
+                </div>
               </form>
             )}
 

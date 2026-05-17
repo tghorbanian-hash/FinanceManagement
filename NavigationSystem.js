@@ -10,7 +10,7 @@
     ListTree = FallbackIcon, FileText = FallbackIcon, Bell = FallbackIcon, Monitor = FallbackIcon, Clock = FallbackIcon,
     Settings = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, ChevronDown = FallbackIcon, Folder = FallbackIcon, FolderOpen = FallbackIcon, Globe = FallbackIcon, Loader2 = FallbackIcon, FileWarning = FallbackIcon,
     Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, FileSpreadsheet = FallbackIcon, Calendar = FallbackIcon, Moon = FallbackIcon, Sun = FallbackIcon,
-    HelpCircle = FallbackIcon
+    HelpCircle = FallbackIcon, LogOut = FallbackIcon
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -149,6 +149,13 @@
       const newTheme = theme === 'light' ? 'dark' : 'light';
       if (window.DSCore?.setGlobalTheme) {
         window.DSCore.setGlobalTheme(newTheme);
+      }
+    };
+
+    const handleLogout = () => {
+      if (window.confirm(t('آیا از خروج از سیستم اطمینان دارید؟', 'Are you sure you want to logout?'))) {
+        localStorage.removeItem('fm_user_session');
+        window.location.reload();
       }
     };
 
@@ -488,7 +495,7 @@
             </button>
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
-            <button className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"><Settings size={18} /></button>
+            <button onClick={handleLogout} title={t('خروج از سیستم', 'Logout')} className="text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"><LogOut size={18} /></button>
             <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">PM</div>
           </div>
         </nav>
