@@ -10,7 +10,7 @@
     ListTree = FallbackIcon, FileText = FallbackIcon, Bell = FallbackIcon, Monitor = FallbackIcon, Clock = FallbackIcon,
     Settings = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, ChevronDown = FallbackIcon, Folder = FallbackIcon, FolderOpen = FallbackIcon, Globe = FallbackIcon, Loader2 = FallbackIcon, FileWarning = FallbackIcon,
     Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, FileSpreadsheet = FallbackIcon, Calendar = FallbackIcon, Moon = FallbackIcon, Sun = FallbackIcon,
-    Book = FallbackIcon, UploadCloud = FallbackIcon, Trash2 = FallbackIcon, Download = FallbackIcon, File = FallbackIcon, AlertCircle = FallbackIcon, X = FallbackIcon, CheckCircle = FallbackIcon
+    HelpCircle = FallbackIcon, UploadCloud = FallbackIcon, Trash2 = FallbackIcon, Download = FallbackIcon, File = FallbackIcon, AlertCircle = FallbackIcon, X = FallbackIcon, CheckCircle = FallbackIcon
   } = LucideIcons;
 
   const FormLoader = ({ path, language }) => {
@@ -36,26 +36,30 @@
     return <DynamicComponent language={language} />;
   };
 
-  const PageDocModal = ({ isOpen, onClose, pageKey, docType, isAdmin, language }) => {
+  const PageDocModal = ({ isOpen, onClose, pageKey, pageName, docType, isAdmin, language }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const { Modal, Button } = window.DesignSystem || window.DSCore || {};
+    const { toast } = window.DSFeedback || {};
     const supabase = window.supabase;
     
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [currentDoc, setCurrentDoc] = useState(null);
+    const [docs, setDocs] = useState([]);
     const [hasFile, setHasFile] = useState(false);
     const fileInputRef = useRef(null);
 
+    const showSuccess = (msg) => toast?.success ? toast.success(msg) : alert(msg);
+    const showError = (msg) => toast?.error ? toast.error(msg) : alert(msg);
+
     useEffect(() => {
       if (isOpen && pageKey) {
-        fetchDocument();
+        fetchDocuments();
         setHasFile(false);
       }
     }, [isOpen, pageKey, docType]);
 
-    const fetchDocument = async () => {
+    const fetchDocuments = async () => {
       if (!supabase) return;
       setLoading(true);
       try {
@@ -64,12 +68,12 @@
           .select('*')
           .eq('page_key', pageKey)
           .eq('doc_type', docType)
-          .maybeSingle();
+          .order('created_at', { ascending: false });
 
         if (!error) {
-          setCurrentDoc(data);
+          setDocs(data || []);
         } else {
-          setCurrentDoc(null);
+          setDocs([]);
         }
       } catch (err) {
         console.error("System Error:", err);
@@ -91,7 +95,7 @@
       if (!file) return;
 
       if (file.size > 10 * 1024 * 1024) {
-        alert(t('حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.', 'File size must be less than 10MB.'));
+        showError(t('حجم فایل نباید بیشتر از ۱۰ مگابایت باشد.', 'File size must be less than 10MB.'));
         return;
       }
 
@@ -119,51 +123,42 @@
           updated_at: new Date().toISOString()
         };
 
-        if (currentDoc && currentDoc.id) {
-          if (currentDoc.file_path) {
-             await supabase.storage.from('documentation').remove([currentDoc.file_path]);
-          }
-          const { error: updateError } = await supabase
-            .from('page_documents')
-            .update(docData)
-            .eq('id', currentDoc.id);
-            
-          if (updateError) throw updateError;
-        } else {
-          const { error: insertError } = await supabase
-            .from('page_documents')
-            .insert([docData]);
+        const { error: insertError } = await supabase
+          .from('page_documents')
+          .insert([docData]);
 
-          if (insertError) throw insertError;
-        }
+        if (insertError) throw insertError;
 
-        await fetchDocument();
+        await fetchDocuments();
         setHasFile(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
-        alert(t('فایل با موفقیت آپلود شد.', 'File uploaded successfully.'));
+        
+        showSuccess(t('فایل با موفقیت آپلود و اضافه شد.', 'File uploaded successfully.'));
 
       } catch (err) {
         console.error("Upload process error:", err);
-        alert(t('خطا در آپلود فایل. مطمئن شوید جدول page_documents در دیتابیس وجود دارد.', 'Error uploading file. Make sure table exists.'));
+        showError(t('خطا در آپلود فایل. مطمئن شوید تنظیمات سرور و دیتابیس صحیح است.', 'Error uploading file. Make sure settings are correct.'));
       } finally {
         setUploading(false);
       }
     };
 
-    const handleDelete = async () => {
-      if (!window.confirm(t('آیا از حذف این سند اطمینان دارید؟', 'Are you sure you want to delete this document?'))) return;
+    const handleDelete = async (doc) => {
+      if (!window.confirm(t(`آیا از حذف سند "${doc.file_name}" اطمینان دارید؟`, `Are you sure you want to delete "${doc.file_name}"?`))) return;
 
       setUploading(true);
       try {
-        if (currentDoc.file_path) {
-          await supabase.storage.from('documentation').remove([currentDoc.file_path]);
+        if (doc.file_path) {
+          await supabase.storage.from('documentation').remove([doc.file_path]);
         }
-        const { error: dbError } = await supabase.from('page_documents').delete().eq('id', currentDoc.id);
+        const { error: dbError } = await supabase.from('page_documents').delete().eq('id', doc.id);
         if (dbError) throw dbError;
-        setCurrentDoc(null);
+        
+        await fetchDocuments();
+        showSuccess(t('سند مورد نظر با موفقیت حذف شد.', 'Document deleted successfully.'));
       } catch (err) {
         console.error(err);
-        alert(t('خطا در حذف سند.', 'Error deleting document.'));
+        showError(t('خطا در حذف سند.', 'Error deleting document.'));
       } finally {
         setUploading(false);
       }
@@ -193,15 +188,15 @@
         onClose={onClose}
         title={
           <div className="flex items-center gap-2">
-             {docType === 'dev' ? <FileText className="text-amber-500" size={18}/> : <Book className="text-indigo-500" size={18}/>}
+             {docType === 'dev' ? <FileText className="text-amber-500" size={18}/> : <HelpCircle className="text-indigo-500" size={18}/>}
              <span className="text-[14px] font-black">{modalTitle}</span>
-             <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-[10px] px-2 py-0.5 rounded font-mono" dir="ltr">{pageKey}</span>
+             <span className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full">{pageName}</span>
           </div>
         }
-        width="max-w-md"
+        width="max-w-xl"
         language={language}
       >
-        <div className="p-4 flex flex-col gap-5 min-h-[200px]" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="p-4 flex flex-col gap-5 min-h-[200px] max-h-[70vh] overflow-y-auto custom-scrollbar" dir={isRtl ? 'rtl' : 'ltr'}>
           {loading ? (
             <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-2">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
@@ -209,70 +204,71 @@
             </div>
           ) : (
             <>
-              <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-4 flex flex-col items-center justify-center shadow-inner">
-                {currentDoc ? (
-                  <div className="w-full animate-in fade-in duration-300">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm shrink-0">
-                         {getFileIcon(currentDoc.file_name)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-bold text-slate-800 dark:text-slate-100 truncate" dir="ltr" title={currentDoc.file_name}>
-                          {currentDoc.file_name}
+              {docs.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  <div className="text-[12px] font-bold text-slate-500 dark:text-slate-400 mb-1">{t('فایل‌های ضمیمه شده:', 'Attached Files:')}</div>
+                  {docs.map(doc => (
+                    <div key={doc.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex items-center justify-between shadow-sm hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all group">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-10 h-10 bg-slate-50 dark:bg-slate-900 rounded-md border border-slate-100 dark:border-slate-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                           {getFileIcon(doc.file_name)}
                         </div>
-                        <div className="text-[10px] text-slate-500 mt-1">
-                          {new Date(currentDoc.updated_at).toLocaleString(isRtl ? 'fa-IR' : 'en-US')}
+                        <div className="flex flex-col min-w-0">
+                          <div className="text-[12px] font-bold text-slate-800 dark:text-slate-100 truncate" dir="ltr" title={doc.file_name}>
+                            {doc.file_name}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {new Date(doc.updated_at).toLocaleString(isRtl ? 'fa-IR' : 'en-US')}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <a 
-                        href={getDownloadUrl(currentDoc.file_path)} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-2 h-9 text-[12px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded transition-colors shadow-sm"
-                      >
-                        <Download size={14} />
-                        {t('دانلود / مشاهده', 'Download / View')}
-                      </a>
                       
-                      {isAdmin && (
-                        <button 
-                          onClick={handleDelete}
-                          disabled={uploading}
-                          className="w-9 h-9 flex items-center justify-center rounded border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors shrink-0"
-                          title={t('حذف سند', 'Delete Document')}
+                      <div className="flex gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <a 
+                          href={getDownloadUrl(doc.file_path)} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="w-8 h-8 flex items-center justify-center text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors"
+                          title={t('دانلود / مشاهده', 'Download / View')}
                         >
-                          {uploading ? <div className="animate-spin h-3 w-3 border-b-2 border-red-600 dark:border-red-400 rounded-full"></div> : <Trash2 size={16} />}
-                        </button>
-                      )}
+                          <Download size={16} />
+                        </a>
+                        
+                        {isAdmin && (
+                          <button 
+                            onClick={() => handleDelete(doc)}
+                            disabled={uploading}
+                            className="w-8 h-8 flex items-center justify-center text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                            title={t('حذف سند', 'Delete Document')}
+                          >
+                            {uploading ? <div className="animate-spin h-3 w-3 border-b-2 border-red-500 rounded-full"></div> : <Trash2 size={16} />}
+                          </button>
+                        )}
+                      </div>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg p-8 flex flex-col items-center justify-center text-center shadow-inner">
+                  <div className="bg-slate-100 dark:bg-slate-800/80 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
+                    {docType === 'dev' ? <FileText size={32} opacity={0.5} /> : <HelpCircle size={32} opacity={0.5} />}
                   </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <div className="bg-slate-100 dark:bg-slate-800/80 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400 dark:text-slate-500">
-                      <Book size={32} opacity={0.5} />
-                    </div>
-                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mb-1">
-                      {t('سندی برای این صفحه بارگذاری نشده است.', 'No documentation uploaded for this page.')}
-                    </p>
-                  </div>
-                )}
-              </div>
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 font-medium">
+                    {t('سندی برای این صفحه بارگذاری نشده است.', 'No documentation uploaded for this page.')}
+                  </p>
+                </div>
+              )}
 
               {isAdmin && (
-                <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4 animate-in slide-in-from-bottom-2">
+                <div className="border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
                   <div className="flex items-center gap-2 mb-3">
                      <UploadCloud size={16} className="text-slate-400 dark:text-slate-500" />
                      <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300">
-                       {currentDoc 
-                         ? t('جایگزینی فایل سند', 'Replace Document File')
-                         : t('آپلود فایل سند جدید', 'Upload New Document')}
+                       {t('آپلود فایل سند جدید', 'Upload New Document')}
                      </span>
                   </div>
                   
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                      <input 
                         type="file" 
                         ref={fileInputRef}
@@ -284,7 +280,7 @@
                           file:bg-indigo-50 file:text-indigo-700
                           dark:file:bg-indigo-900/30 dark:file:text-indigo-400
                           file:cursor-pointer hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/50
-                          cursor-pointer border border-slate-200 dark:border-slate-700 rounded-full p-1 bg-white dark:bg-slate-800
+                          cursor-pointer border border-slate-200 dark:border-slate-700 rounded-full p-1 bg-white dark:bg-slate-800 flex-1
                         `}
                         accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.txt"
                         disabled={uploading}
@@ -294,14 +290,14 @@
                         onClick={handleFileUpload}
                         disabled={uploading || !hasFile}
                         className={`
-                          w-full h-10 flex items-center justify-center gap-2 rounded-lg text-[12px] font-bold transition-all
+                          sm:w-32 h-10 flex items-center justify-center gap-2 rounded-full text-[12px] font-bold transition-all shrink-0
                           ${hasFile ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md' : 'opacity-50 cursor-not-allowed bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}
                         `}
                      >
                         {uploading ? t('در حال آپلود...', 'Uploading...') : (
                           <>
                             {hasFile && <UploadCloud size={16}/>}
-                            <span>{t('آپلود فایل', 'Upload File')}</span>
+                            <span>{t('آپلود', 'Upload')}</span>
                           </>
                         )}
                      </button>
@@ -313,7 +309,7 @@
                 </div>
               )}
 
-              {!isAdmin && !currentDoc && (
+              {!isAdmin && docs.length === 0 && (
                  <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 text-indigo-700 dark:text-indigo-300 p-3 rounded-lg text-[12px] flex gap-2">
                     <AlertCircle size={16} className="shrink-0" />
                     {t('برای دسترسی به راهنما لطفا با مدیر سیستم تماس بگیرید.', 'Please contact system admin for documentation.')}
@@ -857,7 +853,7 @@
                 {activeForm && (
                   <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-1 mr-2 ml-2">
                     <button onClick={() => setDocModalInfo({ isOpen: true, type: 'user' })} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-indigo-500 dark:text-indigo-400" title={t('راهنمای کاربری', 'User Guide')}>
-                      <Book size={14} />
+                      <HelpCircle size={14} />
                     </button>
                     <button onClick={() => setDocModalInfo({ isOpen: true, type: 'dev' })} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-amber-500 dark:text-amber-400" title={t('مستندات توسعه', 'Developer Docs')}>
                       <FileText size={14} />
@@ -912,6 +908,7 @@
           isOpen={docModalInfo.isOpen}
           onClose={() => setDocModalInfo({ ...docModalInfo, isOpen: false })}
           pageKey={activeForm?.unique_code || activeForm?.id}
+          pageName={activeForm ? getLabel(activeForm) : ''}
           docType={docModalInfo.type}
           isAdmin={isAdmin}
           language={currentLanguage}
