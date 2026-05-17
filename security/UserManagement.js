@@ -21,6 +21,13 @@
     const [data, setData] = useState([]);
     const [allParties, setAllParties] = useState([]);
     const [partiesDropdown, setPartiesDropdown] = useState([]);
+    
+    // مقادیر اضافی برای فیلتر پیشرفته
+    const [roles, setRoles] = useState([]);
+    const [userRoles, setUserRoles] = useState([]);
+    const [permissions, setPermissions] = useState([]);
+    const [menus, setMenus] = useState([]);
+
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState({});
     
@@ -88,9 +95,21 @@
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const { data: pData, error: pError } = await supabase
-          .from('parties')
-          .select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email');
+        const [
+          { data: pData, error: pError },
+          { data: usersData, error: uError },
+          { data: rolesData },
+          { data: urData },
+          { data: permsData },
+          { data: menusData }
+        ] = await Promise.all([
+          supabase.from('parties').select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email'),
+          supabase.from('sec_users').select('*').order('created_at', { ascending: false }),
+          supabase.from('sec_roles').select('*'),
+          supabase.from('sec_user_roles').select('*'),
+          supabase.from('sec_permissions').select('*'),
+          supabase.from('menus').select('*')
+        ]);
           
         if (pData && !pError) {
           setAllParties(pData);
@@ -103,14 +122,14 @@
           })));
         }
 
-        const { data: usersData, error } = await supabase
-          .from('sec_users')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
+        if (uError) throw uError;
 
         setData(usersData || []);
+        setRoles(rolesData || []);
+        setUserRoles(urData || []);
+        setPermissions(permsData || []);
+        setMenus(menusData || []);
+
       } catch (err) {
         console.error('Fetch Error:', err);
       } finally {
@@ -417,36 +436,102 @@
 
     const filteredData = useMemo(() => {
       let result = [...data];
-      if (filters.username) {
-         result = result.filter(u => u.username && u.username.toLowerCase().includes(filters.username.toLowerCase()));
+      
+      // 1. فیلتر شخص
+      if (filters.party && filters.party.id) {
+         result = result.filter(u => u.party_id === filters.party.id);
       }
-      if (filters.partyName) {
+      
+      // 2. فیلتر نوع دسترسی
+      if (filters.accessType) {
+         if (filters.accessType === 'direct') {
+             result = result.filter(u => permissions.some(p => p.user_id === u.id));
+         } else if (filters.accessType === 'role') {
+             result = result.filter(u => userRoles.some(ur => ur.user_id === u.id));
+         }
+      }
+
+      // 3. فیلتر نقش
+      if (filters.role && filters.role.id) {
+         result = result.filter(u => userRoles.some(ur => ur.user_id === u.id && ur.role_id === filters.role.id));
+      }
+
+      // 4. فیلتر فرم (بررسی دسترسی مستقیم و نقش توامان)
+      if (filters.form && filters.form.id) {
+         const formId = filters.form.id;
          result = result.filter(u => {
-            const pName = getPartyName(u.party_id).toLowerCase();
-            return pName.includes(filters.partyName.toLowerCase());
+             // دسترسی مستقیم به فرم دارد؟
+             const hasDirect = permissions.some(p => p.user_id === u.id && p.menu_id === formId);
+             if (hasDirect) return true;
+             
+             // نقش‌های کاربر به فرم دسترسی دارند؟
+             const userRoleIds = userRoles.filter(ur => ur.user_id === u.id).map(ur => ur.role_id);
+             const hasRoleAccess = permissions.some(p => userRoleIds.includes(p.role_id) && p.menu_id === formId);
+             
+             return hasRoleAccess;
          });
       }
-      if (filters.userType) {
-         result = result.filter(u => u.user_type === filters.userType);
-      }
+
+      // 5. فیلتر وضعیت
       if (filters.isActive) {
          const wantActive = filters.isActive === 'active';
          result = result.filter(u => u.is_active === wantActive);
       }
+      
       return result;
-    }, [data, filters, allParties]);
+    }, [data, filters, permissions, userRoles]);
 
+    // آماده سازی دیتای LOV ها
     const filterFields = [
-      { name: 'username', label: t('نام کاربری', 'Username'), type: 'text' },
-      { name: 'partyName', label: t('شخص متصل', 'Linked Party'), type: 'text' },
       { 
-        name: 'userType', 
-        label: t('نوع کاربری', 'User Type'), 
+        name: 'party', 
+        label: t('شخص متصل', 'Linked Party'), 
+        type: 'lov', 
+        lovData: partiesDropdown.map(p => ({ ...p, label: p.label })), 
+        lovColumns: [
+          { field: 'label', header_fa: 'نام و کد', header_en: 'Name & Code', width: '250px' },
+          { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '130px' }
+        ] 
+      },
+      { 
+        name: 'accessType', 
+        label: t('نوع دسترسی', 'Access Type'), 
         type: 'select', 
         options: [
-          { value: 'مدیر سیستم', label: t('مدیر سیستم', 'System Admin') },
-          { value: 'کاربر سیستم', label: t('کاربر سیستم', 'System User') }
-        ]
+          { value: 'direct', label: t('مستقیم', 'Direct') },
+          { value: 'role', label: t('نقش', 'Role-based') }
+        ] 
+      },
+      { 
+        name: 'role', 
+        label: t('نقش دسترسی', 'Access Role'), 
+        type: 'lov', 
+        lovData: roles.map(r => ({ ...r, label: r.title || r.name })), 
+        lovColumns: [
+          { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '200px' }
+        ] 
+      },
+      { 
+        name: 'form', 
+        label: t('دسترسی به فرم', 'Form Access'), 
+        type: 'lov', 
+        lovData: menus.map(m => {
+            const parts = [];
+            let curr = m;
+            while(curr) {
+                parts.unshift(isRtl ? (curr.label_fa || curr.title || curr.name) : (curr.label_en || curr.title || curr.name));
+                curr = menus.find(x => x.id === curr.parent_id);
+            }
+            return { 
+               id: m.id, 
+               label: isRtl ? (m.label_fa || m.title || m.name) : (m.label_en || m.title || m.name), 
+               path: parts.join(' / ') 
+            };
+        }), 
+        lovColumns: [
+          { field: 'label', header_fa: 'نام فرم', header_en: 'Form Name', width: '150px' },
+          { field: 'path', header_fa: 'مسیر کامل', header_en: 'Full Path', width: '350px' }
+        ] 
       },
       { 
         name: 'isActive', 
@@ -455,7 +540,7 @@
         options: [
           { value: 'active', label: t('فعال', 'Active') },
           { value: 'inactive', label: t('غیرفعال', 'Inactive') }
-        ]
+        ] 
       }
     ];
 
@@ -630,7 +715,7 @@
                      checked={quickPartyData.roles.includes(role.id)} 
                      disabled={role.id === 'system_user'}
                      onChange={(checked) => {
-                       if (role.id === 'system_user') return; // Safety check
+                       if (role.id === 'system_user') return;
                        setQuickPartyData(prev => ({
                          ...prev,
                          roles: checked ? [...prev.roles, role.id] : prev.roles.filter(r => r !== role.id)
