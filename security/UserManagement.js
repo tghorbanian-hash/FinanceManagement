@@ -171,7 +171,7 @@
 
     const handleSaveQuickParty = async () => {
       if (!quickPartyData.firstName || !quickPartyData.lastName || !quickPartyData.code) {
-         alert(t('لطفاً فیلدهای ستاره‌دار (کد، نام، نام خانوادگی) را تکمیل کنید.', 'Please fill required fields.'));
+         alert(t('لطفاً فیلدهای ستاره‌دار را تکمیل کنید.', 'Please fill required fields.'));
          return;
       }
       
@@ -364,7 +364,7 @@
         header_fa: 'نام کاربری', 
         header_en: 'Username', 
         width: '150px',
-        render: (val) => <span className="font-mono text-slate-700 dark:text-slate-300">{val}</span>
+        render: (val) => <span className="font-bold text-slate-700 dark:text-slate-300" dir="ltr">{val}</span>
       },
       { 
         field: 'party_id', 
@@ -384,14 +384,26 @@
           </Badge>
         )
       },
-      { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '130px', render: (val) => <span className="font-mono">{val || '-'}</span> },
-      { field: 'email', header_fa: 'ایمیل', header_en: 'Email', width: '200px', render: (val) => <span className="font-mono">{val || '-'}</span> },
+      { 
+        field: 'mobile', 
+        header_fa: 'موبایل', 
+        header_en: 'Mobile', 
+        width: '130px', 
+        render: (val) => <span className="inline-block w-full text-left" dir="ltr">{val || '-'}</span> 
+      },
+      { 
+        field: 'email', 
+        header_fa: 'ایمیل', 
+        header_en: 'Email', 
+        width: '200px', 
+        render: (val) => <span className="inline-block w-full text-left" dir="ltr">{val || '-'}</span> 
+      },
       { 
         field: 'last_login', 
         header_fa: 'آخرین ورود', 
         header_en: 'Last Login', 
         width: '140px',
-        render: (val) => <span className="text-[11px] text-slate-500 dir-ltr inline-block">{formatDateTime(val)}</span>
+        render: (val) => <span className="text-[11px] text-slate-500 inline-block w-full text-left" dir="ltr">{formatDateTime(val)}</span>
       },
       { 
         field: 'is_active', 
@@ -528,7 +540,7 @@
                 <div className="flex-1">
                   <SelectField 
                     size="sm" 
-                    label={t('اتصال به شخص / پرسنل *', 'Link to Party *')} 
+                    label={t('اتصال به شخص / پرسنل', 'Link to Party')} 
                     value={formData.partyId} 
                     onChange={handlePartyChange} 
                     isRtl={isRtl}
@@ -551,7 +563,7 @@
 
               <TextField 
                 size="sm" 
-                label={currentRecord ? t('رمز عبور جدید (اختیاری)', 'New Password (Optional)') : t('رمز عبور *', 'Password *')} 
+                label={currentRecord ? t('رمز عبور جدید (اختیاری)', 'New Password (Optional)') : t('رمز عبور', 'Password')} 
                 type="password"
                 value={formData.password} 
                 onChange={e => setFormData({...formData, password: e.target.value})} 
@@ -599,9 +611,9 @@
         >
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <TextField size="sm" label={t('کد شخص *', 'Party Code *')} value={quickPartyData.code} onChange={e => setQuickPartyData({...quickPartyData, code: e.target.value})} isRtl={isRtl} required dir="ltr" />
-              <TextField size="sm" label={t('نام *', 'First Name *')} value={quickPartyData.firstName} onChange={e => setQuickPartyData({...quickPartyData, firstName: e.target.value})} isRtl={isRtl} required />
-              <TextField size="sm" label={t('نام خانوادگی *', 'Last Name *')} value={quickPartyData.lastName} onChange={e => setQuickPartyData({...quickPartyData, lastName: e.target.value})} isRtl={isRtl} required />
+              <TextField size="sm" label={t('کد شخص', 'Party Code')} value={quickPartyData.code} onChange={e => setQuickPartyData({...quickPartyData, code: e.target.value})} isRtl={isRtl} required dir="ltr" />
+              <TextField size="sm" label={t('نام', 'First Name')} value={quickPartyData.firstName} onChange={e => setQuickPartyData({...quickPartyData, firstName: e.target.value})} isRtl={isRtl} required />
+              <TextField size="sm" label={t('نام خانوادگی', 'Last Name')} value={quickPartyData.lastName} onChange={e => setQuickPartyData({...quickPartyData, lastName: e.target.value})} isRtl={isRtl} required />
               <TextField size="sm" label={t('کد ملی', 'National ID')} value={quickPartyData.nationalId} onChange={e => setQuickPartyData({...quickPartyData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('موبایل', 'Mobile')} value={quickPartyData.mobile} onChange={e => setQuickPartyData({...quickPartyData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('ایمیل', 'Email')} value={quickPartyData.email} onChange={e => setQuickPartyData({...quickPartyData, email: e.target.value})} isRtl={isRtl} dir="ltr" />
@@ -616,7 +628,9 @@
                      size="sm" 
                      label={role.label} 
                      checked={quickPartyData.roles.includes(role.id)} 
+                     disabled={role.id === 'system_user'}
                      onChange={(checked) => {
+                       if (role.id === 'system_user') return; // Safety check
                        setQuickPartyData(prev => ({
                          ...prev,
                          roles: checked ? [...prev.roles, role.id] : prev.roles.filter(r => r !== role.id)
