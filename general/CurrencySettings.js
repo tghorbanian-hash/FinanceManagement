@@ -11,7 +11,7 @@
     Clock = FallbackIcon, Calendar = FallbackIcon, Settings = FallbackIcon, Zap = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon
   } = LucideIcons;
 
-  const CurrencySettings = ({ language = 'fa' }) => {
+  const CurrencySettings = ({ language = 'fa', formCode = 'currency_settings' }) => {
     const FallbackComponent = () => null;
     const Core = window.DSCore || window.DesignSystem || {};
     const { 
@@ -38,6 +38,10 @@
     };
 
     const todayStr = getTodayGregorian();
+
+    // تنظیمات امنیت لایه ۲
+    const access = window.SecurityManager ? window.SecurityManager.useSecurity().getActions(formCode) : { canEdit: true, canCreate: true };
+    const isReadOnly = !access.canEdit && !access.canCreate;
 
     const [activeTab, setActiveTab] = useState('list');
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
@@ -628,12 +632,13 @@
                   data={filteredCurrencies} 
                   columns={currencyColumns} 
                   language={language}
+                  formCode={formCode}
                   gridState={currenciesGridState}
                   onGridStateChange={setCurrenciesGridState}
                   actions={[
                     { icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
-                    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
-                    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
+                    { id: 'edit', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
+                    { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
                   ]}
                   selectable={true}
                   onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
@@ -665,6 +670,7 @@
                    data={filteredRates} 
                    columns={historyColumns} 
                    language={language}
+                   formCode={formCode}
                    selectable={true}
                    gridState={ratesGridState}
                    onGridStateChange={setRatesGridState}
@@ -677,6 +683,7 @@
                        className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' 
                      },
                      { 
+                       id: 'edit',
                        icon: Edit, 
                        tooltip: t('ویرایش سابقه', 'Edit Record'), 
                        onClick: (row) => { setEditingRate({...row}); setIsEditRateModalOpen(true); },
@@ -684,6 +691,7 @@
                        className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' 
                      },
                      { 
+                       id: 'delete',
                        icon: Trash2, 
                        tooltip: t('حذف سابقه', 'Delete Record'), 
                        onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), 
@@ -713,36 +721,42 @@
         <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
           <div className="p-4 flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <TextField label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-1" />
+              <TextField formCode={formCode} label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-1" />
               
               <div className="sm:col-span-2 flex flex-col gap-1 w-full">
                   <div className="flex items-center justify-between">
                       <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('عنوان ارز', 'Title')} <span className="text-red-500 dark:text-red-400">*</span></label>
-                      <ToggleField label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
+                      <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
                   </div>
                   <input
                       type="text"
+                      disabled={isReadOnly}
                       value={selectedCurrency?.title || ''}
                       onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})}
-                      className="w-full h-8 text-[12px] px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20"
+                      className={`w-full h-8 text-[12px] px-2.5 rounded-lg transition-all outline-none 
+                        ${isReadOnly 
+                          ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed' 
+                          : 'bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20'}`}
                       dir={isRtl ? 'rtl' : 'ltr'}
                   />
               </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <TextField label={t('نماد', 'Symbol')} value={selectedCurrency?.symbol || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, symbol: e.target.value})} isRtl={isRtl} size="sm" />
+              <TextField formCode={formCode} label={t('نماد', 'Symbol')} value={selectedCurrency?.symbol || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, symbol: e.target.value})} isRtl={isRtl} size="sm" />
               <SelectField 
+                formCode={formCode}
                 label={t('نوع دریافت نرخ', 'Fetch Method')} value={selectedCurrency?.fetch_type || 'manual'} onChange={(e) => setSelectedCurrency({...selectedCurrency, fetch_type: e.target.value})} isRtl={isRtl} size="sm"
                 options={[{value: 'manual', label: t('دستی', 'Manual')}, {value: 'auto', label: t('اتوماتیک (API)', 'Automatic')}]} 
               />
-              <TextField label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
+              <TextField formCode={formCode} label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
             </div>
             
             <div className="mt-1 pt-3 border-t border-slate-100 dark:border-slate-700/50">
                <label className="text-[12px] font-black text-slate-500 dark:text-slate-400 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
                <div className="flex flex-col gap-2">
                  <SelectField 
+                   formCode={formCode}
                    value="" 
                    onChange={(e) => {
                      const val = e.target.value;
@@ -760,9 +774,11 @@
                     {(selectedCurrency?.targets || []).map(tcode => (
                       <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
                         <span className="font-bold text-[10px]">{tcode}</span>
-                        <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 dark:bg-indigo-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}>
-                           <X size={10} />
-                        </div>
+                        {!isReadOnly && (
+                          <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 dark:bg-indigo-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}>
+                             <X size={10} />
+                          </div>
+                        )}
                       </Badge>
                     ))}
                     {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px] italic py-1">{t('هیچ ارزی انتخاب نشده است.', 'No targets selected.')}</span>}
@@ -771,8 +787,8 @@
             </div>
 
             <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-              <Button variant="outline" size="sm" onClick={() => setIsCurrencyModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" icon={Save} onClick={handleSaveCurrency} className="px-6">{t('ذخیره تغییرات', 'Save Changes')}</Button>
+              <Button variant="outline" size="sm" onClick={() => setIsCurrencyModalOpen(false)}>{t('بستن', 'Close')}</Button>
+              {!isReadOnly && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveCurrency} className="px-6">{t('ذخیره تغییرات', 'Save Changes')}</Button>}
             </div>
           </div>
         </Modal>
@@ -780,10 +796,20 @@
         <Modal isOpen={isManualModalOpen} onClose={() => setIsManualModalOpen(false)} title={t('بروزرسانی دستی نرخ‌ها', 'Manual Rates Update')} language={language} width="max-w-2xl">
            <div className="p-4 flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
-                 <DatePicker size="sm" label={t('تاریخ ثبت نرخ', 'Rate Date')} value={manualDate} onChange={setManualDate} isRtl={isRtl} language={language} required />
+                 <DatePicker formCode={formCode} size="sm" label={t('تاریخ ثبت نرخ', 'Rate Date')} value={manualDate} onChange={setManualDate} isRtl={isRtl} language={language} required />
                  <div className="flex flex-col gap-1 w-full">
                     <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500 dark:text-red-400">*</span></label>
-                    <input type="time" value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[12px] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500 px-2.5 transition-all`} required />
+                    <input 
+                      type="time" 
+                      disabled={isReadOnly}
+                      value={manualTime} 
+                      onChange={(e) => setManualTime(e.target.value)} 
+                      className={`h-8 text-[12px] rounded-lg outline-none px-2.5 transition-all
+                        ${isReadOnly 
+                          ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed' 
+                          : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-100 focus:border-indigo-400 dark:focus:border-indigo-500 focus:ring-1 focus:ring-indigo-400 dark:focus:ring-indigo-500'}`}
+                      required 
+                    />
                  </div>
               </div>
 
@@ -796,7 +822,7 @@
                        </div>
                        <div className="w-16 font-black text-slate-800 dark:text-slate-200 text-[14px] text-center">{item.target}</div>
                        <div className="flex-1 ml-2">
-                          <CurrencyField size="sm" value={item.rate} onChange={(v) => {
+                          <CurrencyField formCode={formCode} size="sm" value={item.rate} onChange={(v) => {
                               const newList = [...manualRatesList];
                               newList[idx].rate = v;
                               setManualRatesList(newList);
@@ -813,7 +839,7 @@
 
               <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
                 <Button variant="outline" size="sm" onClick={() => setIsManualModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-                <Button variant="primary" size="sm" icon={Save} onClick={handleSaveManualRates} disabled={manualRatesList.length === 0}>{t('ذخیره اطلاعات در تاریخچه', 'Save to History')}</Button>
+                {!isReadOnly && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveManualRates} disabled={manualRatesList.length === 0}>{t('ذخیره اطلاعات در تاریخچه', 'Save to History')}</Button>}
               </div>
            </div>
         </Modal>
@@ -837,6 +863,7 @@
                  </div>
               </div>
               <CurrencyField 
+                 formCode={formCode}
                  label={t('مبلغ نرخ', 'Rate Amount')} 
                  value={editingRate?.rate || ''} 
                  onChange={(v) => setEditingRate({...editingRate, rate: v})} 
@@ -846,7 +873,7 @@
               />
               <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
                 <Button variant="outline" size="sm" onClick={() => setIsEditRateModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-                <Button variant="primary" size="sm" icon={Save} onClick={handleSaveEditedRate}>{t('ذخیره تغییرات', 'Save Changes')}</Button>
+                {!isReadOnly && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveEditedRate}>{t('ذخیره تغییرات', 'Save Changes')}</Button>}
               </div>
            </div>
         </Modal>
@@ -916,5 +943,6 @@
     );
   };
 
+  CurrencySettings.formCode = 'currency_settings';
   window.CurrencySettings = CurrencySettings;
 })();
