@@ -40,7 +40,8 @@
     const todayStr = getTodayGregorian();
 
     // تنظیمات امنیت لایه ۲
-    const access = window.SecurityManager ? window.SecurityManager.useSecurity().getActions(formCode) : { canEdit: true, canCreate: true };
+    const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
+    const access = securityCtx ? securityCtx.getActions(formCode) : { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
     const isReadOnly = !access.canEdit && !access.canCreate;
 
     const [activeTab, setActiveTab] = useState('list');
@@ -522,13 +523,14 @@
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '90px' },
     ];
 
+    // اعمال فیلتر سطح دو روی Bulk Actions لیست ارزها
     const currencyBulkActions = [
-      { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400' },
-      { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400' },
-      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400' },
-      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400' },
-      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
-    ];
+      { id: 'activate', label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400' },
+      { id: 'deactivate', label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400' },
+      { id: 'setAuto', label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400' },
+      { id: 'setManual', label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400' },
+      { id: 'delete', label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
+    ].filter(act => act.id === 'delete' ? access.canDelete : access.canEdit);
 
     const historyColumns = [
       { 
@@ -553,8 +555,10 @@
       { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px', render: (v) => <Badge variant={v === 'XE' ? 'emerald' : 'blue'} size="sm">{v}</Badge> }
     ];
 
+    // اعمال فیلتر سطح دو روی Bulk Actions سوابق ارز
     const historyBulkActions = [
       { 
+        id: 'delete',
         label: t('حذف سوابق انتخاب شده', 'Delete Selected Records'), 
         icon: Trash2, 
         onClick: (ids) => {
@@ -576,8 +580,8 @@
         }, 
         variant: 'danger-outline', 
         className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' 
-      },
-    ];
+      }
+    ].filter(act => access.canDelete);
 
     const filteredCurrencies = useMemo(() => {
       let result = [...currencies];
@@ -604,6 +608,26 @@
       
       return result;
     }, [rates, rateFilters]);
+
+    // اعمال فیلتر سطح دو روی منوهای بالای گرید (Header Menus)
+    const rateOps = [];
+    if (access.canCreate) {
+      rateOps.push({ label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' });
+    }
+    if (access.canEdit || access.canCreate) {
+      rateOps.push({ label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' });
+    }
+    if (rateOps.length > 0) rateOps.push({ divider: true });
+    rateOps.push({ label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400' });
+
+    const headerMenus = [
+      {
+        label: t('عملیات نرخ‌گذاری', 'Rate Operations'),
+        icon: Zap,
+        className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800',
+        items: rateOps
+      }
+    ];
 
     return (
       <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -643,7 +667,7 @@
                   selectable={true}
                   onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
                   bulkActions={currencyBulkActions}
-                  onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
+                  onAdd={access.canCreate ? () => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); } : undefined}
                 />
               </div>
             </>
@@ -699,19 +723,7 @@
                        className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' 
                      }
                    ]}
-                   headerMenus={[
-                     {
-                       label: t('عملیات نرخ‌گذاری', 'Rate Operations'),
-                       icon: Zap,
-                       className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800',
-                       items: [
-                         { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' },
-                         { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' },
-                         { divider: true },
-                         { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400' }
-                       ]
-                     }
-                   ]}
+                   headerMenus={headerMenus}
                  />
               </div>
             </>
@@ -838,7 +850,7 @@
               </div>
 
               <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                <Button variant="outline" size="sm" onClick={() => setIsManualModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="outline" size="sm" onClick={() => setIsManualModalOpen(false)}>{t('بستن', 'Close')}</Button>
                 {!isReadOnly && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveManualRates} disabled={manualRatesList.length === 0}>{t('ذخیره اطلاعات در تاریخچه', 'Save to History')}</Button>}
               </div>
            </div>
@@ -872,7 +884,7 @@
                  required 
               />
               <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                <Button variant="outline" size="sm" onClick={() => setIsEditRateModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="outline" size="sm" onClick={() => setIsEditRateModalOpen(false)}>{t('بستن', 'Close')}</Button>
                 {!isReadOnly && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveEditedRate}>{t('ذخیره تغییرات', 'Save Changes')}</Button>}
               </div>
            </div>
