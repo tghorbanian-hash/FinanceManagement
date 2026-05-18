@@ -20,6 +20,7 @@
 
   const supabase = window.supabase;
 
+  // دیکشنری اکشن‌ها آپدیت شد تا شامل اکشن‌های اختصاصی فرم ارزها باشد
   const ACTION_DICT = {
     'read': { fa: 'مشاهده اطلاعات', en: 'Read' },
     'create': { fa: 'ایجاد', en: 'Create' },
@@ -29,7 +30,12 @@
     'import': { fa: 'وارد نمودن اکسل', en: 'Excel Import' },
     'export': { fa: 'خروجی اکسل', en: 'Excel Export' },
     'approve': { fa: 'تغییر وضعیت / تایید', en: 'Approval' },
-    'assign_detail': { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' }
+    'assign_detail': { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' },
+    'bulk_action': { fa: 'عملیات گروهی', en: 'Bulk Actions' },
+    'xe_fetch': { fa: 'گرفتن نرخ از XE', en: 'Fetch XE Rates' },
+    'manual_rate': { fa: 'بروزرسانی دستی نرخ‌ها', en: 'Manual Rate Update' },
+    'converter': { fa: 'ماشین حساب تبدیل‌گر', en: 'Currency Converter' },
+    'view_log': { fa: 'مشاهده لاگ سیستم', en: 'View System Log' }
   };
 
   const SCOPE_DICT = {

@@ -23,6 +23,7 @@
 
   const supabase = window.supabase;
 
+  // لیست اکشن‌ها آپدیت شد تا شامل اکشن‌های اختصاصی فرم ارزها باشد
   const AVAILABLE_ACTIONS = [
     { id: 'read', label: { fa: 'مشاهده اطلاعات', en: 'Read' } },
     { id: 'create', label: { fa: 'ایجاد', en: 'Create' } },
@@ -32,7 +33,12 @@
     { id: 'import', label: { fa: 'وارد نمودن اکسل', en: 'Excel Import' } },
     { id: 'export', label: { fa: 'خروجی اکسل', en: 'Excel Export' } },
     { id: 'approve', label: { fa: 'تغییر وضعیت / تایید', en: 'Approval' } },
-    { id: 'assign_detail', label: { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' } }
+    { id: 'assign_detail', label: { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' } },
+    { id: 'bulk_action', label: { fa: 'عملیات گروهی', en: 'Bulk Actions' } },
+    { id: 'xe_fetch', label: { fa: 'گرفتن نرخ از XE', en: 'Fetch XE Rates' } },
+    { id: 'manual_rate', label: { fa: 'بروزرسانی دستی نرخ‌ها', en: 'Manual Rate Update' } },
+    { id: 'converter', label: { fa: 'ماشین حساب تبدیل‌گر', en: 'Currency Converter' } },
+    { id: 'view_log', label: { fa: 'مشاهده لاگ سیستم', en: 'View System Log' } }
   ];
 
   const SCOPE_DICT = {

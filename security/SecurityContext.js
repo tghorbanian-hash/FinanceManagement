@@ -28,7 +28,6 @@
         try {
           const supabase = window.supabase;
           
-          // ۱. واکشی نقش‌های کاربر
           const { data: userRoles } = await supabase
             .from('sec_user_roles')
             .select('role_id')
@@ -36,7 +35,6 @@
 
           const roleIds = userRoles ? userRoles.map(ur => ur.role_id) : [];
 
-          // ۲. واکشی دسترسی‌های مستقیم و دسترسی‌های نقش از جدول واحد sec_permissions
           const { data: userPerms } = await supabase
             .from('sec_permissions')
             .select('*')
@@ -51,7 +49,6 @@
             if (rPerms) rolePerms = rPerms;
           }
 
-          // ۳. واکشی منوها برای تبدیل menu_id به unique_code
           const { data: menus } = await supabase.from('menus').select('id, unique_code');
 
           const merged = {};
@@ -69,22 +66,22 @@
                 can_edit: false,
                 can_delete: false,
                 can_print: false,
+                raw_actions: [], 
                 data_scope: {} 
               };
             }
             
             const actions = typeof p.actions === 'string' ? JSON.parse(p.actions || '[]') : (p.actions || []);
             
-            // اگر رکوردی وجود دارد، حداقل دسترسی مشاهده منو باید باز شود
-            merged[code].can_view = true;
+            merged[code].raw_actions = [...new Set([...merged[code].raw_actions, ...actions])];
             
+            if (actions.length > 0) merged[code].can_view = true; 
             if (actions.includes('read')) merged[code].can_view = true;
             if (actions.includes('create')) merged[code].can_create = true;
             if (actions.includes('update')) merged[code].can_edit = true;
             if (actions.includes('delete')) merged[code].can_delete = true;
             if (actions.includes('print') || actions.includes('export')) merged[code].can_print = true;
             
-            // تجمیع Data Scopes
             const scopes = typeof p.data_scopes === 'string' ? JSON.parse(p.data_scopes || '{}') : (p.data_scopes || {});
             Object.keys(scopes).forEach(key => {
                 if (!merged[code].data_scope[key]) merged[code].data_scope[key] = [];
@@ -115,28 +112,29 @@
 
     const getActions = useCallback((formCode) => {
       if (isFullAccess) {
-        return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
+        return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, raw_actions: ['*'] };
       }
       if (!formCode) {
-        return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false };
+        return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, raw_actions: [] };
       }
       const target = formCode.trim().toLowerCase();
       const p = permissions[target];
       if (!p) {
-        return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false };
+        return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, raw_actions: [] };
       }
       return { 
         canView: p.can_view, 
         canCreate: p.can_create, 
         canEdit: p.can_edit, 
         canDelete: p.can_delete, 
-        canPrint: p.can_print 
+        canPrint: p.can_print,
+        raw_actions: p.raw_actions || [] 
       };
     }, [isFullAccess, permissions]);
 
     const getDataScope = useCallback((formCode) => {
       if (isFullAccess) return ['*']; 
-      if (!formCode) return [];
+      if (!formCode) return {};
       const target = formCode.trim().toLowerCase();
       const p = permissions[target];
       return p && p.data_scope ? p.data_scope : {};
