@@ -11,22 +11,30 @@
     const [loading, setLoading] = useState(true);
     const [isFullAccess, setIsFullAccess] = useState(false);
 
+    const userId = userSession?.id;
+    const username = userSession?.username?.toLowerCase();
+
     useEffect(() => {
       const loadPermissions = async () => {
-        if (!userSession || !userSession.id) {
+        if (!userId) {
           setLoading(false);
           return;
         }
 
-        const username = userSession.username?.toLowerCase();
-        
         try {
           const supabase = window.supabase;
 
-          const [dictRes, rolesRes, userPermsRes, menusRes] = await Promise.all([
+          const { data: rolesRes } = await supabase
+            .from('sec_user_roles')
+            .select('role_id')
+            .eq('user_id', userId);
+
+          const roleIds = rolesRes ? rolesRes.map(ur => ur.role_id) : [];
+
+          const [dictRes, userPermsRes, rolePermsRes, menusRes] = await Promise.all([
             supabase.from('sec_action_dictionary').select('action_code, label_fa, label_en'),
-            supabase.from('sec_user_roles').select('role_id').eq('user_id', userSession.id),
-            supabase.from('sec_permissions').select('*').eq('user_id', userSession.id),
+            supabase.from('sec_permissions').select('*').eq('user_id', userId),
+            roleIds.length > 0 ? supabase.from('sec_permissions').select('*').in('role_id', roleIds) : Promise.resolve({ data: [] }),
             supabase.from('menus').select('id, unique_code')
           ]);
 
@@ -44,21 +52,12 @@
             return;
           }
           
-          const roleIds = rolesRes.data ? rolesRes.data.map(ur => ur.role_id) : [];
-
-          let rolePermsData = [];
-          if (roleIds.length > 0) {
-            const { data: rPerms } = await supabase
-              .from('sec_permissions')
-              .select('*')
-              .in('role_id', roleIds);
-            if (rPerms) rolePermsData = rPerms;
-          }
-
           const menusData = menusRes.data || [];
           const menuMap = {};
           menusData.forEach(m => {
-            menuMap[m.id] = m.unique_code?.trim().toLowerCase();
+            if (m.unique_code) {
+              menuMap[m.id] = m.unique_code.trim().toLowerCase();
+            }
           });
 
           const merged = {};
@@ -90,9 +89,9 @@
             merged[code].raw_actions = [...new Set([...merged[code].raw_actions, ...normalizedActions])];
             
             if (normalizedActions.length > 0) merged[code].can_view = true; 
-            if (normalizedActions.includes('read') || normalizedActions.includes('view')) merged[code].can_view = true;
-            if (normalizedActions.includes('create') || normalizedActions.includes('add')) merged[code].can_create = true;
-            if (normalizedActions.includes('update') || normalizedActions.includes('edit')) merged[code].can_edit = true;
+            if (normalizedActions.includes('read') || normalizedActions.includes('view') || normalizedActions.includes('view_log')) merged[code].can_view = true;
+            if (normalizedActions.includes('create') || normalizedActions.includes('add') || normalizedActions.includes('insert')) merged[code].can_create = true;
+            if (normalizedActions.includes('update') || normalizedActions.includes('edit') || normalizedActions.includes('modify')) merged[code].can_edit = true;
             if (normalizedActions.includes('delete') || normalizedActions.includes('remove')) merged[code].can_delete = true;
             if (normalizedActions.includes('print') || normalizedActions.includes('export')) merged[code].can_print = true;
             
@@ -109,7 +108,7 @@
             });
           };
 
-          rolePermsData.forEach(processPerm);
+          if (rolePermsRes.data) rolePermsRes.data.forEach(processPerm);
           if (userPermsRes.data) userPermsRes.data.forEach(processPerm);
 
           setPermissions(merged);
@@ -121,7 +120,7 @@
       };
 
       loadPermissions();
-    }, [userSession]);
+    }, [userId, username]);
 
     const hasAccess = useCallback((formCode) => {
       if (isFullAccess) return true;
