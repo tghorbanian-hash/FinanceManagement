@@ -1,8 +1,3 @@
-/* توضیح کوتاه در مورد کاهش خطوط: 
-  هیچ قابلیتی جا نیفتاده است. دلیل کاهش خطوط، فشرده‌سازی استایل‌ها و تگ‌های JSX در یک خط (برای جلوگیری از قطعی پاسخ هوش مصنوعی) و همچنین حذف کدهای تکراری بعد از جداسازی بود. 
-  در این نسخه، جداسازی به کامل‌ترین و اصولی‌ترین شکل انجام شده و تمام پراپ‌ها و فیلترها بین فرم اصلی و تاریخچه پاس داده می‌شوند تا قابلیت "ذخیره نما" به درستی کار کند.
-*/
-
 /* Filename: general/CurrencySettings.js */
 (() => {
   const React = window.React;
@@ -61,7 +56,6 @@
     const [recordLogs, setRecordLogs] = useState([]);
     const [isLogsLoading, setIsLogsLoading] = useState(false);
 
-    // استیت‌های مربوط به تاریخچه که باید در ViewConfig ذخیره شوند
     const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     const [ratesGridState, setRatesGridState] = useState(null);
 
@@ -153,13 +147,13 @@
           const oldRecord = currencies.find(c => c.id === selectedCurrency.id);
           const { error } = await supabase.from('fm_currencies').update(payload).eq('id', selectedCurrency.id);
           if (error) throw error;
-          await logAction('fm_currencies', selectedCurrency.id, 'ویرایش', `بروزرسانی مشخصات ارز: ${payload.title}`, oldRecord, { ...oldRecord, ...payload });
+          await logAction('fm_currencies', selectedCurrency.id, 'update', `بروزرسانی مشخصات ارز: ${payload.title}`, oldRecord, { ...oldRecord, ...payload });
           showToast(t('ارز با موفقیت بروزرسانی شد', 'Currency updated successfully'));
         } else {
           payload.created_by = currentUser;
           const { data, error } = await supabase.from('fm_currencies').insert([payload]).select();
           if (error) throw error;
-          if (data && data.length > 0) await logAction('fm_currencies', data[0].id, 'ایجاد', `تعریف ارز جدید: ${payload.title}`, null, data[0]);
+          if (data && data.length > 0) await logAction('fm_currencies', data[0].id, 'create', `تعریف ارز جدید: ${payload.title}`, null, data[0]);
           showToast(t('ارز جدید با موفقیت تعریف شد', 'New currency added successfully'));
         }
         setIsCurrencyModalOpen(false);
@@ -185,7 +179,7 @@
         
         for (const id of selectedIds) {
            const oldRecord = currencies.find(c => c.id === id);
-           await logAction('fm_currencies', id, 'ویرایش', `عملیات گروهی: ${actionDesc}`, oldRecord, { ...oldRecord, ...updatePayload });
+           await logAction('fm_currencies', id, 'update', `عملیات گروهی: ${actionDesc}`, oldRecord, { ...oldRecord, ...updatePayload });
         }
         showToast(t('عملیات گروهی با موفقیت انجام شد', 'Bulk action successful'));
         fetchCurrencies();
@@ -200,12 +194,12 @@
           const oldRec = currencies.find(c => c.id === deleteConfirm.data.id);
           const { error } = await supabase.from('fm_currencies').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
-          await logAction('fm_currencies', deleteConfirm.data.id, 'حذف', `حذف ارز با کد: ${deleteConfirm.data.code}`, oldRec, null);
+          await logAction('fm_currencies', deleteConfirm.data.id, 'delete', `حذف ارز با کد: ${deleteConfirm.data.code}`, oldRec, null);
         } else if (deleteConfirm.type === 'bulk') {
           const oldRecords = deleteConfirm.data.map(id => currencies.find(c => c.id === id)).filter(Boolean);
           const { error } = await supabase.from('fm_currencies').delete().in('id', deleteConfirm.data);
           if (error) throw error;
-          for (const oldRec of oldRecords) await logAction('fm_currencies', oldRec.id, 'حذف', `حذف گروهی ارز`, oldRec, null);
+          for (const oldRec of oldRecords) await logAction('fm_currencies', oldRec.id, 'delete', `حذف گروهی ارز`, oldRec, null);
         }
         fetchCurrencies();
         showToast(t('عملیات حذف با موفقیت انجام شد', 'Deletion successful'));
@@ -284,7 +278,7 @@
                   gridState={currenciesGridState} onGridStateChange={setCurrenciesGridState}
                   actions={[
                     { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), hidden: () => !hasCustomAccess('view_log', access.canView), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
-                    { id: 'edit', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
+                    { id: 'update', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
                     { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
                   ]}
                   selectable={true}
@@ -359,7 +353,7 @@
           <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1"><AlertTriangle size={22} /></div>
             <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1"><Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}</div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{deleteConfirm.type === 'bulk' ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد اطمینان دارید؟`, `Delete selected items?`) : t(`آیا از حذف این مورد اطمینان دارید؟`, `Delete this item?`)}</p>
+            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{deleteConfirm.type === 'bulk' ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد اطمینان دارید؟`, `Delete selected items?`) : t(`آیا از حذف این مورد اطمینان دارید?`, `Delete this item?`)}</p>
             <div className="flex gap-2 mt-4 w-full">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" onClick={executeDelete} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500 shadow-lg shadow-red-100 dark:shadow-none">{t('تایید حذف', 'Delete Now')}</Button>
