@@ -177,6 +177,7 @@
       window.location.reload();
     };
 
+    // تجمیع منوهای مجاز و بازسازی بازگشتی مسیر گره‌های بالاسری (Parents) برای نمایش صحیح درخت
     const accessibleMenus = useMemo(() => {
       if (isFullAccess) return menuData;
       
@@ -599,7 +600,7 @@
               )}
               <div className="relative w-full max-w-md">
                 <Search size={14} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-3' : 'left-3'} text-slate-400 dark:text-slate-500`} />
-                <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[12px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-300 dark:focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <input placeholder={t('جستجو در تمام فرم‌ها...', 'Search all forms...')} className={`w-full h-8 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-md text-[12px] font-bold ${isRtl ? 'pr-9 pl-3' : 'pl-9 pr-3'} focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-300 dark:focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-400 text-slate-700 dark:text-slate-200 font-sans`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                 {searchTerm && (
                   <div className="absolute top-full right-0 left-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden animate-in zoom-in-95 py-2 z-50 font-sans">
                     {filteredItems.length > 0 ? filteredItems.map(item => (

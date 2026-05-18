@@ -1,7 +1,7 @@
 /* Filename: security/SecurityContext.js */
 (() => {
   const React = window.React;
-  const { createContext, useState, useEffect, useContext } = React;
+  const { createContext, useState, useEffect, useContext, useCallback, useMemo } = React;
 
   const SecurityContext = createContext(null);
 
@@ -53,7 +53,10 @@
           const merged = {};
 
           const mergeRow = (row) => {
-            const code = row.form_code;
+            if (!row.form_code) return;
+            
+            // تبدیل کد فرم به حروف کوچک برای حذف حساسیت به نوع حروف (Case-Insensitivity)
+            const code = row.form_code.trim().toLowerCase();
             if (!merged[code]) {
               merged[code] = {
                 can_view: false,
@@ -96,16 +99,22 @@
       loadPermissions();
     }, [userSession]);
 
-    const hasAccess = (formCode) => {
+    const hasAccess = useCallback((formCode) => {
       if (isFullAccess) return true;
-      return !!(permissions[formCode] && permissions[formCode].can_view);
-    };
+      if (!formCode) return false;
+      const target = formCode.trim().toLowerCase();
+      return !!(permissions[target] && permissions[target].can_view);
+    }, [isFullAccess, permissions]);
 
-    const getActions = (formCode) => {
+    const getActions = useCallback((formCode) => {
       if (isFullAccess) {
         return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
       }
-      const p = permissions[formCode];
+      if (!formCode) {
+        return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false };
+      }
+      const target = formCode.trim().toLowerCase();
+      const p = permissions[target];
       if (!p) {
         return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false };
       }
@@ -116,22 +125,24 @@
         canDelete: p.can_delete, 
         canPrint: p.can_print 
       };
-    };
+    }, [isFullAccess, permissions]);
 
-    const getDataScope = (formCode) => {
+    const getDataScope = useCallback((formCode) => {
       if (isFullAccess) return ['*']; 
-      const p = permissions[formCode];
+      if (!formCode) return [];
+      const target = formCode.trim().toLowerCase();
+      const p = permissions[target];
       return p && p.data_scope && p.data_scope.length > 0 ? p.data_scope : [];
-    };
+    }, [isFullAccess, permissions]);
 
-    const value = {
+    const value = useMemo(() => ({
       isFullAccess,
       permissions,
       loading,
       hasAccess,
       getActions,
       getDataScope
-    };
+    }), [isFullAccess, permissions, loading, hasAccess, getActions, getDataScope]);
 
     if (loading) {
       return (
