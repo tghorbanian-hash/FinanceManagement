@@ -1,7 +1,7 @@
-/* Filename: DSGrid.js  */
+/* Filename: designsystem/DSGrid.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo, useRef } = React;
+  const { useState, useEffect, useMemo, useRef, useCallback } = React;
   
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
@@ -19,17 +19,21 @@
   } = Core;
   const { Modal } = window.DSFeedback || {};
 
-  // هوک بررسی دسترسی فیلدها و گرید بر اساس کد فرم
   const useSecureAccess = (formCode) => {
     if (!formCode || !window.SecurityManager) {
-       return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
+       return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
     }
     try {
-      const { getActions } = window.SecurityManager.useSecurity();
-      return getActions(formCode);
+      const securityCtx = window.SecurityManager.useSecurity();
+      const { getActions, isFullAccess } = securityCtx;
+      const access = getActions(formCode);
+      return {
+        ...access,
+        hasCustomAccess: (actionCode) => isFullAccess || (access.raw_actions && (access.raw_actions.includes('*') || access.raw_actions.includes(actionCode)))
+      };
     } catch (e) {
       console.warn("Security context not found for grid access check.");
-      return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false };
+      return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, hasCustomAccess: () => false };
     }
   };
 
@@ -141,15 +145,59 @@
     const theme = useTheme();
     const access = useSecureAccess(formCode);
 
-    // فیلتر کردن اکشن‌ها بر اساس سطح دسترسی (ویرایش، حذف، چاپ و ...)
+    const checkAccess = useCallback((reqAccess) => {
+      if (!reqAccess) return true;
+      if (reqAccess === 'view') return access.canView;
+      if (reqAccess === 'create') return access.canCreate;
+      if (reqAccess === 'edit' || reqAccess === 'update') return access.canEdit;
+      if (reqAccess === 'delete') return access.canDelete;
+      if (reqAccess === 'print' || reqAccess === 'export') return access.canPrint;
+      return access.hasCustomAccess ? access.hasCustomAccess(reqAccess) : false;
+    }, [access]);
+
     const filteredActions = useMemo(() => {
       return actions.filter(act => {
-        if (act.id === 'edit' && !access.canEdit) return false;
-        if (act.id === 'delete' && !access.canDelete) return false;
-        if (act.id === 'print' && !access.canPrint) return false;
+        if (act.requiredAccess !== undefined) return checkAccess(act.requiredAccess);
+        if (act.id === 'edit' || act.id === 'update') return access.canEdit;
+        if (act.id === 'delete' || act.id === 'remove') return access.canDelete;
+        if (act.id === 'print' || act.id === 'export') return access.canPrint;
+        if (act.id === 'view_log') return access.canView || (access.hasCustomAccess && access.hasCustomAccess('view_log'));
         return true;
       });
-    }, [actions, access]);
+    }, [actions, access, checkAccess]);
+
+    const filteredBulkActions = useMemo(() => {
+      return bulkActions.filter(act => {
+        if (act.requiredAccess !== undefined) return checkAccess(act.requiredAccess);
+        if (act.id === 'delete' || act.id === 'remove') return access.canDelete;
+        if (act.id === 'print' || act.id === 'export') return access.canPrint;
+        return true;
+      });
+    }, [bulkActions, access, checkAccess]);
+
+    const filteredHeaderMenus = useMemo(() => {
+       if (!headerMenus) return [];
+       return headerMenus.map(menu => {
+           if (menu.requiredAccess !== undefined && !checkAccess(menu.requiredAccess)) return null;
+           
+           const filteredItems = menu.items.filter(item => {
+               if (item.divider) return true;
+               if (item.requiredAccess !== undefined) return checkAccess(item.requiredAccess);
+               return true;
+           });
+           
+           const cleanedItems = filteredItems.filter((item, idx, arr) => {
+               if (item.divider) {
+                   if (idx === 0 || idx === arr.length - 1) return false;
+                   if (arr[idx-1].divider) return false;
+               }
+               return true;
+           });
+           
+           if (cleanedItems.length === 0) return null;
+           return { ...menu, items: cleanedItems };
+       }).filter(Boolean);
+    }, [headerMenus, access, checkAccess]);
 
     const [gridData, setGridData] = useState(data);
     const [columnOrder, setColumnOrder] = useState(columns.map(c => c.field));
@@ -198,8 +246,7 @@
         setSortConfig({ field: null, direction: 'asc' });
         setGroupCols([]);
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [gridState]);
+    }, [gridState, columns]);
 
     useEffect(() => {
       if (onGridStateChange) {
@@ -211,8 +258,7 @@
           onGridStateChange(currentState);
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols]);
+    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, onGridStateChange]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { 
@@ -426,11 +472,11 @@
             )}
           </div>
 
-          {selectedRows.length > 0 && bulkActions.length > 0 ? (
+          {selectedRows.length > 0 && filteredBulkActions.length > 0 ? (
             <div className="flex-1 flex items-center gap-3 px-4 py-1 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/30 rounded-md transition-all animate-in fade-in">
               <span className="text-[12px] font-black text-indigo-800 dark:text-indigo-300">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
               <div className="w-px h-4 bg-indigo-200 dark:bg-indigo-800/50 mx-1"></div>
-              {bulkActions.map((act, i) => (
+              {filteredBulkActions.map((act, i) => (
                 <Button key={i} size="sm" variant={act.variant || 'outline'} icon={act.icon} onClick={() => {act.onClick(selectedRows); setSelectedRows([]);}} className={`!h-7 text-[10px] ${act.className || ''}`}>
                   {act.label}
                 </Button>
@@ -463,9 +509,9 @@
           )}
 
           <div className="flex items-center gap-1 shrink-0">
-            {headerMenus && headerMenus.length > 0 && (
+            {filteredHeaderMenus && filteredHeaderMenus.length > 0 && (
               <div className="flex items-center gap-1.5" ref={headerMenuRef}>
-                {headerMenus.map((menu, idx) => (
+                {filteredHeaderMenus.map((menu, idx) => (
                   <div key={idx} className="relative h-full">
                     <Button size="sm" variant={menu.variant || 'outline'} onClick={() => setActiveHeaderMenu(activeHeaderMenu === idx ? null : idx)} className={`h-full flex items-center justify-between gap-4 min-w-[130px] ${menu.className || ''}`}>
                       <span className="flex items-center gap-1.5">
