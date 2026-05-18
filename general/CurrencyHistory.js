@@ -249,19 +249,19 @@
     }, [rates, rateFilters]);
 
     const rateOps = [];
-    if (hasCustomAccess('xe_fetch', access.canCreate)) {
+    if (hasCustomAccess('xe_fetch', false)) {
       rateOps.push({ label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' });
     }
-    if (hasCustomAccess('manual_rate', access.canEdit)) {
+    if (hasCustomAccess('manual_rate', false)) {
       rateOps.push({ label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' });
     }
     if (rateOps.length > 0) rateOps.push({ divider: true });
     
-    if (hasCustomAccess('converter', true)) {
+    if (hasCustomAccess('converter', false)) {
       rateOps.push({ label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400' });
     }
 
-    const headerMenus = [{ label: t('عملیات نرخ‌گذاری', 'Rate Operations'), icon: Zap, className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800', items: rateOps }];
+    const headerMenus = rateOps.length > 0 ? [{ label: t('عملیات نرخ‌گذاری', 'Rate Operations'), icon: Zap, className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800', items: rateOps }] : [];
 
     return (
       <>
