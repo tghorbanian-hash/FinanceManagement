@@ -7,6 +7,7 @@
 
   const SecurityProvider = ({ children, userSession }) => {
     const [permissions, setPermissions] = useState({});
+    const [actionDictionary, setActionDictionary] = useState({});
     const [loading, setLoading] = useState(true);
     const [isFullAccess, setIsFullAccess] = useState(false);
 
@@ -19,14 +20,23 @@
 
         const username = userSession.username?.toLowerCase();
         
-        if (username === 'admin' || username === 'superadmin') {
-          setIsFullAccess(true);
-          setLoading(false);
-          return;
-        }
-
         try {
           const supabase = window.supabase;
+
+          const { data: dictData } = await supabase.from('sec_action_dictionary').select('*');
+          const dict = {};
+          if (dictData) {
+              dictData.forEach(item => {
+                  dict[item.action_code] = { fa: item.label_fa, en: item.label_en };
+              });
+          }
+          setActionDictionary(dict);
+          
+          if (username === 'admin' || username === 'superadmin') {
+            setIsFullAccess(true);
+            setLoading(false);
+            return;
+          }
           
           const { data: userRoles } = await supabase
             .from('sec_user_roles')
@@ -143,11 +153,12 @@
     const value = useMemo(() => ({
       isFullAccess,
       permissions,
+      actionDictionary,
       loading,
       hasAccess,
       getActions,
       getDataScope
-    }), [isFullAccess, permissions, loading, hasAccess, getActions, getDataScope]);
+    }), [isFullAccess, permissions, actionDictionary, loading, hasAccess, getActions, getDataScope]);
 
     if (loading) {
       return (

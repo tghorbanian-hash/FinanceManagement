@@ -23,24 +23,6 @@
 
   const supabase = window.supabase;
 
-  // لیست اکشن‌ها آپدیت شد تا شامل اکشن‌های اختصاصی فرم ارزها باشد
-  const AVAILABLE_ACTIONS = [
-    { id: 'read', label: { fa: 'مشاهده اطلاعات', en: 'Read' } },
-    { id: 'create', label: { fa: 'ایجاد', en: 'Create' } },
-    { id: 'update', label: { fa: 'ویرایش', en: 'Update' } },
-    { id: 'delete', label: { fa: 'حذف', en: 'Delete' } },
-    { id: 'print', label: { fa: 'چاپ اطلاعات', en: 'Print' } },
-    { id: 'import', label: { fa: 'وارد نمودن اکسل', en: 'Excel Import' } },
-    { id: 'export', label: { fa: 'خروجی اکسل', en: 'Excel Export' } },
-    { id: 'approve', label: { fa: 'تغییر وضعیت / تایید', en: 'Approval' } },
-    { id: 'assign_detail', label: { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' } },
-    { id: 'bulk_action', label: { fa: 'عملیات گروهی', en: 'Bulk Actions' } },
-    { id: 'xe_fetch', label: { fa: 'گرفتن نرخ از XE', en: 'Fetch XE Rates' } },
-    { id: 'manual_rate', label: { fa: 'بروزرسانی دستی نرخ‌ها', en: 'Manual Rate Update' } },
-    { id: 'converter', label: { fa: 'ماشین حساب تبدیل‌گر', en: 'Currency Converter' } },
-    { id: 'view_log', label: { fa: 'مشاهده لاگ سیستم', en: 'View System Log' } }
-  ];
-
   const SCOPE_DICT = {
     'docTypes': { fa: 'انواع سند مجاز', en: 'Allowed Document Types' },
     'branches': { fa: 'شعب مجاز', en: 'Allowed Branches' }
@@ -125,6 +107,9 @@
   const UserAccess = ({ isOpen, onClose, user, language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
+
+    const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
+    const actionDictionary = securityCtx?.actionDictionary || {};
 
     const [isLoading, setIsLoading] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
@@ -743,7 +728,8 @@
                                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                                                     {availActions.map(actId => {
                                                         const isChecked = activeSource.actions.includes(actId);
-                                                        const lbl = AVAILABLE_ACTIONS.find(a => a.id === actId)?.label[isRtl ? 'fa' : 'en'] || actId;
+                                                        const labelObj = actionDictionary[actId];
+                                                        const lbl = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actId;
 
                                                         if (isReadOnly) {
                                                             return (

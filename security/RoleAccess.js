@@ -20,24 +20,6 @@
 
   const supabase = window.supabase;
 
-  // دیکشنری اکشن‌ها آپدیت شد تا شامل اکشن‌های اختصاصی فرم ارزها باشد
-  const ACTION_DICT = {
-    'read': { fa: 'مشاهده اطلاعات', en: 'Read' },
-    'create': { fa: 'ایجاد', en: 'Create' },
-    'update': { fa: 'ویرایش', en: 'Update' },
-    'delete': { fa: 'حذف', en: 'Delete' },
-    'print': { fa: 'چاپ اطلاعات', en: 'Print' },
-    'import': { fa: 'وارد نمودن اکسل', en: 'Excel Import' },
-    'export': { fa: 'خروجی اکسل', en: 'Excel Export' },
-    'approve': { fa: 'تغییر وضعیت / تایید', en: 'Approval' },
-    'assign_detail': { fa: 'تخصیص کد تفصیلی', en: 'Detail Assignment' },
-    'bulk_action': { fa: 'عملیات گروهی', en: 'Bulk Actions' },
-    'xe_fetch': { fa: 'گرفتن نرخ از XE', en: 'Fetch XE Rates' },
-    'manual_rate': { fa: 'بروزرسانی دستی نرخ‌ها', en: 'Manual Rate Update' },
-    'converter': { fa: 'ماشین حساب تبدیل‌گر', en: 'Currency Converter' },
-    'view_log': { fa: 'مشاهده لاگ سیستم', en: 'View System Log' }
-  };
-
   const SCOPE_DICT = {
     'docTypes': { fa: 'انواع سند مجاز', en: 'Allowed Document Types' },
     'branches': { fa: 'شعب مجاز', en: 'Allowed Branches' }
@@ -46,6 +28,9 @@
   const RoleAccess = ({ isOpen, onClose, role, language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
+
+    const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
+    const actionDictionary = securityCtx?.actionDictionary || {};
 
     const [isLoading, setIsLoading] = useState(false);
     const [menusData, setMenusData] = useState([]);
@@ -344,7 +329,7 @@
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                             {availActions.map(actionId => {
                                                 const isChecked = tempPermissions[selectedMenu.id]?.actions?.includes(actionId);
-                                                const labelObj = ACTION_DICT[actionId];
+                                                const labelObj = actionDictionary[actionId];
                                                 const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actionId;
                                                 
                                                 return (
