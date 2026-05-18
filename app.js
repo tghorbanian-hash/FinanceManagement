@@ -14,15 +14,13 @@
     const [isCheckingSession, setIsCheckingSession] = useState(true);
 
     useEffect(() => {
-      // بررسی وضعیت لاگین از نشست‌های قبلی
-      const session = localStorage.getItem('fm_user_session');
-      if (session) {
-        setIsAuthenticated(true);
-      }
+      // جلوگیری از ورود خودکار با رفرش صفحه جهت افزایش امنیت سیستم
+      localStorage.removeItem('fm_user_session');
+      sessionStorage.removeItem('fm_user_session');
+      setIsAuthenticated(false);
       setIsCheckingSession(false);
     }, []);
 
-    // تابع هش کردن کلمه عبور مشابه تابع تعریف شده در بخش مدیریت کاربران
     const hashPassword = async (pass) => {
       const msgBuffer = new TextEncoder().encode(pass);
       const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
@@ -63,11 +61,10 @@
            return;
         }
 
-        // بروزرسانی تاریخ آخرین ورود در دیتابیس
         await window.supabase.from('sec_users').update({ last_login: new Date().toISOString() }).eq('id', data.id);
 
-        // ذخیره اطلاعات نشست در مرورگر
-        localStorage.setItem('fm_user_session', JSON.stringify({ 
+        // ذخیره اطلاعات نشست در sessionStorage
+        sessionStorage.setItem('fm_user_session', JSON.stringify({ 
             id: data.id, 
             username: data.username, 
             type: data.user_type 
@@ -117,7 +114,6 @@
     const NavigationSystemComponent = window.NavigationSystem;
     if (!NavigationSystemComponent) return <div className="p-4 text-center">کامپوننت NavigationSystem در index.html فراخوانی نشده است.</div>;
 
-    // پس از ورود موفق، سیستم راهبری باز می‌شود
     return <NavigationSystemComponent isAdmin={true} initialLanguage={language} />;
   };
 

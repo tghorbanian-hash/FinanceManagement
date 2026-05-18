@@ -71,12 +71,24 @@
     const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     const theme = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
 
-    const MOCK_USER_ID = '00000000-0000-0000-0000-000000000000';
+    // استخراج اطلاعات کاربر و اختصاص یک کلید منحصر به فرد برای داده‌های شخصی
+    const sessionString = sessionStorage.getItem('fm_user_session') || localStorage.getItem('fm_user_session') || '{}';
+    let sessionUser = { id: '00000000-0000-0000-0000-000000000000', username: 'US' };
+    try {
+        const parsed = JSON.parse(sessionString);
+        if (parsed && parsed.id) {
+            sessionUser = parsed;
+        }
+    } catch (e) {
+        console.error("Error parsing session data", e);
+    }
+    const CURRENT_USER_ID = sessionUser.id;
+    const RECENTS_STORAGE_KEY = `sys_recents_${CURRENT_USER_ID}`;
 
     useEffect(() => {
       fetchMenuData();
       fetchFavorites();
-      const savedRecents = localStorage.getItem('sys_recents');
+      const savedRecents = localStorage.getItem(RECENTS_STORAGE_KEY);
       if (savedRecents) {
         setRecents(JSON.parse(savedRecents));
       }
@@ -111,7 +123,7 @@
         const { data } = await supabase
           .from('user_favorites')
           .select('menu_id')
-          .eq('user_id', MOCK_USER_ID);
+          .eq('user_id', CURRENT_USER_ID);
         if (data) setFavorites(new Set(data.map(f => f.menu_id)));
       } catch(err) {}
     };
@@ -127,8 +139,8 @@
       setFavorites(newFavs);
 
       try {
-        if (isAdding) await supabase.from('user_favorites').insert({ user_id: MOCK_USER_ID, menu_id: id });
-        else await supabase.from('user_favorites').delete().match({ user_id: MOCK_USER_ID, menu_id: id });
+        if (isAdding) await supabase.from('user_favorites').insert({ user_id: CURRENT_USER_ID, menu_id: id });
+        else await supabase.from('user_favorites').delete().match({ user_id: CURRENT_USER_ID, menu_id: id });
       } catch (err) {}
     };
 
@@ -137,7 +149,7 @@
       setActiveFormId(item.id);
       const newRecents = [item.id, ...recents.filter(id => id !== item.id)].slice(0, 10);
       setRecents(newRecents);
-      localStorage.setItem('sys_recents', JSON.stringify(newRecents));
+      localStorage.setItem(RECENTS_STORAGE_KEY, JSON.stringify(newRecents));
     };
 
     const toggleCalendar = () => {
@@ -159,6 +171,7 @@
     };
 
     const executeLogout = () => {
+      sessionStorage.removeItem('fm_user_session');
       localStorage.removeItem('fm_user_session');
       window.location.reload();
     };
@@ -500,7 +513,9 @@
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
             <button onClick={handleLogoutClick} title={t('خروج از سیستم', 'Logout')} className="text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"><LogOut size={18} /></button>
-            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">PM</div>
+            <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors uppercase">
+              {sessionUser.username ? sessionUser.username.substring(0, 2) : 'US'}
+            </div>
           </div>
         </nav>
 
