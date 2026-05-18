@@ -101,6 +101,29 @@
     return `${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`;
   };
 
+  const useSecureDataScope = (formCode) => {
+    const SecurityManager = window.SecurityManager;
+    if (!SecurityManager) return ['*'];
+    
+    try {
+      const security = SecurityManager.useSecurity();
+      return security.getDataScope(formCode);
+    } catch (e) {
+       console.warn("SecurityContext not found, defaulting to restricted scope");
+       return [];
+    }
+  };
+
+  const applyDataScope = (supabaseQuery, scopes, columnName = 'id') => {
+    if (!scopes || scopes.length === 0) {
+      return supabaseQuery.in(columnName, ['00000000-0000-0000-0000-000000000000']); 
+    }
+    if (scopes.includes('*')) {
+      return supabaseQuery; 
+    }
+    return supabaseQuery.in(columnName, scopes);
+  };
+
   const Button = (props) => {
     const { children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title } = props;
     const restProps = Object.assign({}, props);
@@ -692,6 +715,7 @@
   Object.assign(window.DSCore, {
     getGlobalCalendarMode, setGlobalCalendarMode, useCalendarMode, formatGlobalDate, j2g, g2j,
     getGlobalTheme, setGlobalTheme, useTheme,
+    useSecureDataScope, applyDataScope,
     Button, Card, Badge, PageHeader, Tabs, Skeleton, EmptyState, StatCard, 
     Timeline, Avatar, DropdownMenu, ProgressBar, Stepper, Spinner
   });

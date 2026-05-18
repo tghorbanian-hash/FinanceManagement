@@ -12,12 +12,13 @@
     const [error, setError] = useState(null);
     const [language, setLanguage] = useState('fa');
     const [isCheckingSession, setIsCheckingSession] = useState(true);
+    const [userSession, setUserSession] = useState(null);
 
     useEffect(() => {
-      // جلوگیری از ورود خودکار با رفرش صفحه جهت افزایش امنیت سیستم
       localStorage.removeItem('fm_user_session');
       sessionStorage.removeItem('fm_user_session');
       setIsAuthenticated(false);
+      setUserSession(null);
       setIsCheckingSession(false);
     }, []);
 
@@ -63,13 +64,14 @@
 
         await window.supabase.from('sec_users').update({ last_login: new Date().toISOString() }).eq('id', data.id);
 
-        // ذخیره اطلاعات نشست در sessionStorage
-        sessionStorage.setItem('fm_user_session', JSON.stringify({ 
+        const sessionObj = { 
             id: data.id, 
             username: data.username, 
             type: data.user_type 
-        }));
+        };
         
+        sessionStorage.setItem('fm_user_session', JSON.stringify(sessionObj));
+        setUserSession(sessionObj);
         setIsAuthenticated(true);
         
       } catch (err) {
@@ -112,9 +114,18 @@
     }
 
     const NavigationSystemComponent = window.NavigationSystem;
-    if (!NavigationSystemComponent) return <div className="p-4 text-center">کامپوننت NavigationSystem در index.html فراخوانی نشده است.</div>;
+    const SecurityProvider = window.SecurityManager?.SecurityProvider;
 
-    return <NavigationSystemComponent isAdmin={true} initialLanguage={language} />;
+    if (!NavigationSystemComponent) return <div className="p-4 text-center">کامپوننت NavigationSystem در index.html فراخوانی نشده است.</div>;
+    if (!SecurityProvider) return <div className="p-4 text-center">کامپوننت SecurityContext در index.html فراخوانی نشده است.</div>;
+
+    const isSystemAdmin = userSession?.username === 'admin' || userSession?.username === 'superadmin';
+
+    return (
+      <SecurityProvider userSession={userSession}>
+        <NavigationSystemComponent isAdmin={isSystemAdmin} initialLanguage={language} />
+      </SecurityProvider>
+    );
   };
 
   const rootElement = document.getElementById('root');

@@ -33,12 +33,14 @@
       );
     }
 
-    return <DynamicComponent language={language} />;
+    return <DynamicComponent language={language} formCode={DynamicComponent.formCode || componentName} />;
   };
 
   const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
     const supabase = window.supabase;
     const { Dialog } = window.DSFeedback || {};
+    
+    const { hasAccess, isFullAccess } = window.SecurityManager ? window.SecurityManager.useSecurity() : { hasAccess: () => true, isFullAccess: true };
 
     const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
     const isRtl = currentLanguage === 'fa';
@@ -71,7 +73,6 @@
     const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     const theme = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
 
-    // استخراج اطلاعات کاربر و اختصاص یک کلید منحصر به فرد برای داده‌های شخصی
     const sessionString = sessionStorage.getItem('fm_user_session') || localStorage.getItem('fm_user_session') || '{}';
     let sessionUser = { id: '00000000-0000-0000-0000-000000000000', username: 'US' };
     try {
@@ -176,7 +177,29 @@
       window.location.reload();
     };
 
-    const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
+    const accessibleMenus = useMemo(() => {
+      if (isFullAccess) return menuData;
+      
+      const accessibleIds = new Set();
+      
+      menuData.forEach(m => {
+        if (m.menu_type === 'form') {
+          if (hasAccess(m.unique_code)) {
+            accessibleIds.add(m.id);
+            let pid = m.parent_id;
+            while (pid) {
+              accessibleIds.add(pid);
+              const pMenu = menuData.find(x => x.id === pid);
+              pid = pMenu ? pMenu.parent_id : null;
+            }
+          }
+        }
+      });
+      
+      return menuData.filter(m => accessibleIds.has(m.id));
+    }, [menuData, hasAccess, isFullAccess]);
+
+    const domains = useMemo(() => accessibleMenus.filter(m => m.menu_type === 'domain'), [accessibleMenus]);
     
     const buildTree = (items, parentId = null) => {
       return items
@@ -187,7 +210,7 @@
         }));
     };
 
-    const fullTree = useMemo(() => buildTree(menuData), [menuData]);
+    const fullTree = useMemo(() => buildTree(accessibleMenus), [accessibleMenus]);
 
     const flattenedForms = useMemo(() => {
       const forms = [];
@@ -210,8 +233,8 @@
 
     const activeTree = useMemo(() => {
       if (activeDomainId === 'HOME_FAV') return [];
-      return buildTree(menuData, activeDomainId);
-    }, [menuData, activeDomainId]);
+      return buildTree(accessibleMenus, activeDomainId);
+    }, [accessibleMenus, activeDomainId]);
 
     const filteredActiveTree = useMemo(() => {
       if (!treeSearchTerm) return activeTree;
@@ -464,8 +487,8 @@
     };
 
     const renderHomeView = () => {
-      const favItems = menuData.filter(m => favorites.has(m.id) && m.menu_type === 'form');
-      const recentItems = recents.map(id => menuData.find(m => m.id === id)).filter(Boolean);
+      const favItems = accessibleMenus.filter(m => favorites.has(m.id) && m.menu_type === 'form');
+      const recentItems = recents.map(id => accessibleMenus.find(m => m.id === id)).filter(Boolean);
       return (
         <div className="p-8 space-y-10 animate-in fade-in font-sans">
           <section>
