@@ -12,9 +12,6 @@
   } = LucideIcons;
 
   const CurrencySettings = ({ language = 'fa' }) => {
-    // کلید اختصاصی این فرم برای بررسی دسترسی‌ها در AccessManager
-    const PAGE_KEY = 'currency_settings';
-
     const FallbackComponent = () => null;
     const Core = window.DSCore || window.DesignSystem || {};
     const { 
@@ -107,9 +104,6 @@
     const supabase = window.supabase;
     const currentUser = window.NavigationSystem?.currentUser?.name || 'مدیر سیستم';
 
-    // بررسی دسترسی سریع برای دکمه‌های خارج از گرید
-    const hasAccess = (action) => !window.AccessManager || window.AccessManager.hasAction(PAGE_KEY, action);
-
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
@@ -167,15 +161,7 @@
       setIsLoading(true);
       try {
         if (!supabase) throw new Error("Supabase is not initialized");
-        let query = supabase.from('fm_currencies').select('*').order('code');
-        
-        // الگوی اعمال دسترسی سطح 3 (داده) روی کوئری:
-        // اگر ستون branch_id در جدول موجود بود:
-        // if (window.AccessManager) {
-        //   query = window.AccessManager.applyScopeToQuery(PAGE_KEY, 'branches', query, 'branch_id');
-        // }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.from('fm_currencies').select('*').order('code');
         if (error) throw error;
         setCurrencies(data || []);
       } catch (err) {
@@ -189,14 +175,7 @@
     const fetchRates = async () => {
       try {
         if (!supabase) return;
-        let query = supabase.from('fm_currency_rates').select('*').order('created_at', { ascending: false });
-        
-        // الگوی اعمال دسترسی سطح 3:
-        // if (window.AccessManager) {
-        //   query = window.AccessManager.applyScopeToQuery(PAGE_KEY, 'branches', query, 'branch_id');
-        // }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.from('fm_currency_rates').select('*').order('created_at', { ascending: false });
         if (error) throw error;
         setRates(data || []);
       } catch (err) {
@@ -540,11 +519,11 @@
     ];
 
     const currencyBulkActions = [
-      { actionKey: 'edit', label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400' },
-      { actionKey: 'edit', label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400' },
-      { actionKey: 'edit', label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400' },
-      { actionKey: 'edit', label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400' },
-      { actionKey: 'delete', label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
+      { label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400' },
+      { label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400' },
+      { label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400' },
+      { label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400' },
+      { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, source: 'currency' }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
     ];
 
     const historyColumns = [
@@ -572,7 +551,6 @@
 
     const historyBulkActions = [
       { 
-        actionKey: 'delete',
         label: t('حذف سوابق انتخاب شده', 'Delete Selected Records'), 
         icon: Trash2, 
         onClick: (ids) => {
@@ -623,16 +601,6 @@
       return result;
     }, [rates, rateFilters]);
 
-    // اعمال فیلتر دسترسی سطح ۳ (در صورت وجود) روی LOV ها
-    const filterSelectOptions = (dataArray, idField) => {
-      if (window.AccessManager) {
-        // الگو: اگر دیتای LOV نیاز به کنترل شعب داشت، در اینجا اعمال می‌شود:
-        // return window.AccessManager.filterLOVData(PAGE_KEY, 'branches', dataArray, idField);
-        return dataArray;
-      }
-      return dataArray;
-    };
-
     return (
       <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
@@ -660,21 +628,15 @@
                   data={filteredCurrencies} 
                   columns={currencyColumns} 
                   language={language}
-                  pageKey={PAGE_KEY}
                   gridState={currenciesGridState}
                   onGridStateChange={setCurrenciesGridState}
                   actions={[
-                    { actionKey: 'read', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
-                    { actionKey: 'edit', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
-                    { actionKey: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
+                    { icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
+                    { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
+                    { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'currency' }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
                   ]}
                   selectable={true}
-                  onRowDoubleClick={(row) => { 
-                    if(hasAccess('edit')) {
-                      setSelectedCurrency({...row}); 
-                      setIsCurrencyModalOpen(true); 
-                    }
-                  }}
+                  onRowDoubleClick={(row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }}
                   bulkActions={currencyBulkActions}
                   onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
                 />
@@ -686,8 +648,8 @@
             <>
               <AdvancedFilter 
                 fields={[
-                  { name: 'base', label: t('ارز پایه', 'Base Currency'), type: 'select', options: filterSelectOptions(currencies, 'code').map(c => ({value: c.code, label: c.code})) },
-                  { name: 'target', label: t('ارز هدف', 'Target Currency'), type: 'select', options: filterSelectOptions(currencies, 'code').map(c => ({value: c.code, label: c.code})) },
+                  { name: 'base', label: t('ارز پایه', 'Base Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
+                  { name: 'target', label: t('ارز هدف', 'Target Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
                   { name: 'fromDate', label: t('از تاریخ', 'From Date'), type: 'date' },
                   { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' },
                   { name: 'source', label: t('منبع', 'Source'), type: 'select', options: [{value:'XE', label:'XE (اتوماتیک)'}, {value:'Manual', label:'دستی'}] }
@@ -703,21 +665,18 @@
                    data={filteredRates} 
                    columns={historyColumns} 
                    language={language}
-                   pageKey={PAGE_KEY}
                    selectable={true}
                    gridState={ratesGridState}
                    onGridStateChange={setRatesGridState}
                    bulkActions={historyBulkActions}
                    actions={[
                      { 
-                       actionKey: 'read',
                        icon: History, 
                        tooltip: t('مشاهده لاگ سیستم', 'View System Log'), 
                        onClick: (row) => openLogModal('fm_currency_rates', row.id), 
                        className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' 
                      },
                      { 
-                       actionKey: 'edit',
                        icon: Edit, 
                        tooltip: t('ویرایش سابقه', 'Edit Record'), 
                        onClick: (row) => { setEditingRate({...row}); setIsEditRateModalOpen(true); },
@@ -725,7 +684,6 @@
                        className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' 
                      },
                      { 
-                       actionKey: 'delete',
                        icon: Trash2, 
                        tooltip: t('حذف سابقه', 'Delete Record'), 
                        onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, source: 'rate' }), 
@@ -739,11 +697,11 @@
                        icon: Zap,
                        className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800',
                        items: [
-                         hasAccess('create') ? { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' } : null,
-                         hasAccess('create') ? { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' } : null,
+                         { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' },
+                         { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' },
                          { divider: true },
                          { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400' }
-                       ].filter(Boolean) // حذف آیتم‌های غیرمجاز (null)
+                       ]
                      }
                    ]}
                  />
@@ -795,8 +753,7 @@
                    isRtl={isRtl} size="sm" wrapperClassName="w-full sm:w-1/2"
                    options={[
                      { value: '', label: t('انتخاب ارز جهت افزودن...', 'Select currency to add...') },
-                     // فیلتر مقادیر بر اساس دسترسی
-                     ...filterSelectOptions(currencies, 'code').filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
+                     ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))
                    ]} 
                  />
                  <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] mt-1">
@@ -902,13 +859,13 @@
               
               <div className="flex flex-col sm:flex-row items-end gap-3 w-full relative">
                  <CurrencyField label={t('مبلغ مبدا', 'Source Amount')} value={convAmount} onChange={setConvAmount} isRtl={isRtl} size="sm" wrapperClassName="flex-1" />
-                 <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={filterSelectOptions(currencies, 'code').map(c => ({value: c.code, label: c.code}))} />
+                 <SelectField label={t('از ارز', 'From')} value={convFrom} onChange={(e) => setConvFrom(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
                  
                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-400 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-1 shrink-0" onClick={() => { const temp = convFrom; setConvFrom(convTo); setConvTo(temp); }}>
                     <ArrowRightLeft size={16} className={isRtl ? '' : 'rotate-180'} />
                  </div>
                  
-                 <SelectField label={t('به ارز', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={filterSelectOptions(currencies, 'code').map(c => ({value: c.code, label: c.code}))} />
+                 <SelectField label={t('به ارز', 'To')} value={convTo} onChange={(e) => setConvTo(e.target.value)} isRtl={isRtl} size="sm" wrapperClassName="w-24" options={currencies.map(c => ({value: c.code, label: c.code}))} />
               </div>
               
               {currentConvRate !== null && (

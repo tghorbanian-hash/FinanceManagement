@@ -14,24 +14,15 @@
     const [isCheckingSession, setIsCheckingSession] = useState(true);
 
     useEffect(() => {
-      const checkSession = async () => {
-        const sessionStr = localStorage.getItem('fm_user_session');
-        if (sessionStr) {
-          try {
-            const session = JSON.parse(sessionStr);
-            if (window.AccessManager) {
-              await window.AccessManager.init(session.id, session.username);
-            }
-            setIsAuthenticated(true);
-          } catch (e) {
-            localStorage.removeItem('fm_user_session');
-          }
-        }
-        setIsCheckingSession(false);
-      };
-      checkSession();
+      // بررسی وضعیت لاگین از نشست‌های قبلی
+      const session = localStorage.getItem('fm_user_session');
+      if (session) {
+        setIsAuthenticated(true);
+      }
+      setIsCheckingSession(false);
     }, []);
 
+    // تابع هش کردن کلمه عبور مشابه تابع تعریف شده در بخش مدیریت کاربران
     const hashPassword = async (pass) => {
       const msgBuffer = new TextEncoder().encode(pass);
       const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
@@ -72,19 +63,15 @@
            return;
         }
 
+        // بروزرسانی تاریخ آخرین ورود در دیتابیس
         await window.supabase.from('sec_users').update({ last_login: new Date().toISOString() }).eq('id', data.id);
 
-        const sessionData = { 
+        // ذخیره اطلاعات نشست در مرورگر
+        localStorage.setItem('fm_user_session', JSON.stringify({ 
             id: data.id, 
             username: data.username, 
             type: data.user_type 
-        };
-        
-        localStorage.setItem('fm_user_session', JSON.stringify(sessionData));
-        
-        if (window.AccessManager) {
-           await window.AccessManager.init(data.id, data.username);
-        }
+        }));
         
         setIsAuthenticated(true);
         
@@ -130,18 +117,8 @@
     const NavigationSystemComponent = window.NavigationSystem;
     if (!NavigationSystemComponent) return <div className="p-4 text-center">کامپوننت NavigationSystem در index.html فراخوانی نشده است.</div>;
 
-    const isAdminCheck = () => {
-        const sessionStr = localStorage.getItem('fm_user_session');
-        if (sessionStr) {
-            try {
-                const session = JSON.parse(sessionStr);
-                return session.username === 'admin' || session.username === 'superadmin';
-            } catch(e) {}
-        }
-        return false;
-    };
-
-    return <NavigationSystemComponent isAdmin={isAdminCheck()} initialLanguage={language} />;
+    // پس از ورود موفق، سیستم راهبری باز می‌شود
+    return <NavigationSystemComponent isAdmin={true} initialLanguage={language} />;
   };
 
   const rootElement = document.getElementById('root');
