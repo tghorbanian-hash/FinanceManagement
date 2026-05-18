@@ -23,10 +23,16 @@
         try {
           const supabase = window.supabase;
 
-          const { data: dictData } = await supabase.from('sec_action_dictionary').select('*');
+          const [dictRes, rolesRes, userPermsRes, menusRes] = await Promise.all([
+            supabase.from('sec_action_dictionary').select('action_code, label_fa, label_en'),
+            supabase.from('sec_user_roles').select('role_id').eq('user_id', userSession.id),
+            supabase.from('sec_permissions').select('*').eq('user_id', userSession.id),
+            supabase.from('menus').select('id, unique_code')
+          ]);
+
           const dict = {};
-          if (dictData) {
-              dictData.forEach(item => {
+          if (dictRes.data) {
+              dictRes.data.forEach(item => {
                   dict[item.action_code] = { fa: item.label_fa, en: item.label_en };
               });
           }
@@ -38,36 +44,28 @@
             return;
           }
           
-          const { data: userRoles } = await supabase
-            .from('sec_user_roles')
-            .select('role_id')
-            .eq('user_id', userSession.id);
+          const roleIds = rolesRes.data ? rolesRes.data.map(ur => ur.role_id) : [];
 
-          const roleIds = userRoles ? userRoles.map(ur => ur.role_id) : [];
-
-          const { data: userPerms } = await supabase
-            .from('sec_permissions')
-            .select('*')
-            .eq('user_id', userSession.id);
-
-          let rolePerms = [];
+          let rolePermsData = [];
           if (roleIds.length > 0) {
             const { data: rPerms } = await supabase
               .from('sec_permissions')
               .select('*')
               .in('role_id', roleIds);
-            if (rPerms) rolePerms = rPerms;
+            if (rPerms) rolePermsData = rPerms;
           }
 
-          const { data: menus } = await supabase.from('menus').select('id, unique_code');
+          const menusData = menusRes.data || [];
+          const menuMap = {};
+          menusData.forEach(m => {
+            menuMap[m.id] = m.unique_code?.trim().toLowerCase();
+          });
 
           const merged = {};
 
           const processPerm = (p) => {
-            const menu = menus?.find(m => m.id === p.menu_id);
-            if (!menu || !menu.unique_code) return;
-            
-            const code = menu.unique_code.trim().toLowerCase();
+            const code = menuMap[p.menu_id];
+            if (!code) return;
             
             if (!merged[code]) {
               merged[code] = {
@@ -81,26 +79,38 @@
               };
             }
             
-            const actions = typeof p.actions === 'string' ? JSON.parse(p.actions || '[]') : (p.actions || []);
+            let parsedActions = [];
+            if (typeof p.actions === 'string') {
+                try { parsedActions = JSON.parse(p.actions || '[]'); } catch(e) { parsedActions = []; }
+            } else if (Array.isArray(p.actions)) {
+                parsedActions = p.actions;
+            }
             
-            merged[code].raw_actions = [...new Set([...merged[code].raw_actions, ...actions])];
+            const normalizedActions = parsedActions.map(a => String(a).toLowerCase().trim());
+            merged[code].raw_actions = [...new Set([...merged[code].raw_actions, ...normalizedActions])];
             
-            if (actions.length > 0) merged[code].can_view = true; 
-            if (actions.includes('read')) merged[code].can_view = true;
-            if (actions.includes('create')) merged[code].can_create = true;
-            if (actions.includes('update')) merged[code].can_edit = true;
-            if (actions.includes('delete')) merged[code].can_delete = true;
-            if (actions.includes('print') || actions.includes('export')) merged[code].can_print = true;
+            if (normalizedActions.length > 0) merged[code].can_view = true; 
+            if (normalizedActions.includes('read') || normalizedActions.includes('view')) merged[code].can_view = true;
+            if (normalizedActions.includes('create') || normalizedActions.includes('add')) merged[code].can_create = true;
+            if (normalizedActions.includes('update') || normalizedActions.includes('edit')) merged[code].can_edit = true;
+            if (normalizedActions.includes('delete') || normalizedActions.includes('remove')) merged[code].can_delete = true;
+            if (normalizedActions.includes('print') || normalizedActions.includes('export')) merged[code].can_print = true;
             
-            const scopes = typeof p.data_scopes === 'string' ? JSON.parse(p.data_scopes || '{}') : (p.data_scopes || {});
-            Object.keys(scopes).forEach(key => {
+            let parsedScopes = {};
+            if (typeof p.data_scopes === 'string') {
+                try { parsedScopes = JSON.parse(p.data_scopes || '{}'); } catch(e) { parsedScopes = {}; }
+            } else if (typeof p.data_scopes === 'object' && p.data_scopes !== null) {
+                parsedScopes = p.data_scopes;
+            }
+
+            Object.keys(parsedScopes).forEach(key => {
                 if (!merged[code].data_scope[key]) merged[code].data_scope[key] = [];
-                merged[code].data_scope[key] = [...new Set([...merged[code].data_scope[key], ...scopes[key]])];
+                merged[code].data_scope[key] = [...new Set([...merged[code].data_scope[key], ...parsedScopes[key]])];
             });
           };
 
-          if (rolePerms) rolePerms.forEach(processPerm);
-          if (userPerms) userPerms.forEach(processPerm);
+          rolePermsData.forEach(processPerm);
+          if (userPermsRes.data) userPermsRes.data.forEach(processPerm);
 
           setPermissions(merged);
         } catch (err) {
