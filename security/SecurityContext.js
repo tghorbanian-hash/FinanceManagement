@@ -28,35 +28,40 @@
         try {
           const supabase = window.supabase;
           
-          const { data: userPerms, error: err1 } = await supabase
-            .from('sec_user_permissions')
-            .select('*')
-            .eq('user_id', userSession.id);
-
-          const { data: userRoles, error: err2 } = await supabase
+          // ۱. واکشی نقش‌های کاربر
+          const { data: userRoles } = await supabase
             .from('sec_user_roles')
             .select('role_id')
             .eq('user_id', userSession.id);
 
+          const roleIds = userRoles ? userRoles.map(ur => ur.role_id) : [];
+
+          // ۲. واکشی دسترسی‌های مستقیم و دسترسی‌های نقش از جدول واحد sec_permissions
+          const { data: userPerms } = await supabase
+            .from('sec_permissions')
+            .select('*')
+            .eq('user_id', userSession.id);
+
           let rolePerms = [];
-          if (userRoles && userRoles.length > 0) {
-            const roleIds = userRoles.map(ur => ur.role_id);
-            const { data: rPerms, error: err3 } = await supabase
-              .from('sec_role_permissions')
+          if (roleIds.length > 0) {
+            const { data: rPerms } = await supabase
+              .from('sec_permissions')
               .select('*')
               .in('role_id', roleIds);
-            if (rPerms) {
-              rolePerms = rPerms;
-            }
+            if (rPerms) rolePerms = rPerms;
           }
+
+          // ۳. واکشی منوها برای تبدیل menu_id به unique_code
+          const { data: menus } = await supabase.from('menus').select('id, unique_code');
 
           const merged = {};
 
-          const mergeRow = (row) => {
-            if (!row.form_code) return;
+          const processPerm = (p) => {
+            const menu = menus?.find(m => m.id === p.menu_id);
+            if (!menu || !menu.unique_code) return;
             
-            // تبدیل کد فرم به حروف کوچک برای حذف حساسیت به نوع حروف (Case-Insensitivity)
-            const code = row.form_code.trim().toLowerCase();
+            const code = menu.unique_code.trim().toLowerCase();
+            
             if (!merged[code]) {
               merged[code] = {
                 can_view: false,
@@ -64,29 +69,31 @@
                 can_edit: false,
                 can_delete: false,
                 can_print: false,
-                data_scope: [] 
+                data_scope: {} 
               };
             }
             
-            if (row.can_view) merged[code].can_view = true;
-            if (row.can_create) merged[code].can_create = true;
-            if (row.can_edit) merged[code].can_edit = true;
-            if (row.can_delete) merged[code].can_delete = true;
-            if (row.can_print) merged[code].can_print = true;
+            const actions = typeof p.actions === 'string' ? JSON.parse(p.actions || '[]') : (p.actions || []);
             
-            if (row.data_scope) {
-              let scopes = [];
-              if (Array.isArray(row.data_scope)) {
-                scopes = row.data_scope;
-              } else if (typeof row.data_scope === 'string') {
-                scopes = row.data_scope.split(',').map(s => s.trim());
-              }
-              merged[code].data_scope = [...new Set([...merged[code].data_scope, ...scopes])];
-            }
+            // اگر رکوردی وجود دارد، حداقل دسترسی مشاهده منو باید باز شود
+            merged[code].can_view = true;
+            
+            if (actions.includes('read')) merged[code].can_view = true;
+            if (actions.includes('create')) merged[code].can_create = true;
+            if (actions.includes('update')) merged[code].can_edit = true;
+            if (actions.includes('delete')) merged[code].can_delete = true;
+            if (actions.includes('print') || actions.includes('export')) merged[code].can_print = true;
+            
+            // تجمیع Data Scopes
+            const scopes = typeof p.data_scopes === 'string' ? JSON.parse(p.data_scopes || '{}') : (p.data_scopes || {});
+            Object.keys(scopes).forEach(key => {
+                if (!merged[code].data_scope[key]) merged[code].data_scope[key] = [];
+                merged[code].data_scope[key] = [...new Set([...merged[code].data_scope[key], ...scopes[key]])];
+            });
           };
 
-          if (rolePerms) rolePerms.forEach(mergeRow);
-          if (userPerms) userPerms.forEach(mergeRow);
+          if (rolePerms) rolePerms.forEach(processPerm);
+          if (userPerms) userPerms.forEach(processPerm);
 
           setPermissions(merged);
         } catch (err) {
@@ -132,7 +139,7 @@
       if (!formCode) return [];
       const target = formCode.trim().toLowerCase();
       const p = permissions[target];
-      return p && p.data_scope && p.data_scope.length > 0 ? p.data_scope : [];
+      return p && p.data_scope ? p.data_scope : {};
     }, [isFullAccess, permissions]);
 
     const value = useMemo(() => ({
