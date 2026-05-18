@@ -10,7 +10,7 @@
     Lock = FallbackIcon, AlertTriangle = FallbackIcon, Globe = FallbackIcon, Save = FallbackIcon
   } = LucideIcons;
 
-  const CurrencySettings = ({ language = 'fa', formCode = 'currency_settings' }) => {
+  const CurrencySettings = ({ language = 'fa', formCode = 'SYS_CURRENCY' }) => {
     const FallbackComponent = () => null;
     const Core = window.DSCore || window.DesignSystem || {};
     const { 
@@ -36,7 +36,7 @@
     const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
     const access = securityCtx ? securityCtx.getActions(formCode) : { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
     const isFullAccess = securityCtx ? securityCtx.isFullAccess : true;
-    const rawActions = securityCtx?.permissions?.[formCode]?.raw_actions || [];
+    const rawActions = securityCtx?.permissions?.[formCode.trim().toLowerCase()]?.raw_actions || [];
     const hasCustomAccess = (act, fallback) => isFullAccess || rawActions.includes(act) || fallback;
 
     const isReadOnly = !access.canEdit && !access.canCreate;
@@ -370,6 +370,6 @@
     );
   };
 
-  CurrencySettings.formCode = 'currency_settings';
+  CurrencySettings.formCode = 'SYS_CURRENCY';
   window.CurrencySettings = CurrencySettings;
 })();
