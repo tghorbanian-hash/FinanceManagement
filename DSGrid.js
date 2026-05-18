@@ -1,4 +1,4 @@
-/* * Filename: DSGrid.js  */
+/* Filename: DSGrid.js  */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useRef } = React;
@@ -118,11 +118,29 @@
     );
   };
 
-  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowClick, onRowDoubleClick, selectable = false, activeRowId = null, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false, gridState, onGridStateChange, hideImport = false, onImport }) => {
+  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowClick, onRowDoubleClick, selectable = false, activeRowId = null, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false, gridState, onGridStateChange, hideImport = false, onImport, pageKey = null }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const globalMode = useCalendarMode();
     const theme = useTheme();
+
+    // بررسی دسترسی‌های امنیتی از طریق AccessManager
+    const AccessMgr = window.AccessManager;
+    const canCreate = !pageKey || !AccessMgr || AccessMgr.hasAction(pageKey, 'create');
+    const canExport = !pageKey || !AccessMgr || AccessMgr.hasAction(pageKey, 'export');
+    const canImport = !pageKey || !AccessMgr || AccessMgr.hasAction(pageKey, 'import');
+
+    // فیلتر کردن اکشن‌های روی سطرها
+    const allowedActions = actions.filter(act => {
+      if (!act.actionKey || !pageKey || !AccessMgr) return true;
+      return AccessMgr.hasAction(pageKey, act.actionKey);
+    });
+
+    // فیلتر کردن اکشن‌های گروهی
+    const allowedBulkActions = bulkActions.filter(act => {
+      if (!act.actionKey || !pageKey || !AccessMgr) return true;
+      return AccessMgr.hasAction(pageKey, act.actionKey);
+    });
 
     const [gridData, setGridData] = useState(data);
     const [columnOrder, setColumnOrder] = useState(columns.map(c => c.field));
@@ -384,18 +402,18 @@
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 gap-2 shrink-0 min-h-[46px]">
           <div className="flex items-center shrink-0">
-            {onAdd && (
+            {onAdd && canCreate && (
               <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[12px] shadow-sm">
                 {t('جدید', 'New')}
               </Button>
             )}
           </div>
 
-          {selectedRows.length > 0 && bulkActions.length > 0 ? (
+          {selectedRows.length > 0 && allowedBulkActions.length > 0 ? (
             <div className="flex-1 flex items-center gap-3 px-4 py-1 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/30 rounded-md transition-all animate-in fade-in">
               <span className="text-[12px] font-black text-indigo-800 dark:text-indigo-300">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
               <div className="w-px h-4 bg-indigo-200 dark:bg-indigo-800/50 mx-1"></div>
-              {bulkActions.map((act, i) => (
+              {allowedBulkActions.map((act, i) => (
                 <Button key={i} size="sm" variant={act.variant || 'outline'} icon={act.icon} onClick={() => {act.onClick(selectedRows); setSelectedRows([]);}} className={`!h-7 text-[10px] ${act.className || ''}`}>
                   {act.label}
                 </Button>
@@ -475,17 +493,23 @@
                 </div>
               )}
             </div>
+            
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-            {onDownloadSample && (
+            
+            {onDownloadSample && canImport && (
               <button onClick={onDownloadSample} title={t('دانلود نمونه فایل اکسل', 'Download Excel Sample')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileDown size={16} /></button>
             )}
-            {!hideImport && (
+            
+            {!hideImport && canImport && (
               <>
                 <button onClick={() => document.getElementById('grid-import-input').click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
                 <input id="grid-import-input" type="file" className="hidden" accept=".csv" onChange={(e) => { if (onImport && e.target.files.length > 0) { onImport(e.target.files[0]); e.target.value = ''; } }} />
               </>
             )}
-            <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileSpreadsheet size={16} /></button>
+
+            {canExport && (
+              <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileSpreadsheet size={16} /></button>
+            )}
           </div>
         </div>
 
@@ -522,7 +546,7 @@
                     </th>
                   )
                 })}
-                {actions.length > 0 && (
+                {allowedActions.length > 0 && (
                   <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[12px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-0">
                     {t('عملیات', 'Actions')}
                   </th>
@@ -566,7 +590,7 @@
                     </td>
                   );
                 })}
-                {actions.length > 0 && (
+                {allowedActions.length > 0 && (
                   <td style={getStickyStyles('ACTIONS', true, true)} className="p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={applyInlineFilters} title={t('اعمال فیلتر', 'Apply Filter')} className="p-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm transition-colors">
@@ -589,7 +613,7 @@
                   const isCollapsed = collapsedGroups.includes(row.groupKey);
                   return (
                     <tr key={`group-${row.groupKey}`} className="bg-indigo-50/40 dark:bg-indigo-900/20 border-b border-indigo-100 dark:border-indigo-800/50">
-                      <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-0 sticky left-0 right-0">
+                      <td colSpan={visibleColumns.length + (allowedActions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-0 sticky left-0 right-0">
                         <div className="flex items-center gap-2 p-1.5 cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors w-max" style={{ paddingInlineStart: `${row.depth * 20 + 8}px` }} onClick={() => toggleGroupCollapse(row.groupKey)}>
                           <div className="text-indigo-500 dark:text-indigo-400">{isRtl ? (isCollapsed ? <ChevronLeft size={14}/> : <ChevronDown size={14}/>) : (isCollapsed ? <ChevronRight size={14}/> : <ChevronDown size={14}/>)}</div>
                           <Layers size={12} className="text-indigo-400 dark:text-indigo-500" />
@@ -633,10 +657,10 @@
                       </td>
                     ))}
                     
-                    {actions.length > 0 && (
+                    {allowedActions.length > 0 && (
                       <td style={{...getStickyStyles('ACTIONS', true), backgroundColor: 'inherit'}} className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] dark:shadow-none bg-inherit ${!isHighlighted ? 'group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50' : ''} border-slate-100 dark:border-slate-700/50`}>
                         <div className="flex items-center justify-center gap-0.5">
-                          {actions.map((act, i) => {
+                          {allowedActions.map((act, i) => {
                             if (act.hidden && act.hidden(row)) return null;
                             const actClass = typeof act.className === 'function' ? act.className(row) : (act.className || 'hover:text-indigo-600 dark:hover:text-indigo-400');
                             return (
@@ -652,14 +676,14 @@
                 );
               }) : (
                 <tr>
-                  <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-12 h-full text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
+                  <td colSpan={visibleColumns.length + (allowedActions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="p-12 h-full text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
                     <div className="flex flex-col items-center justify-center gap-3"><Search size={32} className="text-slate-300 dark:text-slate-600" /><span>{t('هیچ داده‌ای برای نمایش یافت نشد.', 'No data found to display.')}</span></div>
                   </td>
                 </tr>
               )}
               {paginatedData.length > 0 && (
                 <tr className="h-full">
-                  <td colSpan={visibleColumns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="border-0 bg-transparent p-0"></td>
+                  <td colSpan={visibleColumns.length + (allowedActions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="border-0 bg-transparent p-0"></td>
                 </tr>
               )}
             </tbody>
@@ -680,7 +704,7 @@
                       </td>
                     );
                   })}
-                  {actions.length > 0 && <td style={getStickyStyles('ACTIONS', true, false, true)} className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
+                  {allowedActions.length > 0 && <td style={getStickyStyles('ACTIONS', true, false, true)} className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
                 </tr>
               </tfoot>
             )}

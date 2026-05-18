@@ -163,18 +163,29 @@
       window.location.reload();
     };
 
-    const domains = useMemo(() => menuData.filter(m => m.menu_type === 'domain'), [menuData]);
-    
+    // ساخت درخت منوها همراه با فیلترینگ هوشمند بر اساس دسترسی کاربر (سطح اول)
     const buildTree = (items, parentId = null) => {
       return items
         .filter(item => item.parent_id === parentId)
         .map(item => ({
           ...item,
           children: buildTree(items, item.id)
-        }));
+        }))
+        .filter(node => {
+          if (node.menu_type === 'form') {
+            return window.AccessManager ? window.AccessManager.hasAccessToForm(node.id) : true;
+          }
+          // نودهای والد (ماژول، پوشه، دامین) فقط در صورتی نمایش داده می‌شوند که فرزند مجاز داشته باشند
+          return node.children && node.children.length > 0;
+        });
     };
 
     const fullTree = useMemo(() => buildTree(menuData), [menuData]);
+
+    // دامین‌های منوی اصلی فقط در صورتی نمایش داده می‌شوند که ساختار درختی آن‌ها معتبر و مجاز باشد
+    const domains = useMemo(() => {
+      return menuData.filter(m => m.menu_type === 'domain' && fullTree.some(t => t.id === m.id));
+    }, [menuData, fullTree]);
 
     const flattenedForms = useMemo(() => {
       const forms = [];
@@ -197,8 +208,8 @@
 
     const activeTree = useMemo(() => {
       if (activeDomainId === 'HOME_FAV') return [];
-      return buildTree(menuData, activeDomainId);
-    }, [menuData, activeDomainId]);
+      return fullTree.filter(t => t.id === activeDomainId)[0]?.children || [];
+    }, [fullTree, activeDomainId]);
 
     const filteredActiveTree = useMemo(() => {
       if (!treeSearchTerm) return activeTree;
@@ -451,8 +462,10 @@
     };
 
     const renderHomeView = () => {
-      const favItems = menuData.filter(m => favorites.has(m.id) && m.menu_type === 'form');
-      const recentItems = recents.map(id => menuData.find(m => m.id === id)).filter(Boolean);
+      // فیلتر کردن علاقه‌مندی‌ها و بازدیدهای اخیر بر اساس دسترسی جاری کاربر
+      const favItems = menuData.filter(m => favorites.has(m.id) && m.menu_type === 'form' && (window.AccessManager ? window.AccessManager.hasAccessToForm(m.id) : true));
+      const recentItems = recents.map(id => menuData.find(m => m.id === id)).filter(Boolean).filter(m => window.AccessManager ? window.AccessManager.hasAccessToForm(m.id) : true);
+      
       return (
         <div className="p-8 space-y-10 animate-in fade-in font-sans">
           <section>
