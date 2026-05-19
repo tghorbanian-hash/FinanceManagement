@@ -42,7 +42,6 @@
 
     const [rawNodes, setRawNodes] = useState([]);
     
-    // وضعیت‌های منطبق با استاندارد Showcase برای مدیریت درخت
     const [selectedTreeNodeId, setSelectedTreeNodeId] = useState(null);
     const [treeFormData, setTreeFormData] = useState({});
     const [isCreatingNode, setIsCreatingNode] = useState(false);
@@ -69,7 +68,7 @@
       isFetching.current = true;
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.from('fm_cost_types').select('*').order('created_at', { ascending: true });
+        const { data, error } = await supabase.schema('fm').from('cost_types').select('*').order('created_at', { ascending: true });
         if (error) throw error;
 
         const mappedNodes = (data || []).map(n => ({
@@ -77,7 +76,7 @@
           parentId: n.parent_id,
           titleFa: n.title_fa,
           titleEn: n.title_en,
-          title: isRtl ? n.title_fa : (n.title_en || n.title_fa), // فیلد کلیدی برای نمایش در کامپوننت Tree
+          title: isRtl ? n.title_fa : (n.title_en || n.title_fa),
           code: n.code,
           isActive: n.is_active
         }));
@@ -186,7 +185,7 @@
         let targetNodeId = null;
 
         if (isCreatingNode) {
-          const { data, error } = await supabase.from('fm_cost_types').insert([payload]).select();
+          const { data, error } = await supabase.schema('fm').from('cost_types').insert([payload]).select();
           if (error) throw error;
           if (data && data[0]) {
             targetNodeId = data[0].id;
@@ -196,7 +195,7 @@
           if (treeFormData.parentId === selectedTreeNodeId) {
              return showToast(t('گره نمی‌تواند زیرمجموعه خودش باشد', 'Cannot be parent to itself'), 'error');
           }
-          const { error } = await supabase.from('fm_cost_types').update(payload).eq('id', selectedTreeNodeId);
+          const { error } = await supabase.schema('fm').from('cost_types').update(payload).eq('id', selectedTreeNodeId);
           if (error) throw error;
           targetNodeId = selectedTreeNodeId;
           await logAction('انواع هزینه', targetNodeId, 'update', `ویرایش نوع هزینه: ${payload.title_fa}`);
@@ -233,7 +232,7 @@
         const targetId = deleteConfirm.data.id;
         const targetTitle = deleteConfirm.data.titleFa;
 
-        const { error } = await supabase.from('fm_cost_types').delete().eq('id', targetId);
+        const { error } = await supabase.schema('fm').from('cost_types').delete().eq('id', targetId);
         if (error) throw error;
         
         await logAction('انواع هزینه', targetId, 'delete', `حذف نوع هزینه: ${targetTitle}`);
