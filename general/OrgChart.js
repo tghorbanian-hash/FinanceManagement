@@ -321,7 +321,7 @@
       try {
         const payload = {
           node_id: selectedNode.id,
-          person_id: Number(assignData.personId),
+          person_id: assignData.personId,
           person_name: personName,
           from_date: assignData.fromDate || null,
           to_date: assignData.toDate || null,
