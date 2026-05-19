@@ -37,8 +37,6 @@
     const access = useMemo(() => {
         return rawActions || { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
     }, [rawActions]);
-    
-    const canDesign = access.canEdit || (access.hasCustomAccess && access.hasCustomAccess('design'));
 
     const supabase = window.supabase;
     const currentUser = window.NavigationSystem?.currentUser?.name || 'مدیر سیستم';
@@ -105,9 +103,17 @@
       isFetchingEmps.current = true;
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.from('fm_parties').select('id, code, name, roles').eq('party_type', 'person').eq('is_active', true);
+        const { data, error } = await supabase.from('parties').select('id, code, first_name, last_name, company_name, party_type, roles').eq('is_active', true);
         if (error) throw error;
-        setEmployees(data || []);
+        
+        const mappedEmps = (data || []).map(p => ({
+          id: p.id,
+          code: p.code,
+          name: p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+          roles: p.roles || []
+        }));
+        
+        setEmployees(mappedEmps);
       } catch (err) {
         console.error('Error fetching employees:', err);
       } finally {
@@ -388,7 +394,7 @@
       },
       { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '100px', type: 'date' },
       { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '100px', type: 'date' },
-      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '100px' }
+      { field: 'is_active', header_fa: 'فعال', header_en: 'Active', type: 'toggle', width: '100px' }
     ];
 
     const personnelColumns = [

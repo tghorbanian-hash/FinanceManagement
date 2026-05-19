@@ -620,19 +620,19 @@
                     <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700`}>
                       <div className="relative">
                         {col.type === 'date' ? (
-                          <div className="-mt-1.5 w-full">
+                          <div className="w-full">
                               <DatePicker 
                                 value={localFilters[col.field] || ''} 
                                 onChange={(val) => handleLocalFilterChange(col.field, val)}
-                                isRtl={isRtl} language={language} size="sm" wrapperClassName="!gap-0" className="!h-6 !text-[10px] !min-h-[24px]"
+                                isRtl={isRtl} language={language} size="xs" wrapperClassName="!gap-0"
                               />
                           </div>
                         ) : col.type === 'select' ? (
-                          <div className="-mt-1.5 w-full">
+                          <div className="w-full">
                               <SelectField 
-                                size="sm" options={col.options || []} value={localFilters[col.field] || ''} 
+                                size="xs" options={col.options || []} value={localFilters[col.field] || ''} 
                                 onChange={(e) => handleLocalFilterChange(col.field, e.target.value)} 
-                                isRtl={isRtl} wrapperClassName="!gap-0" className="!h-6 !text-[10px] !min-h-[24px]" placeholder={t('همه', 'All')} 
+                                isRtl={isRtl} wrapperClassName="!gap-0" placeholder={t('همه', 'All')} 
                               />
                           </div>
                         ) : col.type !== 'toggle' && col.type !== 'checkbox' ? (

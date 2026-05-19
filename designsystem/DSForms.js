@@ -1,4 +1,4 @@
-/* Filename: DSForms.js */
+/* Filename: designsystem/DSForms.js */
 (() => {
   const React = window.React;
   const { useState, useEffect, useRef, useCallback, useMemo } = React;
@@ -21,28 +21,16 @@
 
   const { useCalendarMode, formatGlobalDate, j2g, g2j } = window.DSCore || {};
 
-  const useSecureAccess = (formCode) => {
-    if (!formCode || !window.SecurityManager) {
-       return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
-    }
-    try {
-      const securityCtx = window.SecurityManager.useSecurity();
-      const { getActions, isFullAccess } = securityCtx;
-      const access = getActions(formCode);
-      return {
-        ...access,
-        hasCustomAccess: (actionCode) => isFullAccess || (access.raw_actions && (access.raw_actions.includes('*') || access.raw_actions.includes(actionCode)))
-      };
-    } catch (e) {
-      console.warn("Security context not found for access check.");
-      return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, hasCustomAccess: () => false };
-    }
-  };
-
   const useSecureField = (formCode, defaultDisabled) => {
-    if (!formCode) return defaultDisabled;
-    const access = useSecureAccess(formCode);
-    return (!access.canEdit && !access.canCreate) || defaultDisabled;
+    if (!formCode || !window.SecurityManager) return defaultDisabled;
+    try {
+      const { getActions } = window.SecurityManager.useSecurity();
+      const actions = getActions(formCode);
+      if (!actions.canEdit && !actions.canCreate) return true;
+    } catch (e) {
+      console.warn("Security context not found for field access check.");
+    }
+    return defaultDisabled;
   };
 
   const TextField = (props) => {
@@ -53,16 +41,17 @@
     const isDisabled = useSecureField(formCode, disabled);
     const [generatedId] = useState(() => `input-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
-    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+    const inputHeights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+    const isXs = size === 'xs';
     
     return (
-      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+      <div className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
         {label && <label htmlFor={inputId} className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative flex items-center">
-          {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Icon size={size === 'sm' ? 14 : 16} /></div>}
+          {Icon && <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Icon size={isXs ? 12 : size === 'sm' ? 14 : 16} /></div>}
           <input
             id={inputId} type={type} disabled={isDisabled}
-            className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${Icon ? (isRtl ? 'pr-8 pl-2.5' : 'pl-8 pr-2.5') : 'px-2.5'} ${className}`}
+            className={`w-full ${inputHeights[size] || inputHeights.md} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${Icon ? (isRtl ? (isXs ? 'pr-6 pl-2' : 'pr-8 pl-2.5') : (isXs ? 'pl-6 pr-2' : 'pl-8 pr-2.5')) : (isXs ? 'px-2' : 'px-2.5')} ${className}`}
             dir={isRtl ? 'rtl' : 'ltr'} {...restProps}
           />
         </div>
@@ -78,6 +67,7 @@
     const containerRef = useRef(null);
     const inputRef = useRef(null);
     const t = (fa, en) => isRtl ? fa : en;
+    const isXs = size === 'xs';
     
     const [generatedId] = useState(() => `select-${Math.random().toString(36).substr(2, 9)}`);
     const selectId = id || generatedId;
@@ -105,29 +95,29 @@
       String(o.value).toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+    const inputHeights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
 
     return (
-      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
+      <div ref={containerRef} className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label htmlFor={selectId} className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div 
-          className={`relative w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all flex items-center ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
+          className={`relative w-full ${inputHeights[size] || inputHeights.md} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all flex items-center ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${className}`}
           onClick={() => !isDisabled && setIsOpen(true)}
         >
           {isOpen ? (
             <input
               ref={inputRef} type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={displayValue || placeholder || t('جستجو...', 'Search...')}
-              className={`w-full h-full bg-transparent border-none outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}
+              className={`w-full h-full bg-transparent border-none outline-none placeholder:text-slate-400 dark:placeholder:text-slate-400 ${isRtl ? (isXs ? 'pr-2 pl-6' : 'pr-2.5 pl-8') : (isXs ? 'pl-2 pr-6' : 'pl-2.5 pr-8')}`}
               dir={isRtl ? 'rtl' : 'ltr'}
             />
           ) : (
-            <div className={`w-full h-full flex items-center truncate ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+            <div className={`w-full h-full flex items-center truncate ${isRtl ? (isXs ? 'pr-2 pl-6' : 'pr-2.5 pl-8') : (isXs ? 'pl-2 pr-6' : 'pl-2.5 pr-8')}`} dir={isRtl ? 'rtl' : 'ltr'}>
               <span className={displayValue ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-400'}>{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
             </div>
           )}
-          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'left-2.5' : 'right-2.5'} pointer-events-none text-slate-400 dark:text-slate-400`}>
-            <ChevronDown size={14} />
+          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? (isXs ? 'left-1.5' : 'left-2.5') : (isXs ? 'right-1.5' : 'right-2.5')} pointer-events-none text-slate-400 dark:text-slate-400`}>
+            <ChevronDown size={isXs ? 12 : 14} />
           </div>
         </div>
         
@@ -285,8 +275,9 @@
     const containerRef = useRef(null);
     const [generatedId] = useState(() => `datepicker-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
-    const inputHeights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+    const inputHeights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
     const t = (fa, en) => isRtl ? fa : en;
+    const isXs = size === 'xs';
 
     useEffect(() => {
       const clickOutside = (e) => { 
@@ -388,23 +379,23 @@
     const todayStr = `${ti.y}/${ti.m < 10 ? '0'+ti.m : ti.m}/${ti.d < 10 ? '0'+ti.d : ti.d}`;
 
     return (
-      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
+      <div ref={containerRef} className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label htmlFor={inputId} className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         <div className="relative group flex items-center">
-          <div className={`absolute ${isRtl ? 'right-2.5' : 'left-2.5'} text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors pointer-events-none z-10`}>
-            <Calendar size={size === 'sm' ? 14 : 16} />
+          <div className={`absolute ${isRtl ? (isXs ? 'right-1.5' : 'right-2.5') : (isXs ? 'left-1.5' : 'left-2.5')} text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors pointer-events-none z-10`}>
+            <Calendar size={isXs ? 12 : size === 'sm' ? 14 : 16} />
           </div>
           <input 
             id={inputId} type="text" value={displayValue} readOnly disabled={isDisabled}
             onClick={handleOpen}
             placeholder={todayStr}
-            className={`w-full ${inputHeights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none cursor-pointer focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${isRtl ? 'pr-8 pl-[60px]' : 'pl-8 pr-[60px]'} font-mono`}
+            className={`w-full ${inputHeights[size] || inputHeights.md} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none cursor-pointer focus:bg-white dark:focus:bg-slate-700/60 focus:ring-2 ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus:border-indigo-400 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'} ${isRtl ? (isXs ? 'pr-6 pl-[38px]' : 'pr-8 pl-[60px]') : (isXs ? 'pl-6 pr-[38px]' : 'pl-8 pr-[60px]')} font-mono`}
             dir="ltr"
           />
           <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded p-0.5 z-10`}>
             <button 
               type="button" onClick={(e) => { e.stopPropagation(); toggleCalendarMode(); }}
-              className={`px-1.5 py-0.5 rounded text-[10px] font-black transition-all bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300`}
+              className={`rounded ${isXs ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'} font-black transition-all bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300`}
               title={t('تغییر نوع تقویم', 'Toggle Calendar Mode')}
             >
               {calendarMode === 'jalali' ? 'FA' : 'EN'}
@@ -474,10 +465,7 @@
   };
 
   const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa', formCode }) => {
-    const access = useSecureAccess(formCode);
     const isReadOnlyMode = useSecureField(formCode, readOnly);
-    const canDelete = !isReadOnlyMode && (!formCode || access.canDelete);
-    
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isDragging, setIsDragging] = useState(false);
@@ -510,7 +498,7 @@
               </div>
               <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md"><Download size={14} /></button>}
-                {canDelete && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"><Trash2 size={14} /></button>}
+                {!isReadOnlyMode && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"><Trash2 size={14} /></button>}
               </div>
             </div>
           ))}
@@ -523,12 +511,13 @@
     const isDisabled = useSecureField(formCode, disabled);
     const [val, setVal] = useState('');
     const handleKeyDown = (e) => { if (e.key === 'Enter' && val && !isDisabled) { onAdd(val); setVal(''); e.preventDefault(); } };
-    const minHeights = { sm: 'min-h-[32px]', md: 'min-h-[40px]', lg: 'min-h-[48px]' };
+    const minHeights = { xs: 'min-h-[24px]', sm: 'min-h-[32px]', md: 'min-h-[40px]', lg: 'min-h-[48px]' };
+    const isXs = size === 'xs';
     
     return (
-      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+      <div className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
         {label && <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{label}</label>}
-        <div className={`flex flex-wrap gap-1.5 p-1 bg-white dark:bg-slate-700/40 border rounded-lg transition-all items-center ${minHeights[size]} ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className={`flex flex-wrap gap-1.5 p-1 bg-white dark:bg-slate-700/40 border rounded-lg transition-all items-center ${minHeights[size] || minHeights.md} ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20'}`} dir={isRtl ? 'rtl' : 'ltr'}>
           {tags.map((tag, idx) => (
             <div key={idx} className={`flex items-center gap-1 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-200 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-500/30 animate-in zoom-in-90 duration-150 ${isDisabled ? 'opacity-70' : ''}`}>
               <span className="text-[12px] font-bold">{tag}</span>
@@ -558,6 +547,7 @@
     const containerRef = useRef(null);
     const searchInputRef = useRef(null);
     const t = (fa, en) => isRtl ? fa : en;
+    const isXs = size === 'xs';
 
     const selectedOption = unitOptions.find(o => String(o.value) === String(unitValue));
     const displayUnit = selectedOption ? selectedOption.label : '';
@@ -597,13 +587,13 @@
       }
     };
 
-    const heights = { sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+    const heights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
 
     return (
-      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
+      <div className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
         
-        <div ref={containerRef} className={`relative flex items-center w-full ${heights[size]} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'}`} dir={isRtl ? 'rtl' : 'ltr'}>
+        <div ref={containerRef} className={`relative flex items-center w-full ${heights[size] || heights.md} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100 dark:focus-within:ring-indigo-400/20 hover:border-slate-400 dark:hover:border-slate-400'}`} dir={isRtl ? 'rtl' : 'ltr'}>
           
           <input
             type="text"
