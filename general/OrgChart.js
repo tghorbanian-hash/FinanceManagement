@@ -48,6 +48,7 @@
     const [isLoading, setIsLoading] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
     const isFetchingCharts = useRef(false);
+    const isFetchingEmps = useRef(false);
 
     const [charts, setCharts] = useState([]);
     const [chartFilters, setChartFilters] = useState({});
@@ -64,7 +65,7 @@
 
     const [employees, setEmployees] = useState([]);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-    const [assignData, setAssignData] = useState({ id: null, personId: '', fromDate: '', toDate: '' });
+    const [assignData, setAssignData] = useState({ id: null, personId: '', fromDate: '', toDate: '', isManager: false });
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
@@ -100,13 +101,17 @@
     }, [supabase, showToast, t]);
 
     const fetchEmployees = useCallback(async () => {
+      if (isFetchingEmps.current) return;
+      isFetchingEmps.current = true;
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.from('fm_parties').select('id, code, name').eq('party_type', 'person').eq('is_active', true);
+        const { data, error } = await supabase.from('fm_parties').select('id, code, name, roles').eq('party_type', 'person').eq('is_active', true);
         if (error) throw error;
         setEmployees(data || []);
       } catch (err) {
         console.error('Error fetching employees:', err);
+      } finally {
+        isFetchingEmps.current = false;
       }
     }, [supabase]);
 
@@ -277,10 +282,11 @@
           id: assignment.id, 
           personId: assignment.person_id || '', 
           fromDate: assignment.from_date || '', 
-          toDate: assignment.to_date || '' 
+          toDate: assignment.to_date || '',
+          isManager: assignment.is_manager || false
         });
       } else {
-        setAssignData({ id: null, personId: '', fromDate: '', toDate: '' });
+        setAssignData({ id: null, personId: '', fromDate: '', toDate: '', isManager: false });
       }
       setIsAssignModalOpen(true);
     };
@@ -289,13 +295,31 @@
       if (!assignData.personId || !selectedNode) return;
       const personName = employees.find(p => String(p.id) === String(assignData.personId))?.name || '';
       
+      if (assignData.isManager) {
+        const start1 = assignData.fromDate || '2000/01/01';
+        const end1 = assignData.toDate || '2200/01/01';
+        
+        const otherManagers = personnelDataForSelectedNode.filter(p => p.is_manager && String(p.id) !== String(assignData.id));
+        
+        const hasOverlap = otherManagers.some(m => {
+          const start2 = m.from_date || '2000/01/01';
+          const end2 = m.to_date || '2200/01/01';
+          return (start1 <= end2) && (start2 <= end1);
+        });
+        
+        if (hasOverlap) {
+          return showToast(t('تداخل تاریخ: در این بازه زمانی مسئول واحد دیگری تعریف شده است', 'Date overlap: Another manager exists in this period'), 'error');
+        }
+      }
+
       try {
         const payload = {
           node_id: selectedNode.id,
           person_id: Number(assignData.personId),
           person_name: personName,
           from_date: assignData.fromDate || null,
-          to_date: assignData.toDate || null
+          to_date: assignData.toDate || null,
+          is_manager: assignData.isManager
         };
 
         if (assignData.id) {
@@ -368,12 +392,20 @@
     ];
 
     const personnelColumns = [
-      { field: 'person_name', header_fa: 'نام شخص', header_en: 'Person Name', width: '200px', render: (v) => <span className="font-bold text-slate-700 dark:text-slate-200">{v}</span> },
-      { field: 'from_date', header_fa: 'از تاریخ', header_en: 'From Date', width: '120px', type: 'date' },
-      { field: 'to_date', header_fa: 'تا تاریخ', header_en: 'To Date', width: '120px', type: 'date' }
+      { field: 'person_name', header_fa: 'نام شخص', header_en: 'Person Name', width: '180px', render: (v) => <span className="font-bold text-slate-700 dark:text-slate-200">{v}</span> },
+      { field: 'is_manager', header_fa: 'مسئول واحد', header_en: 'Manager', width: '90px', type: 'toggle' },
+      { field: 'from_date', header_fa: 'از تاریخ', header_en: 'From Date', width: '100px', type: 'date' },
+      { field: 'to_date', header_fa: 'تا تاریخ', header_en: 'To Date', width: '100px', type: 'date' }
     ];
 
-    const employeeOptions = employees.map(e => ({ value: e.id, label: `${e.name} (${e.code})` }));
+    const employeeOptions = useMemo(() => {
+      return employees.filter(e => {
+        if (!e.roles || !e.roles.includes('employee')) return false;
+        const isAlreadyInNode = personnelDataForSelectedNode.some(p => String(p.person_id) === String(e.id) && String(p.id) !== String(assignData.id));
+        return !isAlreadyInNode;
+      }).map(e => ({ value: e.id, label: `${e.name} (${e.code})` }));
+    }, [employees, personnelDataForSelectedNode, assignData.id]);
+
     const parentNodeOptions = rawNodes.filter(n => n.id !== nodeForm.id).map(n => ({ value: n.id, label: n.title }));
 
     const renderList = () => (
@@ -432,7 +464,7 @@
                   <TextField formCode={formCode} label={t('عنوان گره', 'Node Title')} value={nodeForm.title} onChange={e => setNodeForm({...nodeForm, title: e.target.value})} isRtl={isRtl} required size="sm" />
                   <SelectField formCode={formCode} label={t('گره والد', 'Parent Node')} value={nodeForm.parentId} onChange={e => setNodeForm({...nodeForm, parentId: e.target.value})} isRtl={isRtl} size="sm" options={[{value: '', label: t('بدون والد (ریشه)', 'Root (No Parent)')}, ...parentNodeOptions]} />
                   <div className="flex items-end pb-1.5">
-                    <ToggleField formCode={formCode} label={t('وضعیت فعالیت', 'Active Status')} checked={nodeForm.isActive} onChange={val => setNodeForm({...nodeForm, isActive: val})} isRtl={isRtl} />
+                    <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={nodeForm.isActive} onChange={val => setNodeForm({...nodeForm, isActive: val})} isRtl={isRtl} />
                   </div>
                 </div>
                 <div className="flex justify-end mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 gap-2">
@@ -474,7 +506,7 @@
               <TextField formCode={formCode} label={t('عنوان چارت', 'Chart Title')} value={chartFormData.title} onChange={e => setChartFormData({...chartFormData, title: e.target.value})} isRtl={isRtl} required size="sm" />
               <SelectField formCode={formCode} label={t('نوع چارت', 'Chart Type')} value={chartFormData.type} onChange={e => setChartFormData({...chartFormData, type: e.target.value})} isRtl={isRtl} size="sm" options={[{value: 'standard', label: t('استاندارد', 'Standard')}, {value: 'sales', label: t('فروش', 'Sales')}, {value: 'finance', label: t('مالی', 'Finance')}, {value: 'hr', label: t('منابع انسانی', 'HR')}]} />
               <div className="flex items-end pb-1.5">
-                <ToggleField formCode={formCode} label={t('وضعیت فعال', 'Active Status')} checked={chartFormData.is_active} onChange={val => setChartFormData({...chartFormData, is_active: val})} isRtl={isRtl} />
+                <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={chartFormData.is_active} onChange={val => setChartFormData({...chartFormData, is_active: val})} isRtl={isRtl} />
               </div>
               <DatePicker formCode={formCode} label={t('تاریخ شروع اعتبار', 'Start Date')} value={chartFormData.start_date} onChange={val => setChartFormData({...chartFormData, start_date: val})} isRtl={isRtl} size="sm" />
               <DatePicker formCode={formCode} label={t('تاریخ پایان اعتبار', 'End Date')} value={chartFormData.end_date} onChange={val => setChartFormData({...chartFormData, end_date: val})} isRtl={isRtl} size="sm" />
@@ -489,6 +521,9 @@
         <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title={t('تخصیص پرسنل به گره', 'Assign Personnel to Node')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-4">
             <SelectField formCode={formCode} label={t('انتخاب شخص', 'Select Person')} value={assignData.personId} onChange={e => setAssignData({...assignData, personId: e.target.value})} options={employeeOptions} isRtl={isRtl} required size="sm" />
+            <div className="flex items-center pt-2">
+                <ToggleField formCode={formCode} label={t('مسئول واحد', 'Manager')} checked={assignData.isManager} onChange={val => setAssignData({...assignData, isManager: val})} isRtl={isRtl} />
+            </div>
             <DatePicker formCode={formCode} label={t('از تاریخ', 'From Date')} value={assignData.fromDate} onChange={val => setAssignData({...assignData, fromDate: val})} isRtl={isRtl} size="sm" />
             <DatePicker formCode={formCode} label={t('تا تاریخ', 'To Date')} value={assignData.toDate} onChange={val => setAssignData({...assignData, toDate: val})} isRtl={isRtl} size="sm" />
             <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">

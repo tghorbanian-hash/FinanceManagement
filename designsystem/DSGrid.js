@@ -620,17 +620,21 @@
                     <td key={`filter-${col.field}`} style={getStickyStyles(col.field, false, true)} className={`p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700`}>
                       <div className="relative">
                         {col.type === 'date' ? (
-                          <DatePicker 
-                            value={localFilters[col.field] || ''} 
-                            onChange={(val) => handleLocalFilterChange(col.field, val)}
-                            isRtl={isRtl} language={language} size="sm" wrapperClassName="!gap-0"
-                          />
+                          <div className="-mt-1.5 w-full">
+                              <DatePicker 
+                                value={localFilters[col.field] || ''} 
+                                onChange={(val) => handleLocalFilterChange(col.field, val)}
+                                isRtl={isRtl} language={language} size="sm" wrapperClassName="!gap-0" className="!h-6 !text-[10px] !min-h-[24px]"
+                              />
+                          </div>
                         ) : col.type === 'select' ? (
-                          <SelectField 
-                            size="sm" options={col.options || []} value={localFilters[col.field] || ''} 
-                            onChange={(e) => handleLocalFilterChange(col.field, e.target.value)} 
-                            isRtl={isRtl} wrapperClassName="!gap-0" placeholder={t('همه', 'All')} 
-                          />
+                          <div className="-mt-1.5 w-full">
+                              <SelectField 
+                                size="sm" options={col.options || []} value={localFilters[col.field] || ''} 
+                                onChange={(e) => handleLocalFilterChange(col.field, e.target.value)} 
+                                isRtl={isRtl} wrapperClassName="!gap-0" className="!h-6 !text-[10px] !min-h-[24px]" placeholder={t('همه', 'All')} 
+                              />
+                          </div>
                         ) : col.type !== 'toggle' && col.type !== 'checkbox' ? (
                           <>
                             <Search size={10} className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-1.5' : 'left-1.5'} text-slate-400 dark:text-slate-500`} />
