@@ -81,7 +81,7 @@
         const [currRes, userRes, roleRes, userRoleMapRes] = await Promise.all([
           supabase.from('fm_currencies').select('id, code, name_fa, name_en'),
           supabase.from('sec_users').select('id, username, is_active'),
-          supabase.from('sec_roles').select('id, name, title'),
+          supabase.from('sec_roles').select('*'),
           supabase.from('sec_user_roles').select('user_id, role_id')
         ]);
 
@@ -94,7 +94,7 @@
       }
     }, [supabase]);
 
-    const calculateDepth = useCallback((nodes, parentId) => {
+    const getNewNodeDepth = useCallback((nodes, parentId) => {
       let depth = 1;
       let currentParentId = parentId;
       while (currentParentId) {
@@ -188,14 +188,14 @@
           if (match) {
             setSelectedNodeId(match.id);
             setNodeFormData({ ...match });
-            setNodeDepth(calculateDepth(mapped, match.parentId));
+            setNodeDepth(getNewNodeDepth(mapped, match.parentId));
             setIsCreatingNode(false);
           }
         }
       } catch (err) {
         showToast(t('خطا در بارگذاری ساختار کدینگ', 'Error loading account codes'), 'error');
       }
-    }, [chart, supabase, calculateDepth, showToast, t, isRtl]);
+    }, [chart, supabase, getNewNodeDepth, showToast, t, isRtl]);
 
     useEffect(() => {
       if (access.canView) {
@@ -208,7 +208,7 @@
       setSelectedNodeId(node.id);
       setNodeFormData({ ...node });
       setIsCreatingNode(false);
-      setNodeDepth(calculateDepth(rawAccounts, node.parentId));
+      setNodeDepth(getNewNodeDepth(rawAccounts, node.parentId));
     };
 
     const handleAddTreeRoot = () => {
@@ -222,11 +222,10 @@
 
     const handleAddTreeChild = (parentNode) => {
       if (!access.canCreate) return;
-      const currentPDepth = calculateDepth(rawAccounts, parentNode.id);
-      if (currentPDepth >= 4) {
+      const nextDepth = getNewNodeDepth(rawAccounts, parentNode.id);
+      if (nextDepth > 4) {
         return showToast(t('امکان تعریف گره جدید فراتر از سطح ۴ (تفصیل) وجود ندارد', 'Cannot add nodes beyond Level 4 (Detail)'), 'error');
       }
-      const nextDepth = currentPDepth + 1;
       const suggested = suggestNextCode(rawAccounts, parentNode.id, nextDepth, chart);
       
       setSelectedNodeId(null);
@@ -455,117 +454,119 @@
     };
 
     return (
-      <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden mt-3 animate-in fade-in zoom-in-95 duration-300">
-        <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" icon={isRtl ? ArrowRight : ArrowLeft} onClick={onBack}>{t('بازگشت به لیست', 'Back')}</Button>
-            <div className="h-4 w-px bg-slate-300 dark:bg-slate-600"></div>
-            <h2 className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-1">
-              {t('پیکربندی درخت حساب:', 'Coding Setup:')} <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{chart?.title}</span>
-            </h2>
-          </div>
-          <Button variant="ghost" size="sm" icon={RefreshCw} onClick={() => fetchDesignerData(selectedNodeId)} className="h-8 w-8 px-0" />
-        </div>
-
-        <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
-          <div className={`w-full md:w-[40%] flex flex-col bg-slate-50/40 dark:bg-slate-900/10 border-b md:border-b-0 ${isRtl ? 'md:border-l' : 'md:border-r'} border-slate-200 dark:border-slate-700 overflow-y-auto`}>
-            <Tree
-              data={rawAccounts} language={language} formCode={formCode}
-              idField="id" parentField="parentId" displayField="title" secondaryField="code" activeField="isActive"
-              selectedId={selectedNodeId}
-              onSelect={handleSelectTreeNode}
-              onAddRoot={access.canCreate ? handleAddTreeRoot : undefined}
-              onAddChild={access.canCreate ? handleAddTreeChild : undefined}
-              onDelete={access.canDelete ? handleDeleteNode : undefined}
-            />
+      <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+          <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" icon={isRtl ? ArrowRight : ArrowLeft} onClick={onBack}>{t('بازگشت به لیست', 'Back')}</Button>
+              <div className="h-4 w-px bg-slate-300 dark:bg-slate-600"></div>
+              <h2 className="font-bold text-slate-800 dark:text-slate-100 text-sm flex items-center gap-1">
+                {t('پیکربندی درخت حساب:', 'Coding Setup:')} <span className="text-indigo-600 dark:text-indigo-400 font-extrabold">{chart?.title}</span>
+              </h2>
+            </div>
+            <Button variant="ghost" size="sm" icon={RefreshCw} onClick={() => fetchDesignerData(selectedNodeId)} className="h-8 w-8 px-0" />
           </div>
 
-          <div className="flex-1 flex flex-col overflow-auto p-4 gap-3 bg-slate-50/50 dark:bg-slate-900/20">
-            {selectedNodeId || isCreatingNode ? (
-              <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm">
-                <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
-                  <button onClick={() => setActiveTab('details')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                    {t('مشخصات و الزامات حساب', 'Account Parameters')}
-                  </button>
-                  {!isCreatingNode && (
-                    <>
-                      <button onClick={() => setActiveTab('permissions')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'permissions' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                        {t('تعریف قوانین دسترسی', 'Access Grantees')}
-                      </button>
-                      <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'summary' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                        {t('مجموع کاربران مجاز سیستم', 'Consolidated User Scope')}
-                      </button>
-                    </>
-                  )}
-                </div>
+          <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
+            <div className={`w-full md:w-[40%] flex flex-col bg-slate-50/40 dark:bg-slate-900/10 border-b md:border-b-0 ${isRtl ? 'md:border-l' : 'md:border-r'} border-slate-200 dark:border-slate-700 overflow-y-auto`}>
+              <Tree
+                data={rawAccounts} language={language} formCode={formCode}
+                idField="id" parentField="parentId" displayField="title" secondaryField="code" activeField="isActive"
+                selectedId={selectedNodeId}
+                onSelect={handleSelectTreeNode}
+                onAddRoot={access.canCreate ? handleAddTreeRoot : undefined}
+                onAddChild={access.canCreate ? handleAddTreeChild : undefined}
+                onDelete={access.canDelete ? handleDeleteNode : undefined}
+              />
+            </div>
 
-                <div className="flex-1 p-4 overflow-y-auto min-h-0">
-                  {activeTab === 'details' && (
-                    <div className="space-y-4 animate-in fade-in duration-200">
-                      <Alert type="info" icon={Info} message={<span>{t('سطح گره جاری:', 'Current Element Hierarchy Level:')} <strong className="text-indigo-600 dark:text-indigo-300">{levelLabels[nodeDepth]}</strong></span>} />
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <TextField size="sm" formCode={formCode} label={t('کد حساب (ترکیبی اتوماتیک)', 'Account Code')} value={nodeFormData.code || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
-                        <SelectField size="sm" formCode={formCode} label={t('ارز مبنای تراکنش', 'Transaction Base Currency')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => ({ value: c.id, label: `${c.code} - ${isRtl ? c.name_fa : c.name_en}` }))]} isRtl={isRtl} />
-                      </div>
+            <div className="flex-1 flex flex-col overflow-auto p-4 gap-3 bg-slate-50/50 dark:bg-slate-900/20">
+              {selectedNodeId || isCreatingNode ? (
+                <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm">
+                  <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
+                    <button onClick={() => setActiveTab('details')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+                      {t('مشخصات و الزامات حساب', 'Account Parameters')}
+                    </button>
+                    {!isCreatingNode && (
+                      <>
+                        <button onClick={() => setActiveTab('permissions')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'permissions' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+                          {t('تعریف قوانین دسترسی', 'Access Grantees')}
+                        </button>
+                        <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'summary' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+                          {t('مجموع کاربران مجاز سیستم', 'Consolidated User Scope')}
+                        </button>
+                      </>
+                    )}
+                  </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <TextField size="sm" formCode={formCode} label={t('عنوان فارسی حساب', 'Persian Title')} value={nodeFormData.titleFa || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleFa: e.target.value })} isRtl={isRtl} required />
-                        <TextField size="sm" formCode={formCode} label={t('عنوان انگلیسی حساب', 'English Title')} value={nodeFormData.titleEn || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleEn: e.target.value })} isRtl={isRtl} dir="ltr" />
-                      </div>
+                  <div className="flex-1 p-4 overflow-y-auto min-h-0">
+                    {activeTab === 'details' && (
+                      <div className="space-y-4 animate-in fade-in duration-200">
+                        <Alert type="info" icon={Info} message={<span>{t('سطح گره جاری:', 'Current Element Hierarchy Level:')} <strong className="text-indigo-600 dark:text-indigo-300">{levelLabels[nodeDepth]}</strong></span>} />
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <TextField size="sm" formCode={formCode} label={t('کد حساب (ترکیبی اتوماتیک)', 'Account Code')} value={nodeFormData.code || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
+                          <SelectField size="sm" formCode={formCode} label={t('ارز مبنای تراکنش', 'Transaction Base Currency')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => ({ value: c.id, label: `${c.code} - ${isRtl ? c.name_fa : c.name_en}` }))]} isRtl={isRtl} />
+                        </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        <SelectField size="sm" formCode={formCode} label={t('نوع حساب', 'Account Category')} value={nodeFormData.accountType || 'main'} onChange={(e) => setNodeFormData({ ...nodeFormData, accountType: e.target.value })} options={[{ value: 'main', label: t('حساب اصلی', 'Main Account') }, { value: 'intermediate', label: t('حساب واسط / کنترلی', 'Intermediate Account') }]} isRtl={isRtl} />
-                        <div className="flex flex-col justify-end gap-3 pb-1">
-                          <ToggleField size="sm" formCode={formCode} label={t('کنترل موجودی طی دوره مالی', 'Validate Balance Constraints During Period')} checked={!!nodeFormData.controlInventory} onChange={(v) => setNodeFormData({ ...nodeFormData, controlInventory: v })} isRtl={isRtl} />
-                          <ToggleField size="sm" formCode={formCode} label={t('حساب فعال و قابل استفاده باشد', 'Account Active & Exposed')} checked={nodeFormData.isActive !== false} onChange={(v) => setNodeFormData({ ...nodeFormData, isActive: v })} isRtl={isRtl} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <TextField size="sm" formCode={formCode} label={t('عنوان فارسی حساب', 'Persian Title')} value={nodeFormData.titleFa || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleFa: e.target.value })} isRtl={isRtl} required />
+                          <TextField size="sm" formCode={formCode} label={t('عنوان انگلیسی حساب', 'English Title')} value={nodeFormData.titleEn || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleEn: e.target.value })} isRtl={isRtl} dir="ltr" />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                          <SelectField size="sm" formCode={formCode} label={t('نوع حساب', 'Account Category')} value={nodeFormData.accountType || 'main'} onChange={(e) => setNodeFormData({ ...nodeFormData, accountType: e.target.value })} options={[{ value: 'main', label: t('حساب اصلی', 'Main Account') }, { value: 'intermediate', label: t('حساب واسط / کنترلی', 'Intermediate Account') }]} isRtl={isRtl} />
+                          <div className="flex flex-row items-center gap-6 pt-5 pb-1">
+                            <ToggleField size="sm" formCode={formCode} label={t('کنترل موجودی', 'Control Inventory')} checked={!!nodeFormData.controlInventory} onChange={(v) => setNodeFormData({ ...nodeFormData, controlInventory: v })} isRtl={isRtl} />
+                            <ToggleField size="sm" formCode={formCode} label={t('فعال', 'Active')} checked={nodeFormData.isActive !== false} onChange={(v) => setNodeFormData({ ...nodeFormData, isActive: v })} isRtl={isRtl} />
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                          <Button size="sm" variant="ghost" onClick={() => { setIsCreatingNode(false); setSelectedNodeId(null); setNodeFormData({}); }}>{t('انصراف', 'Cancel')}</Button>
+                          {access.canEdit && <Button size="sm" variant="primary" icon={Save} onClick={handleSaveNodeForm}>{t('ذخیره تغییرات حساب', 'Save Account')}</Button>}
                         </div>
                       </div>
+                    )}
 
-                      <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => { setIsCreatingNode(false); setSelectedNodeId(null); setNodeFormData({}); }}>{t('انصراف', 'Cancel')}</Button>
-                        {access.canEdit && <Button size="sm" variant="primary" icon={Save} onClick={handleSaveNodeForm}>{t('ذخیره تغییرات حساب', 'Save Account')}</Button>}
-                      </div>
-                    </div>
-                  )}
+                    {activeTab === 'permissions' && (
+                      <div className="space-y-4 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                          <SelectField size="sm" label={t('نوع گیرنده دسترسی', 'Grantee Type')} value={permFormData.granteeType} onChange={(e) => setPermFormData({ ...permFormData, granteeType: e.target.value, granteeId: '' })} options={[{ value: 'user', label: t('کاربر مشخص', 'Specific User') }, { value: 'role', label: t('نقش کلان سیستم', 'System Role Group') }]} isRtl={isRtl} />
+                          
+                          <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
+                          
+                          <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده اطلاعات حساب', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
+                          
+                          <Button size="sm" variant="primary" icon={Plus} onClick={handleAddPermission}>{t('افزودن دسترسی', 'Grant Access')}</Button>
+                        </div>
 
-                  {activeTab === 'permissions' && (
-                    <div className="space-y-4 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
-                      <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
-                        <SelectField size="sm" label={t('نوع گیرنده دسترسی', 'Grantee Type')} value={permFormData.granteeType} onChange={(e) => setPermFormData({ ...permFormData, granteeType: e.target.value, granteeId: '' })} options={[{ value: 'user', label: t('کاربر مشخص', 'Specific User') }, { value: 'role', label: t('نقش کلان سیستم', 'System Role Group') }]} isRtl={isRtl} />
-                        
-                        <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
-                        
-                        <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده اطلاعات حساب', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
-                        
-                        <Button size="sm" variant="primary" icon={Plus} onClick={handleAddPermission}>{t('افزودن دسترسی', 'Grant Access')}</Button>
+                        <div className="flex-1 min-h-[250px]">
+                          <DataGrid
+                            data={activeNodePermissions} columns={permColumns} language={language} formCode={formCode}
+                            actions={[{ id: 'delete', icon: Trash2, tooltip: t('حذف دسترسی', 'Revoke Permission'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'permission', data: row }), className: 'text-red-500 hover:text-red-600' }]}
+                          />
+                        </div>
                       </div>
+                    )}
 
-                      <div className="flex-1 min-h-[250px]">
-                        <DataGrid
-                          data={activeNodePermissions} columns={permColumns} language={language} formCode={formCode}
-                          actions={[{ id: 'delete', icon: Trash2, tooltip: t('حذف دسترسی', 'Revoke Permission'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'permission', data: row }), className: 'text-red-500 hover:text-red-600' }]}
-                        />
+                    {activeTab === 'summary' && (
+                      <div className="space-y-3 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
+                        <Alert type="warning" icon={Shield} message={t('لیست زیر مجموع تمامی کاربرانی است که به صورت مستقیم یا از طریق تفویض نقش‌های خود، اجازه تعامل با این حساب را کسب کرده‌اند.', 'Consolidated aggregate list of all operators with computed effective system access level.')} />
+                        <div className="flex-1 min-h-[300px]">
+                          <DataGrid data={consolidatedUsersList} columns={consolidatedColumns} language={language} formCode={formCode} />
+                        </div>
                       </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'summary' && (
-                    <div className="space-y-3 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
-                      <Alert type="warning" icon={Shield} message={t('لیست زیر مجموع تمامی کاربرانی است که به صورت مستقیم یا از طریق تفویض نقش‌های خود، اجازه تعامل با این حساب را کسب کرده‌اند.', 'Consolidated aggregate list of all operators with computed effective system access level.')} />
-                      <div className="flex-1 min-h-[300px]">
-                        <DataGrid data={consolidatedUsersList} columns={consolidatedColumns} language={language} formCode={formCode} />
-                      </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </Card>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 gap-3 text-[12px] font-medium p-8">
+                  <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700"><Network size={26} className="text-slate-300 dark:text-slate-600"/></div>
+                  <span>{t('جهت بررسی پارامترها، قوانین ارث‌بری یا دسترسی، یک حساب را از ساختار درخت انتخاب کنید.', 'Select an account item node from the left tree setup to manage permissions or parameters.')}</span>
                 </div>
-              </Card>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-500 gap-3 text-[12px] font-medium p-8">
-                <div className="p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700"><Network size={26} className="text-slate-300 dark:text-slate-600"/></div>
-                <span>{t('جهت بررسی پارامترها، قوانین ارث‌بری یا دسترسی، یک حساب را از ساختار درخت انتخاب کنید.', 'Select an account item node from the left tree setup to manage permissions or parameters.')}</span>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
