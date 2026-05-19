@@ -3,7 +3,6 @@
   const React = window.React;
   const { useState, useMemo, useEffect, useCallback, useRef } = React;
   
-  // سیستم ضدگلوله برای آیکون‌ها
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
@@ -17,12 +16,29 @@
   const { 
     Button = FallbackComponent, 
     ToggleField = FallbackComponent, 
-    Badge = FallbackComponent, 
     DatePicker = FallbackComponent, 
     formatGlobalDate = (v) => v, 
     useCalendarMode = () => 'jalali',
     useTheme = () => 'light'
   } = Core;
+
+  const useSecureAccess = (formCode) => {
+    if (!formCode || !window.SecurityManager) {
+       return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
+    }
+    try {
+      const securityCtx = window.SecurityManager.useSecurity();
+      const { getActions, isFullAccess } = securityCtx;
+      const access = getActions(formCode);
+      return {
+        ...access,
+        hasCustomAccess: (actionCode) => isFullAccess || (access.raw_actions && (access.raw_actions.includes('*') || access.raw_actions.includes(actionCode)))
+      };
+    } catch (e) {
+      console.warn("Security context not found for access check.");
+      return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, hasCustomAccess: () => false };
+    }
+  };
 
   const HighlightText = ({ text, term }) => {
     if (!term || !text) return <span>{text}</span>;
@@ -36,9 +52,10 @@
     );
   };
 
-  const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa' }) => {
+  const Tree = ({ data = [], idField = 'id', parentField = 'parentId', displayField = 'title', secondaryField, activeField = 'isActive', selectedId, onSelect, onAddChild, onAddRoot, onDelete, onExport, onImport, onDownloadSample, language = 'fa', formCode }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
+    const access = useSecureAccess(formCode);
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
@@ -158,8 +175,8 @@
             </div>
 
             <div className={`flex items-center gap-0.5 shrink-0 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-              {onAddChild && <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"><Plus size={14}/></button>}
-              {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} title={t('حذف', 'Delete')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={14}/></button>}
+              {onAddChild && access.canCreate && <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"><Plus size={14}/></button>}
+              {onDelete && access.canDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} title={t('حذف', 'Delete')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={14}/></button>}
             </div>
           </div>
 
@@ -177,8 +194,8 @@
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1 shrink-0">
-            {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[12px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
-            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+            {onAddRoot && access.canCreate && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[12px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
+            {onAddRoot && access.canCreate && <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>}
             <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
             <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
           </div>
@@ -193,14 +210,14 @@
               />
             </div>
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
-            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
-            {onImport && (
+            {onDownloadSample && access.canCreate && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
+            {onImport && access.canCreate && (
               <>
                 <button onClick={() => document.getElementById('tree-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
                 <input id="tree-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
-            {onExport && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
+            {onExport && access.canPrint && <button onClick={onExport} title={t('خروجی اکسل', 'Export Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileSpreadsheet size={14} /></button>}
           </div>
         </div>
 
@@ -216,23 +233,43 @@
     );
   };
 
-  const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit, gridState, onGridStateChange }) => {
+  const TreeGrid = ({ data = [], columns = [], idField = 'id', parentField = 'parentId', actions = [], selectable = false, selectedIds = [], onSelectChange, onAddRoot, onAddChild, onDelete, onExport, onImport, onDownloadSample, language = 'fa', editingId, editData, onEditFieldChange, onSaveEdit, onCancelEdit, gridState, onGridStateChange, formCode }) => {
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
     const globalMode = useCalendarMode ? useCalendarMode() : 'jalali';
     const theme = useTheme ? useTheme() : 'light';
+    const access = useSecureAccess(formCode);
+
+    const checkAccess = useCallback((reqAccess) => {
+      if (!reqAccess) return true;
+      if (reqAccess === 'view') return access.canView;
+      if (reqAccess === 'create') return access.canCreate;
+      if (reqAccess === 'edit' || reqAccess === 'update') return access.canEdit;
+      if (reqAccess === 'delete') return access.canDelete;
+      if (reqAccess === 'print' || reqAccess === 'export') return access.canPrint;
+      return access.hasCustomAccess ? access.hasCustomAccess(reqAccess) : false;
+    }, [access]);
+
+    const filteredActions = useMemo(() => {
+      return actions.filter(act => {
+        if (act.requiredAccess !== undefined) return checkAccess(act.requiredAccess);
+        if (act.id === 'edit' || act.id === 'update') return access.canEdit;
+        if (act.id === 'delete' || act.id === 'remove') return access.canDelete;
+        if (act.id === 'print' || act.id === 'export') return access.canPrint;
+        if (act.id === 'view_log') return access.canView || (access.hasCustomAccess && access.hasCustomAccess('view_log'));
+        return true;
+      });
+    }, [actions, access, checkAccess]);
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
     
-    // هماهنگی با State Manager نماها
     const [hiddenCols, setHiddenCols] = useState([]);
     const [showColMenu, setShowColMenu] = useState(false);
     const [selectedRowId, setSelectedRowId] = useState(null);
     
     const colMenuRef = useRef(null);
 
-    // همگام‌سازی GridState
     useEffect(() => {
       if (gridState && gridState.hiddenCols) {
         setHiddenCols(gridState.hiddenCols);
@@ -343,8 +380,8 @@
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex items-center justify-between p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 gap-2 shrink-0 overflow-x-auto custom-scrollbar">
           <div className="flex items-center gap-1 shrink-0">
-            {onAddRoot && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[12px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
-            <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+            {onAddRoot && access.canCreate && <Button size="sm" variant="primary" icon={Plus} onClick={onAddRoot} className="h-8 px-3 text-[12px] shadow-sm">{t('افزودن ریشه', 'Add Root')}</Button>}
+            {onAddRoot && access.canCreate && <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1"></div>}
             <button onClick={expandAll} title={t('باز کردن همه', 'Expand All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Maximize2 size={14}/></button>
             <button onClick={collapseAll} title={t('بستن همه', 'Collapse All')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Minimize2 size={14}/></button>
           </div>
@@ -380,14 +417,14 @@
 
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
 
-            {onDownloadSample && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
-            {onImport && (
+            {onDownloadSample && access.canCreate && <button onClick={onDownloadSample} title={t('دانلود نمونه فایل', 'Download Sample')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><FileDown size={14} /></button>}
+            {onImport && access.canCreate && (
               <>
                 <button onClick={() => document.getElementById('treegrid-import-input').click()} title={t('ورود از اکسل', 'Import Excel')} className="p-1 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all"><Upload size={14} /></button>
                 <input id="treegrid-import-input" type="file" className="hidden" accept=".csv,.xlsx" onChange={(e) => { if(e.target.files.length) onImport(e.target.files[0]); }} />
               </>
             )}
-            {onExport && <button onClick={() => {
+            {onExport && access.canPrint && <button onClick={() => {
                 if(onExport) {
                    const rows = flatData.map(row => visibleColumns.map(c => {
                      let val = row[c.field];
@@ -417,7 +454,7 @@
                     {t(col.header_fa, col.header_en)}
                   </th>
                 ))}
-                {actions.length > 0 && (
+                {filteredActions.length > 0 && (
                   <th className={`p-2 border-b border-slate-200 dark:border-slate-700 text-[12px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center sticky ${isRtl ? 'left-0' : 'right-0'} z-50 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none`}>
                     {t('عملیات', 'Actions')}
                   </th>
@@ -468,7 +505,7 @@
                               {hasChildren ? (isExpanded ? <FolderOpen size={14} /> : <Folder size={14} />) : <FileText size={14} />}
                             </div>
                             
-                            {isEditing && col.editable ? (
+                            {isEditing && col.editable && access.canEdit ? (
                               <input 
                                 value={editData[col.field] || ''} 
                                 onChange={(e) => onEditFieldChange(col.field, e.target.value)} 
@@ -481,7 +518,7 @@
                             )}
                           </div>
                         ) : (
-                          isEditing && col.editable ? (
+                          isEditing && col.editable && access.canEdit ? (
                             col.type === 'select' ? (
                               <select 
                                 value={editData[col.field] || ''} 
@@ -518,9 +555,9 @@
                         )}
                       </td>
                     ))}
-                    {actions.length > 0 && (
+                    {filteredActions.length > 0 && (
                       <td className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] dark:shadow-none bg-inherit sticky ${isRtl ? 'left-0' : 'right-0'} z-20 border-slate-100 dark:border-slate-700/50`}>
-                        {isEditing ? (
+                        {isEditing && access.canEdit ? (
                           <div className="flex items-center justify-center gap-1 opacity-100">
                             <button onClick={(e) => { e.stopPropagation(); onSaveEdit(row); }} title={t('ذخیره', 'Save')} className="p-1.5 rounded-md text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all">
                               <Check size={14} strokeWidth={2} />
@@ -531,17 +568,17 @@
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-0.5 opacity-100">
-                            {onAddChild && (
+                            {onAddChild && access.canCreate && (
                               <button onClick={(e) => { e.stopPropagation(); onAddChild(row); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-sm transition-all">
                                 <Plus size={14} strokeWidth={2} />
                               </button>
                             )}
-                            {actions.map((act, i) => (
+                            {filteredActions.map((act, i) => (
                               <button key={i} onClick={(e) => { e.stopPropagation(); act.onClick(row, rowIndex); }} title={act.tooltip} className={`p-1.5 rounded-md text-slate-400 dark:text-slate-500 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:shadow-sm transition-all ${act.className || 'hover:text-indigo-600 dark:hover:text-indigo-400'}`}>
                                 <act.icon size={14} strokeWidth={2} />
                               </button>
                             ))}
-                            {onDelete && (
+                            {onDelete && access.canDelete && (
                               <button onClick={(e) => { e.stopPropagation(); onDelete(row); }} title={t('حذف', 'Delete')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-red-600 dark:hover:text-red-400 hover:shadow-sm transition-all">
                                 <Trash2 size={14} strokeWidth={2} />
                               </button>
@@ -554,7 +591,7 @@
                 );
               }) : (
                 <tr>
-                  <td colSpan={columns.length + (actions.length > 0 ? 1 : 0) + (selectable ? 1 : 0)} className="p-12 text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
+                  <td colSpan={columns.length + (filteredActions.length > 0 ? 1 : 0) + (selectable ? 1 : 0)} className="p-12 text-center text-slate-400 dark:text-slate-500 text-[12px] font-medium bg-slate-50/50 dark:bg-slate-900/30">
                     <div className="flex flex-col items-center justify-center gap-3"><Layers size={32} className="text-slate-300 dark:text-slate-600" /><span>{t('هیچ داده‌ای برای نمایش یافت نشد.', 'No data found to display.')}</span></div>
                   </td>
                 </tr>

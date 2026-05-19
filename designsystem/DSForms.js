@@ -21,18 +21,28 @@
 
   const { useCalendarMode, formatGlobalDate, j2g, g2j } = window.DSCore || {};
 
-  // هوک بررسی دسترسی فیلدها بر اساس کد فرم
-  const useSecureField = (formCode, defaultDisabled) => {
-    if (!formCode || !window.SecurityManager) return defaultDisabled;
-    try {
-      const { getActions } = window.SecurityManager.useSecurity();
-      const actions = getActions(formCode);
-      // اگر کاربر دسترسی ایجاد یا ویرایش نداشته باشد، فیلد به صورت خودکار غیرفعال (فقط‌خواندنی) می‌شود
-      if (!actions.canEdit && !actions.canCreate) return true;
-    } catch (e) {
-      console.warn("Security context not found for field access check.");
+  const useSecureAccess = (formCode) => {
+    if (!formCode || !window.SecurityManager) {
+       return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
     }
-    return defaultDisabled;
+    try {
+      const securityCtx = window.SecurityManager.useSecurity();
+      const { getActions, isFullAccess } = securityCtx;
+      const access = getActions(formCode);
+      return {
+        ...access,
+        hasCustomAccess: (actionCode) => isFullAccess || (access.raw_actions && (access.raw_actions.includes('*') || access.raw_actions.includes(actionCode)))
+      };
+    } catch (e) {
+      console.warn("Security context not found for access check.");
+      return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, hasCustomAccess: () => false };
+    }
+  };
+
+  const useSecureField = (formCode, defaultDisabled) => {
+    if (!formCode) return defaultDisabled;
+    const access = useSecureAccess(formCode);
+    return (!access.canEdit && !access.canCreate) || defaultDisabled;
   };
 
   const TextField = (props) => {
@@ -464,7 +474,10 @@
   };
 
   const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa', formCode }) => {
+    const access = useSecureAccess(formCode);
     const isReadOnlyMode = useSecureField(formCode, readOnly);
+    const canDelete = !isReadOnlyMode && (!formCode || access.canDelete);
+    
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isDragging, setIsDragging] = useState(false);
@@ -497,7 +510,7 @@
               </div>
               <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md"><Download size={14} /></button>}
-                {!isReadOnlyMode && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"><Trash2 size={14} /></button>}
+                {canDelete && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"><Trash2 size={14} /></button>}
               </div>
             </div>
           ))}
