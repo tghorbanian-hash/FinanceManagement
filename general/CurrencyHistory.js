@@ -10,7 +10,7 @@
     ArrowRightLeft = FallbackIcon, AlertTriangle = FallbackIcon, Clock = FallbackIcon, Calendar = FallbackIcon, Zap = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Lock = FallbackIcon
   } = LucideIcons;
 
-  const CurrencyHistory = ({ currencies = [], language = 'fa', formCode, access, hasCustomAccess, rateFilters, setRateFilters, ratesGridState, setRatesGridState }) => {
+  const CurrencyHistory = ({ currencies = [], language = 'fa', formCode, access, rateFilters, setRateFilters, ratesGridState, setRatesGridState }) => {
     const FallbackComponent = () => null;
     const Core = window.DSCore || window.DesignSystem || {};
     const { Button = FallbackComponent, SelectField = FallbackComponent, Badge = FallbackComponent, CurrencyField = FallbackComponent, DatePicker = FallbackComponent } = Core;
@@ -236,7 +236,7 @@
         }, 
         variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' 
       }
-    ].filter(act => access.canDelete);
+    ];
 
     const filteredRates = useMemo(() => {
       let result = [...rates];
@@ -248,20 +248,14 @@
       return result;
     }, [rates, rateFilters]);
 
-    const rateOps = [];
-    if (hasCustomAccess('xe_fetch', false)) {
-      rateOps.push({ label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300' });
-    }
-    if (hasCustomAccess('manual_rate', false)) {
-      rateOps.push({ label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300' });
-    }
-    if (rateOps.length > 0) rateOps.push({ divider: true });
-    
-    if (hasCustomAccess('converter', false)) {
-      rateOps.push({ label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400' });
-    }
+    const rateOps = [
+      { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300', requiredAccess: 'xe_fetch' },
+      { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300', requiredAccess: 'manual_rate' },
+      { divider: true },
+      { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400', requiredAccess: 'converter' }
+    ];
 
-    const headerMenus = rateOps.length > 0 ? [{ label: t('عملیات نرخ‌گذاری', 'Rate Operations'), icon: Zap, className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800', items: rateOps }] : [];
+    const headerMenus = [{ label: t('عملیات نرخ‌گذاری', 'Rate Operations'), icon: Zap, className: 'text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800', items: rateOps }];
 
     return (
       <>
@@ -281,11 +275,11 @@
               data={filteredRates} columns={historyColumns} language={language} formCode={formCode} selectable={true}
               gridState={ratesGridState} onGridStateChange={setRatesGridState} bulkActions={historyBulkActions}
               actions={[
-                { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currency_rates', row.id), hidden: () => !hasCustomAccess('view_log', access.canView), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
+                { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currency_rates', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
                 { id: 'edit', icon: Edit, tooltip: t('ویرایش سابقه', 'Edit Record'), onClick: (row) => { setEditingRate({...row}); setIsEditRateModalOpen(true); }, hidden: (row) => !(row.source === 'Manual' && isWithinOneWeek(row.created_at)), className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
                 { id: 'delete', icon: Trash2, tooltip: t('حذف سابقه', 'Delete Record'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), hidden: (row) => !isWithinOneWeek(row.created_at), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
               ]}
-              headerMenus={rateOps.length > 0 ? headerMenus : []}
+              headerMenus={headerMenus}
             />
         </div>
 

@@ -1,4 +1,4 @@
-/* Filename: DSCore.js */
+/* Filename: designsystem/DSCore.js */
 (() => {
   const React = window.React;
   const { useState, useEffect, useRef, useCallback, useMemo } = React;
@@ -101,6 +101,24 @@
     return `${gy}/${gm < 10 ? '0'+gm : gm}/${gd < 10 ? '0'+gd : gd}`;
   };
 
+  const useSecureAccess = (formCode) => {
+    if (!formCode || !window.SecurityManager) {
+       return { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
+    }
+    try {
+      const securityCtx = window.SecurityManager.useSecurity();
+      const { getActions, isFullAccess } = securityCtx;
+      const access = getActions(formCode);
+      return {
+        ...access,
+        hasCustomAccess: (actionCode) => isFullAccess || (access.raw_actions && (access.raw_actions.includes('*') || access.raw_actions.includes(actionCode)))
+      };
+    } catch (e) {
+      console.warn("Security context not found for access check.");
+      return { canView: false, canCreate: false, canEdit: false, canDelete: false, canPrint: false, hasCustomAccess: () => false };
+    }
+  };
+
   const useSecureDataScope = (formCode) => {
     const SecurityManager = window.SecurityManager;
     if (!SecurityManager) return ['*'];
@@ -125,10 +143,24 @@
   };
 
   const Button = (props) => {
-    const { children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title } = props;
+    const { children, variant = 'primary', size = 'md', isLoading = false, disabled = false, icon: Icon, iconPosition = 'right', className = '', onClick, type = 'button', title, formCode, requiredAccess, hideOnNoAccess = false } = props;
     const restProps = Object.assign({}, props);
-    ['children', 'variant', 'size', 'isLoading', 'disabled', 'icon', 'iconPosition', 'className', 'onClick', 'type', 'title'].forEach(k => delete restProps[k]);
+    ['children', 'variant', 'size', 'isLoading', 'disabled', 'icon', 'iconPosition', 'className', 'onClick', 'type', 'title', 'formCode', 'requiredAccess', 'hideOnNoAccess'].forEach(k => delete restProps[k]);
     
+    const access = useSecureAccess(formCode);
+    let hasAccess = true;
+    if (requiredAccess) {
+       if (requiredAccess === 'view') hasAccess = access.canView;
+       else if (requiredAccess === 'create') hasAccess = access.canCreate;
+       else if (requiredAccess === 'edit' || requiredAccess === 'update') hasAccess = access.canEdit;
+       else if (requiredAccess === 'delete') hasAccess = access.canDelete;
+       else if (requiredAccess === 'print' || requiredAccess === 'export') hasAccess = access.canPrint;
+       else hasAccess = access.hasCustomAccess(requiredAccess);
+    }
+
+    if (!hasAccess && hideOnNoAccess) return null;
+    const finalDisabled = disabled || isLoading || !hasAccess;
+
     const baseStyles = "inline-flex items-center justify-center font-bold transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shrink-0";
     const variants = {
       primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-sm shadow-indigo-200 dark:shadow-none dark:bg-indigo-500 dark:hover:bg-indigo-600",
@@ -143,7 +175,7 @@
     const iconSizes = { sm: 14, md: 16, lg: 18 };
 
     return (
-      <button type={type} title={title} className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} disabled={disabled || isLoading} onClick={onClick} {...restProps}>
+      <button type={type} title={!hasAccess && !title ? 'عدم دسترسی' : title} className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`} disabled={finalDisabled} onClick={onClick} {...restProps}>
         {isLoading && <Loader2 size={iconSizes[size]} className="animate-spin shrink-0" />}
         {!isLoading && Icon && iconPosition === 'right' && <Icon size={iconSizes[size]} className="shrink-0" />}
         {hasText && <span className="truncate">{children}</span>}
@@ -626,10 +658,11 @@
     );
   };
 
-  const DropdownMenu = ({ trigger, items = [], language = 'fa' }) => {
+  const DropdownMenu = ({ trigger, items = [], language = 'fa', formCode }) => {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
     const isRtl = language === 'fa';
+    const access = useSecureAccess(formCode);
 
     useEffect(() => {
       const click = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -637,12 +670,31 @@
       return () => document.removeEventListener('mousedown', click);
     }, []);
 
+    const filteredItems = items.filter(item => {
+        if (item.divider) return true;
+        if (!item.requiredAccess) return true;
+        if (item.requiredAccess === 'view') return access.canView;
+        if (item.requiredAccess === 'create') return access.canCreate;
+        if (item.requiredAccess === 'edit' || item.requiredAccess === 'update') return access.canEdit;
+        if (item.requiredAccess === 'delete') return access.canDelete;
+        if (item.requiredAccess === 'print' || item.requiredAccess === 'export') return access.canPrint;
+        return access.hasCustomAccess(item.requiredAccess);
+    }).filter((item, idx, arr) => {
+        if (item.divider) {
+            if (idx === 0 || idx === arr.length - 1) return false;
+            if (arr[idx - 1].divider) return false;
+        }
+        return true;
+    });
+
+    if (filteredItems.length === 0 && items.length > 0) return null;
+
     return (
       <div className={`relative inline-block text-start ${open ? 'z-[9999]' : 'z-10'}`} ref={ref} dir={isRtl ? 'rtl' : 'ltr'}>
         <div onClick={() => setOpen(!open)} className="cursor-pointer">{trigger}</div>
         {open && (
           <div className={`absolute mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-xl p-1 animate-in zoom-in-95 duration-150 z-[9999] ${isRtl ? 'left-0' : 'right-0'}`}>
-            {items.map((item, i) => (
+            {filteredItems.map((item, i) => (
               item.divider ? <div key={i} className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-1"></div> :
               <button 
                 key={i} 
@@ -715,7 +767,7 @@
   Object.assign(window.DSCore, {
     getGlobalCalendarMode, setGlobalCalendarMode, useCalendarMode, formatGlobalDate, j2g, g2j,
     getGlobalTheme, setGlobalTheme, useTheme,
-    useSecureDataScope, applyDataScope,
+    useSecureDataScope, applyDataScope, useSecureAccess,
     Button, Card, Badge, PageHeader, Tabs, Skeleton, EmptyState, StatCard, 
     Timeline, Avatar, DropdownMenu, ProgressBar, Stepper, Spinner
   });

@@ -35,10 +35,6 @@
 
     const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
     const access = securityCtx ? securityCtx.getActions(formCode) : { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
-    const isFullAccess = securityCtx ? securityCtx.isFullAccess : true;
-    const rawActions = securityCtx?.permissions?.[formCode.trim().toLowerCase()]?.raw_actions || [];
-    const hasCustomAccess = (act, fallback) => isFullAccess || rawActions.includes(act) || fallback;
-
     const isReadOnly = !access.canEdit && !access.canCreate;
 
     const [activeTab, setActiveTab] = useState('list');
@@ -238,12 +234,12 @@
     ];
 
     const currencyBulkActions = [
-      { id: 'activate', label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400' },
-      { id: 'deactivate', label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400' },
-      { id: 'setAuto', label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400' },
-      { id: 'setManual', label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400' },
+      { id: 'activate', label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400', requiredAccess: 'edit' },
+      { id: 'deactivate', label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400', requiredAccess: 'edit' },
+      { id: 'setAuto', label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400', requiredAccess: 'edit' },
+      { id: 'setManual', label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400', requiredAccess: 'edit' },
       { id: 'delete', label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
-    ].filter(act => act.id === 'delete' ? access.canDelete : hasCustomAccess('bulk_action', access.canEdit));
+    ];
 
     const filteredCurrencies = useMemo(() => {
       let result = [...currencies];
@@ -277,14 +273,14 @@
                   data={filteredCurrencies} columns={currencyColumns} language={language} formCode={formCode}
                   gridState={currenciesGridState} onGridStateChange={setCurrenciesGridState}
                   actions={[
-                    { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), hidden: () => !hasCustomAccess('view_log', access.canView), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
-                    { id: 'update', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, hidden: () => !access.canEdit, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
-                    { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), hidden: () => !access.canDelete, className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
+                    { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
+                    { id: 'update', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
+                    { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
                   ]}
                   selectable={true}
                   onRowDoubleClick={(row) => { if(access.canEdit || access.canView) { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); } }}
                   bulkActions={currencyBulkActions}
-                  onAdd={access.canCreate ? () => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); } : undefined}
+                  onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
                 />
               </div>
             </>
@@ -293,7 +289,7 @@
           {activeTab === 'rates' && CurrencyHistoryComponent ? (
              <CurrencyHistoryComponent 
                 currencies={currencies} language={language} formCode={formCode} 
-                access={access} hasCustomAccess={hasCustomAccess}
+                access={access}
                 rateFilters={rateFilters} setRateFilters={setRateFilters}
                 ratesGridState={ratesGridState} setRatesGridState={setRatesGridState}
              />
