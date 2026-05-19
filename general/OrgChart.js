@@ -13,7 +13,6 @@
   const OrgChart = ({ language = 'fa', formCode = 'ORG_CHART' }) => {
     const FallbackComponent = () => null;
     
-    // --- Design System Elements ---
     const Core = window.DSCore || window.DesignSystem || {};
     const { Button = FallbackComponent, PageHeader = FallbackComponent, Badge = FallbackComponent, Card = FallbackComponent } = Core;
     
@@ -30,30 +29,32 @@
     const { Tree = FallbackComponent } = TreeSystem;
 
     const isRtl = language === 'fa';
-    const t = (fa, en) => isRtl ? fa : en;
+    const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
-    // --- Security Access ---
     const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
-    const access = securityCtx ? securityCtx.getActions(formCode) : { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
+    
+    const rawActions = securityCtx ? securityCtx.getActions(formCode) : null;
+    const access = useMemo(() => {
+        return rawActions || { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true, hasCustomAccess: () => true };
+    }, [rawActions]);
+    
     const canDesign = access.canEdit || (access.hasCustomAccess && access.hasCustomAccess('design'));
 
     const supabase = window.supabase;
     const currentUser = window.NavigationSystem?.currentUser?.name || 'مدیر سیستم';
 
-    // --- States ---
-    const [viewMode, setViewMode] = useState('list'); // 'list' | 'designer'
+    const [viewMode, setViewMode] = useState('list');
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [isLoading, setIsLoading] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
+    const isFetchingCharts = useRef(false);
 
-    // Chart List State
     const [charts, setCharts] = useState([]);
     const [chartFilters, setChartFilters] = useState({});
     const [chartsGridState, setChartsGridState] = useState(null);
     const [isChartModalOpen, setIsChartModalOpen] = useState(false);
     const [chartFormData, setChartFormData] = useState({});
 
-    // Designer State
     const [activeChart, setActiveChart] = useState(null);
     const [rawNodes, setRawNodes] = useState([]);
     const [rawPersonnel, setRawPersonnel] = useState([]);
@@ -61,35 +62,16 @@
     const [nodeForm, setNodeForm] = useState({ id: null, code: '', title: '', parentId: '', isActive: true });
     const [isNodeEditMode, setIsNodeEditMode] = useState(false);
 
-    // Personnel State
     const [employees, setEmployees] = useState([]);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [assignData, setAssignData] = useState({ id: null, personId: '', fromDate: '', toDate: '' });
 
-    // View State Manager (for PageHeader View Control)
-    const viewConfig = {
-      pageId: 'org_chart_main',
-      currentState: () => ({ viewMode, chartFilters, chartsGridState }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.viewMode) setViewMode(state.viewMode);
-          if (state.chartFilters) setChartFilters(state.chartFilters);
-          if (state.chartsGridState) setChartsGridState(state.chartsGridState);
-        } else {
-          setViewMode('list');
-          setChartFilters({});
-          setChartsGridState(null);
-        }
-      }
-    };
-
-    // --- Helpers ---
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
       setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
     }, []);
 
-    const logAction = async (entityType, recordId, action, details = '') => {
+    const logAction = useCallback(async (entityType, recordId, action, details = '') => {
       try {
         if (!supabase) return;
         await supabase.from('fm_record_logs').insert([{
@@ -98,10 +80,11 @@
       } catch (err) {
         console.error('Failed to log action:', err);
       }
-    };
+    }, [supabase, currentUser]);
 
-    // --- Data Fetching ---
     const fetchCharts = useCallback(async () => {
+      if (isFetchingCharts.current) return;
+      isFetchingCharts.current = true;
       setIsLoading(true);
       try {
         if (!supabase) return;
@@ -112,6 +95,7 @@
         showToast(t('خطا در دریافت اطلاعات چارت‌ها', 'Error fetching charts'), 'error');
       } finally {
         setIsLoading(false);
+        isFetchingCharts.current = false;
       }
     }, [supabase, showToast, t]);
 
@@ -127,10 +111,12 @@
     }, [supabase]);
 
     useEffect(() => {
-      if (access.canView) {
+      let mounted = true;
+      if (mounted && access.canView) {
         fetchCharts();
         fetchEmployees();
       }
+      return () => { mounted = false; };
     }, [fetchCharts, fetchEmployees, access.canView]);
 
     const fetchDesignerData = async (chartId, retainNodeId = null) => {
@@ -159,14 +145,17 @@
 
         if (retainNodeId) {
           const target = mappedNodes.find(n => n.id === retainNodeId);
-          if (target) handleSelectNode(target);
+          if (target) {
+             setSelectedNode(target);
+             setNodeForm({ id: target.id, code: target.code || '', title: target.title, parentId: target.parentId || '', isActive: target.isActive ?? true });
+             setIsNodeEditMode(true);
+          }
         }
       } catch (err) {
         showToast(t('خطا در دریافت ساختار چارت', 'Error fetching chart structure'), 'error');
       }
     };
 
-    // --- Chart Management (List Mode) ---
     const filteredCharts = useMemo(() => {
       let result = [...charts];
       if (chartFilters.code) result = result.filter(c => (c.code || '').toLowerCase().includes(chartFilters.code.toLowerCase()));
@@ -224,7 +213,6 @@
       setViewMode('designer');
     };
 
-    // --- Designer Node Management ---
     const handleSelectNode = (node) => {
       setSelectedNode(node);
       setNodeForm({ 
@@ -278,7 +266,6 @@
       setDeleteConfirm({ isOpen: true, type: 'node', data: node.id });
     };
 
-    // --- Designer Personnel Management ---
     const personnelDataForSelectedNode = useMemo(() => {
       if (!selectedNode) return [];
       return rawPersonnel.filter(p => p.node_id === selectedNode.id);
@@ -327,7 +314,6 @@
       }
     };
 
-    // --- Unified Delete Executor ---
     const executeDelete = async () => {
       try {
         if (deleteConfirm.type === 'chart') {
@@ -352,7 +338,22 @@
       }
     };
 
-    // --- Columns & Options Definition ---
+    const viewConfig = useMemo(() => ({
+      pageId: 'org_chart_main',
+      currentState: () => ({ viewMode, chartFilters, chartsGridState }),
+      onApplyState: (state) => {
+        if (state) {
+          if (state.viewMode) setViewMode(state.viewMode);
+          if (state.chartFilters) setChartFilters(state.chartFilters);
+          if (state.chartsGridState) setChartsGridState(state.chartsGridState);
+        } else {
+          setViewMode('list');
+          setChartFilters({});
+          setChartsGridState(null);
+        }
+      }
+    }), [viewMode, chartFilters, chartsGridState]);
+
     const chartColumns = [
       { field: 'code', header_fa: 'کد چارت', header_en: 'Code', width: '100px' },
       { field: 'title', header_fa: 'عنوان چارت', header_en: 'Title', width: '200px' },
@@ -375,7 +376,6 @@
     const employeeOptions = employees.map(e => ({ value: e.id, label: `${e.name} (${e.code})` }));
     const parentNodeOptions = rawNodes.filter(n => n.id !== nodeForm.id).map(n => ({ value: n.id, label: n.title }));
 
-    // --- Rendering Functions ---
     const renderList = () => (
       <div className="flex-1 min-h-0 flex flex-col gap-3 animate-in fade-in duration-500">
         <AdvancedFilter 
@@ -413,7 +413,6 @@
           </div>
 
           <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
-            {/* Tree Section */}
             <div className={`w-full md:w-[350px] flex flex-col bg-slate-50/50 dark:bg-slate-900/20 border-b md:border-b-0 ${isRtl ? 'md:border-l' : 'md:border-r'} border-slate-200 dark:border-slate-700`}>
               <Tree 
                 data={rawNodes} language={language} formCode={formCode}
@@ -426,9 +425,7 @@
               />
             </div>
 
-            {/* Content Section */}
             <div className="flex-1 flex flex-col overflow-auto custom-scrollbar p-4 gap-4 bg-slate-50 dark:bg-slate-900/30">
-              
               <Card title={isNodeEditMode ? t('ویرایش اطلاعات گره', 'Edit Node Info') : t('تعریف گره جدید', 'Define New Node')} noPadding={false} language={language}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <TextField formCode={formCode} label={t('کد گره', 'Node Code')} value={nodeForm.code} onChange={e => setNodeForm({...nodeForm, code: e.target.value})} isRtl={isRtl} size="sm" />
@@ -453,7 +450,6 @@
                   ]}
                 />
               </Card>
-
             </div>
           </div>
         </div>
@@ -471,7 +467,6 @@
 
         {viewMode === 'list' ? renderList() : renderDesigner()}
 
-        {/* Chart Modal */}
         <Modal isOpen={isChartModalOpen} onClose={() => setIsChartModalOpen(false)} title={chartFormData.id ? t('ویرایش اطلاعات چارت', 'Edit Chart Info') : t('تعریف چارت جدید', 'Define New Chart')} language={language} width="max-w-2xl">
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -491,7 +486,6 @@
           </div>
         </Modal>
 
-        {/* Assign Personnel Modal */}
         <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title={t('تخصیص پرسنل به گره', 'Assign Personnel to Node')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-4">
             <SelectField formCode={formCode} label={t('انتخاب شخص', 'Select Person')} value={assignData.personId} onChange={e => setAssignData({...assignData, personId: e.target.value})} options={employeeOptions} isRtl={isRtl} required size="sm" />
@@ -504,7 +498,6 @@
           </div>
         </Modal>
 
-        {/* Universal Delete Confirmation */}
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1"><AlertTriangle size={22} /></div>
