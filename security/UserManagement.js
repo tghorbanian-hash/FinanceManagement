@@ -22,7 +22,6 @@
     const [allParties, setAllParties] = useState([]);
     const [partiesDropdown, setPartiesDropdown] = useState([]);
     
-    // مقادیر اضافی برای فیلتر پیشرفته
     const [roles, setRoles] = useState([]);
     const [userRoles, setUserRoles] = useState([]);
     const [permissions, setPermissions] = useState([]);
@@ -437,12 +436,10 @@
     const filteredData = useMemo(() => {
       let result = [...data];
       
-      // 1. فیلتر شخص
       if (filters.party && filters.party.id) {
          result = result.filter(u => u.party_id === filters.party.id);
       }
       
-      // 2. فیلتر نوع دسترسی
       if (filters.accessType) {
          if (filters.accessType === 'direct') {
              result = result.filter(u => permissions.some(p => p.user_id === u.id));
@@ -451,20 +448,16 @@
          }
       }
 
-      // 3. فیلتر نقش
       if (filters.role && filters.role.id) {
          result = result.filter(u => userRoles.some(ur => ur.user_id === u.id && ur.role_id === filters.role.id));
       }
 
-      // 4. فیلتر فرم (بررسی دسترسی مستقیم و نقش توامان)
       if (filters.form && filters.form.id) {
          const formId = filters.form.id;
          result = result.filter(u => {
-             // دسترسی مستقیم به فرم دارد؟
              const hasDirect = permissions.some(p => p.user_id === u.id && p.menu_id === formId);
              if (hasDirect) return true;
              
-             // نقش‌های کاربر به فرم دسترسی دارند؟
              const userRoleIds = userRoles.filter(ur => ur.user_id === u.id).map(ur => ur.role_id);
              const hasRoleAccess = permissions.some(p => userRoleIds.includes(p.role_id) && p.menu_id === formId);
              
@@ -472,7 +465,6 @@
          });
       }
 
-      // 5. فیلتر وضعیت
       if (filters.isActive) {
          const wantActive = filters.isActive === 'active';
          result = result.filter(u => u.is_active === wantActive);
@@ -481,7 +473,6 @@
       return result;
     }, [data, filters, permissions, userRoles]);
 
-    // آماده سازی دیتای LOV ها
     const filterFields = [
       { 
         name: 'party', 
@@ -579,6 +570,9 @@
               onGridStateChange={setGridState}
               onDownloadSample={handleDownloadSample}
               onImport={handleImportFile}
+              onToggle={(row, field, val) => {
+                 if (field === 'is_active') handleToggleActive(row, val);
+              }}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, user: row }), className: 'text-slate-400 hover:text-purple-600' },
