@@ -94,6 +94,7 @@
         }
       } catch (err) {
         showToast(t('خطا در دریافت اطلاعات انواع هزینه', 'Error fetching cost types'), 'error');
+        console.error('Fetch error:', err);
       } finally {
         isFetching.current = false;
       }
@@ -205,6 +206,7 @@
         showToast(t('عملیات با موفقیت انجام شد', 'Operation successful'));
       } catch (err) {
         showToast(t('خطا در ذخیره اطلاعات', 'Error saving data'), 'error');
+        console.error('Save error:', err);
       }
     };
 
@@ -256,6 +258,7 @@
       } catch (err) {
         showToast(t('امکان حذف رکورد دارای وابستگی وجود ندارد', 'Cannot delete record with relations'), 'error');
         setDeleteConfirm({ isOpen: false, data: null });
+        console.error('Delete error:', err);
       }
     };
 
