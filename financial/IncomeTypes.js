@@ -1,4 +1,4 @@
-/* Filename: financial/CostTypes.js */
+/* Filename: financial/IncomeTypes.js */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo, useCallback, useRef } = React;
@@ -6,10 +6,10 @@
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
-    Tags = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon, ListTree = FallbackIcon, AlertTriangle = FallbackIcon, Lock = FallbackIcon
+    TrendingUp = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon, ListTree = FallbackIcon, AlertTriangle = FallbackIcon, Lock = FallbackIcon
   } = LucideIcons;
 
-  const CostTypes = ({ language = 'fa', formCode = 'COST_TYPES' }) => {
+  const IncomeTypes = ({ language = 'fa', formCode = 'INCOME_TYPES' }) => {
     const FallbackComponent = () => null;
     
     const Core = window.DSCore || window.DesignSystem || {};
@@ -68,7 +68,7 @@
       isFetching.current = true;
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.from('fm_cost_types').select('*').order('created_at', { ascending: true });
+        const { data, error } = await supabase.from('fm_income_types').select('*').order('created_at', { ascending: true });
         if (error) throw error;
 
         const mappedNodes = (data || []).map(n => ({
@@ -108,7 +108,7 @@
           }
         }
       } catch (err) {
-        showToast(t('خطا در دریافت اطلاعات انواع هزینه', 'Error fetching cost types'), 'error');
+        showToast(t('خطا در دریافت اطلاعات انواع درآمد', 'Error fetching income types'), 'error');
         console.error('Fetch error:', err);
       } finally {
         isFetching.current = false;
@@ -201,20 +201,20 @@
         let targetNodeId = null;
 
         if (isCreatingNode) {
-          const { data, error } = await supabase.from('fm_cost_types').insert([payload]).select();
+          const { data, error } = await supabase.from('fm_income_types').insert([payload]).select();
           if (error) throw error;
           if (data && data[0]) {
             targetNodeId = data[0].id;
-            await logAction('انواع هزینه', targetNodeId, 'create', `ایجاد نوع هزینه جدید: ${payload.title_fa}`);
+            await logAction('انواع درآمد', targetNodeId, 'create', `ایجاد نوع درآمد جدید: ${payload.title_fa}`);
           }
         } else {
           if (treeFormData.parentId === selectedTreeNodeId) {
              return showToast(t('گره نمی‌تواند زیرمجموعه خودش باشد', 'Cannot be parent to itself'), 'error');
           }
-          const { error } = await supabase.from('fm_cost_types').update(payload).eq('id', selectedTreeNodeId);
+          const { error } = await supabase.from('fm_income_types').update(payload).eq('id', selectedTreeNodeId);
           if (error) throw error;
           targetNodeId = selectedTreeNodeId;
-          await logAction('انواع هزینه', targetNodeId, 'update', `ویرایش نوع هزینه: ${payload.title_fa}`);
+          await logAction('انواع درآمد', targetNodeId, 'update', `ویرایش نوع درآمد: ${payload.title_fa}`);
         }
         
         await fetchData(targetNodeId);
@@ -249,10 +249,10 @@
         const targetId = deleteConfirm.data.id;
         const targetTitle = deleteConfirm.data.titleFa;
 
-        const { error } = await supabase.from('fm_cost_types').delete().eq('id', targetId);
+        const { error } = await supabase.from('fm_income_types').delete().eq('id', targetId);
         if (error) throw error;
         
-        await logAction('انواع هزینه', targetId, 'delete', `حذف نوع هزینه: ${targetTitle}`);
+        await logAction('انواع درآمد', targetId, 'delete', `حذف نوع درآمد: ${targetTitle}`);
         
         const newRawNodes = rawNodes.filter(n => n.id !== targetId);
         setRawNodes(newRawNodes);
@@ -286,10 +286,10 @@
     return (
       <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
-          title={t('تعریف انواع هزینه', 'Cost Types Management')}
-          icon={Tags} language={language}
-          description={t('مدیریت و دسته‌بندی درختی هزینه‌های سیستم', 'Manage and categorize system costs hierarchically')}
-          breadcrumbs={[{ label: t('مدیریت مالی', 'Financial Management') }, { label: t('انواع هزینه', 'Cost Types') }]}
+          title={t('تعریف انواع درآمد', 'Income Types Management')}
+          icon={TrendingUp} language={language}
+          description={t('مدیریت و دسته‌بندی درختی درآمدهای سیستم', 'Manage and categorize system incomes hierarchically')}
+          breadcrumbs={[{ label: t('مدیریت مالی', 'Financial Management') }, { label: t('انواع درآمد', 'Income Types') }]}
         />
 
         <div className="flex-1 flex gap-4 min-h-0 overflow-hidden mt-3 animate-in fade-in duration-300">
@@ -308,7 +308,7 @@
 
           <div className="w-full md:w-[60%] h-full min-h-0 flex flex-col">
             <Card 
-              title={isCreatingNode ? (newTargetParentId ? t('ایجاد زیرمجموعه جدید', 'Create New Child') : t('ایجاد هزینه ریشه', 'Create Root Cost')) : (selectedTreeNodeId ? t('ویرایش مشخصات نوع هزینه', 'Edit Cost Type Details') : t('اطلاعات جزئی', 'Details'))}
+              title={isCreatingNode ? (newTargetParentId ? t('ایجاد زیرمجموعه جدید', 'Create New Child') : t('ایجاد درآمد ریشه', 'Create Root Income')) : (selectedTreeNodeId ? t('ویرایش مشخصات نوع درآمد', 'Edit Income Type Details') : t('اطلاعات جزئی', 'Details'))}
               className="h-full border border-slate-200 dark:border-slate-700 shadow-sm"
               headerClassName="bg-slate-50/80 dark:bg-slate-900/50"
               action={
@@ -323,12 +323,12 @@
                     {isCreatingNode && newTargetParentId && (
                       <Alert 
                         type="info" 
-                        message={<span>{t('در حال تعریف زیرمجموعه برای:', 'Defining sub-cost for:')} <strong className="dark:text-indigo-300">{rawNodes.find(n => n.id === newTargetParentId)?.titleFa}</strong></span>} 
+                        message={<span>{t('در حال تعریف زیرمجموعه برای:', 'Defining sub-income for:')} <strong className="dark:text-indigo-300">{rawNodes.find(n => n.id === newTargetParentId)?.titleFa}</strong></span>} 
                       />
                     )}
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <TextField size="sm" formCode={formCode} label={t('کد هزینه', 'Cost Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} dir="ltr" />
+                        <TextField size="sm" formCode={formCode} label={t('کد درآمد', 'Income Code')} value={treeFormData.code || ''} onChange={(e) => setTreeFormData({...treeFormData, code: e.target.value})} isRtl={isRtl} dir="ltr" />
                         <SelectField size="sm" formCode={formCode} label={t('مجموعه والد', 'Parent Node')} value={treeFormData.parentId || ''} onChange={(e) => setTreeFormData({...treeFormData, parentId: e.target.value})} options={[{value: '', label: t('بدون والد (سطح ریشه)', 'Root Level (No Parent)')}, ...parentNodeOptions]} isRtl={isRtl} disabled={isCreatingNode && newTargetParentId !== null} />
                     </div>
 
@@ -340,7 +340,7 @@
                     <div className="pt-2">
                         <ToggleField size="sm" formCode={formCode} label={t('وضعیت فعال بودن', 'Active Status')} checked={treeFormData.isActive !== false} onChange={(v) => setTreeFormData({...treeFormData, isActive: v})} isRtl={isRtl} wrapperClassName="pt-2" />
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mr-8">
-                            {t('هزینه‌های غیرفعال در لیست‌های انتخاب فرم‌های عملیاتی نمایش داده نمی‌شوند.', 'Inactive costs will not appear in selection dropdowns.')}
+                            {t('درآمدهای غیرفعال در لیست‌های انتخاب فرم‌های عملیاتی نمایش داده نمی‌شوند.', 'Inactive incomes will not appear in selection dropdowns.')}
                         </p>
                     </div>
 
@@ -364,7 +364,7 @@
         </div>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 Flex flex-col gap-3 items-center text-center">
+          <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
                <AlertTriangle size={22} />
             </div>
@@ -372,7 +372,7 @@
                <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
             </div>
             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
-              {t(`آیا از حذف نوع هزینه "${deleteConfirm.data?.titleFa}" اطمینان دارید؟`, `Are you sure you want to delete "${deleteConfirm.data?.titleEn || deleteConfirm.data?.titleFa}"?`)}
+              {t(`آیا از حذف نوع درآمد "${deleteConfirm.data?.titleFa}" اطمینان دارید؟`, `Are you sure you want to delete "${deleteConfirm.data?.titleEn || deleteConfirm.data?.titleFa}"?`)}
             </p>
             <div className="flex gap-2 mt-5 w-full">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, data: null })}>{t('انصراف', 'Cancel')}</Button>
@@ -386,6 +386,6 @@
     );
   };
 
-  CostTypes.formCode = 'COST_TYPES';
-  window.CostTypes = CostTypes;
+  IncomeTypes.formCode = 'INCOME_TYPES';
+  window.IncomeTypes = IncomeTypes;
 })();
