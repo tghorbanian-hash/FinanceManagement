@@ -7,7 +7,8 @@
   const LucideIcons = window.LucideIcons || {};
   const { 
     Network = FallbackIcon, FolderTree = FallbackIcon, Plus = FallbackIcon, Edit = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon,
-    ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Users = FallbackIcon, AlertTriangle = FallbackIcon, Lock = FallbackIcon
+    ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Users = FallbackIcon, AlertTriangle = FallbackIcon, Lock = FallbackIcon,
+    ChevronDown = FallbackIcon, ChevronUp = FallbackIcon
   } = LucideIcons;
 
   const OrgChart = ({ language = 'fa', formCode = 'ORG_CHART' }) => {
@@ -60,6 +61,7 @@
     const [selectedNode, setSelectedNode] = useState(null);
     const [nodeForm, setNodeForm] = useState({ id: null, code: '', title: '', parentId: '', isActive: true });
     const [isNodeEditMode, setIsNodeEditMode] = useState(false);
+    const [isNodeFormExpanded, setIsNodeFormExpanded] = useState(true);
 
     const [employees, setEmployees] = useState([]);
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -200,12 +202,12 @@
         if (chartFormData.id) {
           const { error } = await supabase.from('fm_org_charts').update(payload).eq('id', chartFormData.id);
           if (error) throw error;
-          await logAction('fm_org_charts', chartFormData.id, 'update', `ویرایش چارت سازمانی: ${payload.title}`);
+          await logAction('چارت سازمانی', chartFormData.id, 'update', `ویرایش چارت سازمانی: ${payload.title}`);
           showToast(t('تغییرات با موفقیت ذخیره شد', 'Changes saved successfully'));
         } else {
           const { data, error } = await supabase.from('fm_org_charts').insert([payload]).select();
           if (error) throw error;
-          if (data && data[0]) await logAction('fm_org_charts', data[0].id, 'create', `ایجاد چارت جدید: ${payload.title}`);
+          if (data && data[0]) await logAction('چارت سازمانی', data[0].id, 'create', `ایجاد چارت جدید: ${payload.title}`);
           showToast(t('چارت سازمانی جدید ایجاد شد', 'New chart created successfully'));
         }
         setIsChartModalOpen(false);
@@ -221,6 +223,7 @@
       setSelectedNode(null);
       setNodeForm({ id: null, code: '', title: '', parentId: '', isActive: true });
       setIsNodeEditMode(false);
+      setIsNodeFormExpanded(true);
       setViewMode('designer');
     };
 
@@ -234,12 +237,14 @@
         isActive: node.isActive ?? true 
       });
       setIsNodeEditMode(true);
+      setIsNodeFormExpanded(true);
     };
 
     const handlePrepareNewNode = (parentNode = null) => {
       setSelectedNode(null);
       setNodeForm({ id: null, code: '', title: '', parentId: parentNode ? parentNode.id : '', isActive: true });
       setIsNodeEditMode(false);
+      setIsNodeFormExpanded(true);
     };
 
     const handleSaveNode = async () => {
@@ -390,7 +395,15 @@
       { 
         field: 'type', header_fa: 'نوع چارت', header_en: 'Type', width: '120px', type: 'select',
         options: [{value: 'standard', label: t('استاندارد', 'Standard')}, {value: 'sales', label: t('فروش', 'Sales')}, {value: 'finance', label: t('مالی', 'Finance')}, {value: 'hr', label: t('منابع انسانی', 'HR')}],
-        render: (v) => <Badge variant={v === 'standard' ? 'indigo' : 'slate'} className="text-[10px]">{v}</Badge>
+        render: (v) => {
+          const typeLabels = {
+            standard: t('استاندارد', 'Standard'),
+            sales: t('فروش', 'Sales'),
+            finance: t('مالی', 'Finance'),
+            hr: t('منابع انسانی', 'HR')
+          };
+          return <Badge variant={v === 'standard' ? 'indigo' : 'slate'} className="text-[10px]">{typeLabels[v] || v}</Badge>;
+        }
       },
       { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '100px', type: 'date' },
       { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '100px', type: 'date' },
@@ -451,7 +464,7 @@
           </div>
 
           <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
-            <div className={`w-full md:w-[350px] flex flex-col bg-slate-50/50 dark:bg-slate-900/20 border-b md:border-b-0 ${isRtl ? 'md:border-l' : 'md:border-r'} border-slate-200 dark:border-slate-700`}>
+            <div className={`w-full md:w-[440px] flex flex-col bg-slate-50/50 dark:bg-slate-900/20 border-b md:border-b-0 ${isRtl ? 'md:border-l' : 'md:border-r'} border-slate-200 dark:border-slate-700`}>
               <Tree 
                 data={rawNodes} language={language} formCode={formCode}
                 idField="id" parentField="parentId" displayField="title" activeField="isActive"
@@ -464,18 +477,32 @@
             </div>
 
             <div className="flex-1 flex flex-col overflow-auto custom-scrollbar p-4 gap-4 bg-slate-50 dark:bg-slate-900/30">
-              <Card title={isNodeEditMode ? t('ویرایش اطلاعات گره', 'Edit Node Info') : t('تعریف گره جدید', 'Define New Node')} noPadding={false} language={language}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <TextField formCode={formCode} label={t('کد گره', 'Node Code')} value={nodeForm.code} onChange={e => setNodeForm({...nodeForm, code: e.target.value})} isRtl={isRtl} size="sm" />
-                  <TextField formCode={formCode} label={t('عنوان گره', 'Node Title')} value={nodeForm.title} onChange={e => setNodeForm({...nodeForm, title: e.target.value})} isRtl={isRtl} required size="sm" />
-                  <SelectField formCode={formCode} label={t('گره والد', 'Parent Node')} value={nodeForm.parentId} onChange={e => setNodeForm({...nodeForm, parentId: e.target.value})} isRtl={isRtl} size="sm" options={[{value: '', label: t('بدون والد (ریشه)', 'Root (No Parent)')}, ...parentNodeOptions]} />
-                  <div className="flex items-end pb-1.5">
-                    <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={nodeForm.isActive} onChange={val => setNodeForm({...nodeForm, isActive: val})} isRtl={isRtl} />
+              <Card noPadding={false} language={language}>
+                <div 
+                  className="flex justify-between items-center cursor-pointer mb-2 pb-2 border-b border-slate-100 dark:border-slate-700/50"
+                  onClick={() => setIsNodeFormExpanded(!isNodeFormExpanded)}
+                >
+                  <div className="font-bold text-slate-800 dark:text-slate-100 text-sm">
+                    {isNodeEditMode ? t('ویرایش اطلاعات گره', 'Edit Node Info') : t('تعریف گره جدید', 'Define New Node')}
                   </div>
+                  <Button variant="ghost" size="sm" icon={isNodeFormExpanded ? ChevronUp : ChevronDown} />
                 </div>
-                <div className="flex justify-end mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 gap-2">
-                  {access.canEdit && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveNode}>{t('ذخیره گره', 'Save Node')}</Button>}
-                </div>
+                
+                {isNodeFormExpanded && (
+                  <div className="animate-in fade-in duration-300">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                      <TextField formCode={formCode} label={t('کد گره', 'Node Code')} value={nodeForm.code} onChange={e => setNodeForm({...nodeForm, code: e.target.value})} isRtl={isRtl} size="sm" />
+                      <TextField formCode={formCode} label={t('عنوان گره', 'Node Title')} value={nodeForm.title} onChange={e => setNodeForm({...nodeForm, title: e.target.value})} isRtl={isRtl} required size="sm" />
+                      <SelectField formCode={formCode} label={t('گره والد', 'Parent Node')} value={nodeForm.parentId} onChange={e => setNodeForm({...nodeForm, parentId: e.target.value})} isRtl={isRtl} size="sm" options={[{value: '', label: t('بدون والد (ریشه)', 'Root (No Parent)')}, ...parentNodeOptions]} />
+                      <div className="flex items-end pb-1.5">
+                        <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={nodeForm.isActive} onChange={val => setNodeForm({...nodeForm, isActive: val})} isRtl={isRtl} />
+                      </div>
+                    </div>
+                    <div className="flex justify-end mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 gap-2">
+                      {access.canEdit && <Button variant="primary" size="sm" icon={Save} onClick={handleSaveNode}>{t('ذخیره گره', 'Save Node')}</Button>}
+                    </div>
+                  </div>
+                )}
               </Card>
 
               <Card title={t('پرسنل تخصیص یافته به این گره', 'Assigned Personnel')} noPadding={true} language={language} className="flex-1 min-h-[300px]">
