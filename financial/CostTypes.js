@@ -130,18 +130,32 @@
       setNewTargetParentId(null);
     };
 
-    const handleAddTreeRoot = () => {
+    const handleAddTreeRoot = async () => {
       setSelectedTreeNodeId(null);
-      setTreeFormData({ code: '', titleFa: '', titleEn: '', parentId: null, isActive: true });
       setIsCreatingNode(true);
       setNewTargetParentId(null);
+      
+      let nextCode = '';
+      if (window.AutoNumberingService) {
+        const preview = await window.AutoNumberingService.previewNext('COST_TYPE');
+        if (preview) nextCode = preview.formattedCode;
+      }
+      
+      setTreeFormData({ code: nextCode, titleFa: '', titleEn: '', parentId: null, isActive: true });
     };
 
-    const handleAddTreeChild = (parentNode) => {
+    const handleAddTreeChild = async (parentNode) => {
       setSelectedTreeNodeId(null);
-      setTreeFormData({ code: '', titleFa: '', titleEn: '', parentId: parentNode.id, isActive: true });
       setIsCreatingNode(true);
       setNewTargetParentId(parentNode.id);
+      
+      let nextCode = '';
+      if (window.AutoNumberingService) {
+        const preview = await window.AutoNumberingService.previewNext('COST_TYPE');
+        if (preview) nextCode = preview.formattedCode;
+      }
+      
+      setTreeFormData({ code: nextCode, titleFa: '', titleEn: '', parentId: parentNode.id, isActive: true });
     };
 
     const handleCancelTreeForm = () => {
@@ -203,6 +217,11 @@
         if (isCreatingNode) {
           const { data, error } = await supabase.from('fm_cost_types').insert([payload]).select();
           if (error) throw error;
+          
+          if (window.AutoNumberingService) {
+             await window.AutoNumberingService.consumeNext('COST_TYPE');
+          }
+          
           if (data && data[0]) {
             targetNodeId = data[0].id;
             await logAction('انواع هزینه', targetNodeId, 'create', `ایجاد نوع هزینه جدید: ${payload.title_fa}`);
@@ -364,7 +383,7 @@
         </div>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 Flex flex-col gap-3 items-center text-center">
+          <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
                <AlertTriangle size={22} />
             </div>
