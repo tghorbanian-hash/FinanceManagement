@@ -274,7 +274,7 @@
           viewConfig={viewConfig}
         />
 
-        <div className="flex-1 min-h-0 flex flex-col gap-3 mt-2 animate-in fade-in duration-500">
+        <div className="flex-1 min-h-0 flex flex-col gap-1 mt-2 animate-in fade-in duration-500">
           <AdvancedFilter
             fields={[
               { name: 'code', label: t('کد ساختار', 'Structure Code'), type: 'text' },

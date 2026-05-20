@@ -521,7 +521,7 @@
               />
             </div>
 
-            <div className="flex-1 flex flex-col overflow-auto p-4 gap-1 bg-slate-50/50 dark:bg-slate-900/20">
+            <div className="flex-1 flex flex-col overflow-auto p-4 gap-3 bg-slate-50/50 dark:bg-slate-900/20">
               {selectedNodeId || isCreatingNode ? (
                 <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm h-full">
                   <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
