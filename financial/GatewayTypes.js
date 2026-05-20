@@ -1,12 +1,12 @@
 /* Filename: financial/GatewayTypes.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo } = React;
+  const { useState, useEffect, useMemo, useRef } = React;
   
   const { 
-    Button, PageHeader, Modal, DataGrid, 
+    Button, PageHeader, Modal, DataGrid, AdvancedFilter,
     TextField, ToggleField, SelectField, CurrencyField, DatePicker, CheckboxField
-  } = window.DesignSystem || window.DSCore || window.DSForms || {};
+  } = window.DesignSystem || window.DSCore || window.DSForms || window.DSGrid || {};
   
   const { 
     CreditCard, Plus, Edit, Trash2, Save, 
@@ -14,6 +14,65 @@
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
+
+  // --- کامپوننت محلی برای انتخاب حساب مشابه فرم سند حسابداری ---
+  const SearchableAccountSelect = ({ accounts, value, onChange, disabled, placeholder, isRtl }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const wrapperRef = useRef(null);
+    
+    const selectedAcc = accounts.find(a => String(a.id) === String(value));
+    const displaySelected = selectedAcc ? `${selectedAcc.code} - ${isRtl ? selectedAcc.titleFa : selectedAcc.titleEn}` : '';
+
+    useEffect(() => {
+      const handleClickOutside = (event) => { 
+        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false); 
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = accounts.filter(a => {
+        const searchLower = search.toLowerCase();
+        const codeStr = a.code || '';
+        const titleStr = (isRtl ? a.titleFa : a.titleEn) || '';
+        const pathStr = (isRtl ? a.pathFa : a.pathEn) || '';
+        return codeStr.includes(searchLower) || titleStr.includes(searchLower) || pathStr.includes(searchLower);
+    });
+
+    return (
+      <div className="relative w-full flex flex-col gap-1.5" ref={wrapperRef}>
+        <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">
+          {isRtl ? 'حساب مرتبط (آخرین سطح)' : 'Linked Account'}
+        </label>
+        <div className="relative w-full">
+          <input 
+            type="text" 
+            className={`w-full h-8 px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 outline-none transition-all focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 focus:border-indigo-400 disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 cursor-pointer`}
+            value={isOpen ? search : displaySelected} 
+            onChange={e => { setSearch(e.target.value); setIsOpen(true); }} 
+            onFocus={() => { setIsOpen(true); setSearch(''); }} 
+            disabled={disabled} 
+            placeholder={placeholder} 
+            dir={isRtl ? 'rtl' : 'ltr'}
+          />
+          {isOpen && !disabled && (
+            <div className={`absolute z-[9999] w-[350px] mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
+              {filtered.length > 0 ? filtered.map(acc => (
+                <div key={acc.id} className="px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-indigo-500/20 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0" onMouseDown={(e) => { e.preventDefault(); onChange(acc.id); setIsOpen(false); }}>
+                  <div className="font-bold text-slate-800 dark:text-slate-200 text-right dir-ltr">{acc.code} - {isRtl ? acc.titleFa : acc.titleEn}</div>
+                  <div className="text-slate-500 dark:text-slate-400 truncate mt-0.5 text-[10px] text-right" title={isRtl ? acc.pathFa : acc.pathEn}>{isRtl ? acc.pathFa : acc.pathEn}</div>
+                </div>
+              )) : (
+                <div className="p-3 text-center text-slate-500 text-[12px]">{isRtl ? 'موردی یافت نشد' : 'No results'}</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  // -------------------------------------------------------------
 
   const GatewayTypes = ({ isAdmin, language = 'fa' }) => {
     const isRtl = language === 'fa';
@@ -23,6 +82,7 @@
     const [providers, setProviders] = useState([]);
     const [currencies, setCurrencies] = useState([]);
     const [accounts, setAccounts] = useState([]);
+    const [filters, setFilters] = useState({});
     
     const [isLoading, setIsLoading] = useState(false);
     
@@ -48,27 +108,36 @@
     const [isPartyModalOpen, setIsPartyModalOpen] = useState(false);
     const [isPartyLoading, setIsPartyLoading] = useState(false);
     const [partyFormData, setPartyFormData] = useState({
-      name: '',
       code: '',
-      roles: ['PROVIDER']
+      companyName: '',
+      nationalId: '',
+      mobile: '',
+      roles: ['vendor'] // vendor stands for Provider in Parties.js
     });
 
     const AVAILABLE_ROLES = [
-      { value: 'PROVIDER', label_fa: 'تامین کننده', label_en: 'Provider' },
-      { value: 'CUSTOMER', label_fa: 'مشتری', label_en: 'Customer' },
-      { value: 'EMPLOYEE', label_fa: 'کارمند', label_en: 'Employee' },
-      { value: 'BROKER', label_fa: 'بروکر', label_en: 'Broker' }
+      { value: 'vendor', label_fa: 'تامین کننده', label_en: 'Provider' },
+      { value: 'customer', label_fa: 'مشتری', label_en: 'Customer' },
+      { value: 'exchange', label_fa: 'صرافی', label_en: 'Exchange' },
+      { value: 'shareholder', label_fa: 'سهامدار', label_en: 'Shareholder' }
     ];
 
     const [gridState, setGridState] = useState(null);
 
+    const formatPartyName = (p) => {
+       if (!p) return '---';
+       return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
+    };
+
     const viewConfig = {
       pageId: 'gateway_types_main',
-      currentState: () => ({ gridState }),
+      currentState: () => ({ filters, gridState }),
       onApplyState: (state) => {
         if (state) {
+          if (state.filters) setFilters(state.filters);
           if (state.gridState) setGridState(state.gridState);
         } else {
+          setFilters({});
           setGridState(null);
         }
       }
@@ -83,18 +152,18 @@
       try {
         const { data: partiesData } = await supabase
           .from('parties')
-          .select('id, name')
-          .order('name', { ascending: true });
+          .select('id, first_name, last_name, company_name, party_type')
+          .order('created_at', { ascending: false });
         if (partiesData) {
-          setProviders(partiesData.map(p => ({ value: p.id, label: p.name })));
+          setProviders(partiesData.map(p => ({ value: p.id, label: formatPartyName(p) })));
         }
 
         const { data: currData } = await supabase
           .from('fm_currencies')
-          .select('id, name, code')
+          .select('id, title, code')
           .order('code', { ascending: true });
         if (currData) {
-          setCurrencies(currData.map(c => ({ value: c.id, label: `${c.name} (${c.code})` })));
+          setCurrencies(currData.map(c => ({ value: c.id, label: `${c.title} (${c.code})` })));
         }
 
         const { data: coaData } = await supabase
@@ -122,9 +191,12 @@
           const accOptions = leaves.map(leaf => {
             const paths = buildPath(leaf);
             return {
-              value: leaf.id,
-              labelFa: `[${leaf.code}] ${paths.pathFa}`,
-              labelEn: `[${leaf.code}] ${paths.pathEn}`
+              id: leaf.id,
+              code: leaf.code,
+              titleFa: leaf.title_fa,
+              titleEn: leaf.title_en,
+              pathFa: paths.pathFa,
+              pathEn: paths.pathEn
             };
           });
           setAccounts(accOptions);
@@ -141,8 +213,8 @@
           .from('fm_gateways')
           .select(`
             *,
-            provider:parties(id, name),
-            currency:fm_currencies(id, name, code),
+            provider:parties(id, first_name, last_name, company_name, party_type),
+            currency:fm_currencies(id, title, code),
             account:fm_coa_accounts(id, title_fa, title_en, code)
           `)
           .order('created_at', { ascending: false });
@@ -154,9 +226,9 @@
           code: item.code,
           title: item.title,
           providerId: item.provider_id,
-          providerName: item.provider?.name || '---',
+          providerName: formatPartyName(item.provider),
           currencyId: item.currency_id,
-          currencyName: item.currency ? `${item.currency.name} (${item.currency.code})` : '---',
+          currencyName: item.currency ? `${item.currency.title} (${item.currency.code})` : '---',
           accountId: item.account_id,
           accountName: item.account ? `[${item.account.code}] ${isRtl ? item.account.title_fa : item.account.title_en}` : '---',
           minAmount: item.min_amount,
@@ -183,7 +255,7 @@
           code: formData.code,
           title: formData.title,
           provider_id: formData.providerId,
-          currency_id: formData.currencyId,
+          currency_id: formData.currencyId ? parseInt(formData.currencyId) : null,
           account_id: formData.accountId || null,
           min_amount: formData.minAmount || 0,
           max_amount: formData.maxAmount || 0,
@@ -207,20 +279,25 @@
     };
 
     const handleSaveParty = async () => {
-      if (!partyFormData.name) return;
+      if (!partyFormData.code || !partyFormData.companyName) return;
       setIsPartyLoading(true);
       try {
         const payload = {
-          name: partyFormData.name,
           code: partyFormData.code,
-          roles: partyFormData.roles
+          party_type: 'legal',
+          company_name: partyFormData.companyName,
+          national_id: partyFormData.nationalId,
+          mobile: partyFormData.mobile,
+          roles: partyFormData.roles,
+          is_active: true
         };
+        
         const { data, error } = await supabase.from('parties').insert([payload]).select();
         if (error) throw error;
         
         if (data && data.length > 0) {
            const newParty = data[0];
-           setProviders(prev => [...prev, { value: newParty.id, label: newParty.name }].sort((a,b) => a.label.localeCompare(b.label)));
+           setProviders(prev => [...prev, { value: newParty.id, label: formatPartyName(newParty) }].sort((a,b) => a.label.localeCompare(b.label)));
            setFormData(prev => ({ ...prev, providerId: newParty.id }));
            setIsPartyModalOpen(false);
         }
@@ -275,13 +352,6 @@
       setIsModalOpen(true);
     };
 
-    const accOpts = useMemo(() => {
-      return accounts.map(a => ({
-        value: a.value,
-        label: isRtl ? a.labelFa : a.labelEn
-      }));
-    }, [accounts, isRtl]);
-
     const columns = [
       { field: 'code', header_fa: 'کد', header_en: 'Code', width: '100px' },
       { field: 'title', header_fa: 'عنوان درگاه', header_en: 'Title', width: '180px' },
@@ -312,6 +382,20 @@
       }
     ];
 
+    const filterFields = [
+      { name: 'code', label: t('کد', 'Code'), type: 'text' },
+      { name: 'title', label: t('عنوان درگاه', 'Title'), type: 'text' },
+      { name: 'providerId', label: t('تامین‌کننده', 'Provider'), type: 'select', options: providers }
+    ];
+
+    const filteredData = useMemo(() => {
+      let result = [...data];
+      if (filters.code) result = result.filter(c => c.code.toLowerCase().includes(filters.code.toLowerCase()));
+      if (filters.title) result = result.filter(c => c.title.toLowerCase().includes(filters.title.toLowerCase()));
+      if (filters.providerId) result = result.filter(c => c.providerId === filters.providerId);
+      return result;
+    }, [data, filters]);
+
     return (
       <div className="flex flex-col h-full p-4 bg-[#f8fafc] dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
@@ -324,9 +408,18 @@
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
-          <div className="flex-1 min-h-0">
+          
+          <AdvancedFilter 
+            fields={filterFields}
+            initialValues={filters}
+            onFilter={setFilters}
+            onClear={() => setFilters({})}
+            language={language}
+          />
+
+          <div className="flex-1 min-h-0 mt-1">
             <DataGrid 
-              data={data}
+              data={filteredData}
               columns={columns} 
               language={language}
               selectable={true}
@@ -393,10 +486,10 @@
                   size="sm" 
                   icon={Plus} 
                   onClick={() => {
-                    setPartyFormData({ name: '', code: '', roles: ['PROVIDER'] });
+                    setPartyFormData({ code: '', companyName: '', nationalId: '', mobile: '', roles: ['vendor'] });
                     setIsPartyModalOpen(true);
                   }}
-                  title={t('تعریف شخص/شرکت جدید', 'New Party')}
+                  title={t('تعریف شرکت جدید', 'New Party')}
                 />
               </div>
             </div>
@@ -411,13 +504,12 @@
                 isRtl={isRtl} 
                 required
               />
-              <SelectField 
-                size="sm" 
-                label={t('حساب مرتبط (آخرین سطح)', 'Linked Account')} 
+              <SearchableAccountSelect 
+                accounts={accounts}
                 value={formData.accountId} 
-                onChange={e => setFormData({...formData, accountId: e.target.value})} 
-                options={accOpts}
+                onChange={val => setFormData({...formData, accountId: val})} 
                 isRtl={isRtl} 
+                placeholder={t('جستجوی حساب...', 'Search Account...')}
               />
             </div>
 
@@ -474,28 +566,49 @@
 
         <Modal 
           isOpen={isPartyModalOpen} onClose={() => setIsPartyModalOpen(false)} 
-          title={t('تعریف سریع تامین‌کننده', 'Quick Add Provider')}
+          title={t('تعریف سریع تامین‌کننده (شرکت)', 'Quick Add Provider (Legal)')}
           width="max-w-md"
           language={language}
         >
           <div className="p-4 flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <TextField 
+                size="sm" 
+                label={t('کد شخص/شرکت', 'Code')} 
+                value={partyFormData.code} 
+                onChange={e => setPartyFormData({...partyFormData, code: e.target.value})} 
+                isRtl={isRtl} 
+                dir="ltr"
+                required 
+              />
+              <TextField 
+                size="sm" 
+                label={t('شناسه ملی', 'National ID')} 
+                value={partyFormData.nationalId} 
+                onChange={e => setPartyFormData({...partyFormData, nationalId: e.target.value})} 
+                isRtl={isRtl} 
+                dir="ltr" 
+              />
+            </div>
+            
             <TextField 
               size="sm" 
-              label={t('نام شخص / شرکت', 'Name')} 
-              value={partyFormData.name} 
-              onChange={e => setPartyFormData({...partyFormData, name: e.target.value})} 
+              label={t('نام کامل شرکت', 'Company Name')} 
+              value={partyFormData.companyName} 
+              onChange={e => setPartyFormData({...partyFormData, companyName: e.target.value})} 
               isRtl={isRtl} 
               required 
             />
+
             <TextField 
               size="sm" 
-              label={t('کد', 'Code')} 
-              value={partyFormData.code} 
-              onChange={e => setPartyFormData({...partyFormData, code: e.target.value})} 
+              label={t('موبایل / تلفن همراه', 'Mobile')} 
+              value={partyFormData.mobile} 
+              onChange={e => setPartyFormData({...partyFormData, mobile: e.target.value})} 
               isRtl={isRtl} 
               dir="ltr" 
             />
-            
+
             <div className="mt-2">
               <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-2 block">{t('نقش‌های مرتبط', 'Associated Roles')}</label>
               <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -517,7 +630,7 @@
 
             <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
               <Button variant="outline" size="sm" onClick={() => setIsPartyModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" icon={Users} onClick={handleSaveParty} isLoading={isPartyLoading}>{t('ثبت شخص', 'Save Party')}</Button>
+              <Button variant="primary" size="sm" icon={Users} onClick={handleSaveParty} isLoading={isPartyLoading}>{t('ثبت شخص/شرکت', 'Save Party')}</Button>
             </div>
           </div>
         </Modal>
