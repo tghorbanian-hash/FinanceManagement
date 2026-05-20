@@ -1,7 +1,7 @@
 /* Filename: financial/AutoNumbering.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo } = React;
+  const { useState, useEffect } = React;
   
   const { 
     Button, PageHeader, Modal, DataGrid, 
@@ -199,9 +199,12 @@
         header_fa: 'فرمت الگو', 
         header_en: 'Pattern Format', 
         width: '180px',
-        render: (row) => {
-          const paddedNum = String(row.startNumber).padStart(row.numberLength, 'X');
-          return <span className="font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded dir-ltr inline-block">{`${row.prefix}${paddedNum}${row.suffix}`}</span>;
+        render: (value, row) => {
+          const r = (value && value.startNumber !== undefined) ? value : (row || {});
+          const startNum = r.startNumber || 1;
+          const numLen = r.numberLength || 4;
+          const paddedNum = String(startNum).padStart(numLen, 'X');
+          return <span className="font-mono text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded dir-ltr inline-block">{`${r.prefix || ''}${paddedNum}${r.suffix || ''}`}</span>;
         }
       },
       { field: 'numberLength', header_fa: 'طول ارقام', header_en: 'Length', width: '100px' },
