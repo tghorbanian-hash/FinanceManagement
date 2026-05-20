@@ -446,7 +446,7 @@
 
     const permColumns = [
       {
-        field: 'grantee_type', header_fa: 'نوع گیرنده', header_en: 'Type', width: '110px',
+        field: 'grantee_type', header_fa: 'نوع دسترسی', header_en: 'Type', width: '110px',
         render: (v) => <Badge variant="slate" size="sm">{v === 'user' ? t('کاربر', 'User') : t('نقش', 'Role')}</Badge>
       },
       {
@@ -526,15 +526,15 @@
                 <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm h-full">
                   <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
                     <button onClick={() => setActiveTab('details')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                      {t('مشخصات و الزامات حساب', 'Account Parameters')}
+                      {t('مشخصات حساب', 'Account Parameters')}
                     </button>
                     {!isCreatingNode && (
                       <>
                         <button onClick={() => setActiveTab('permissions')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'permissions' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                          {t('تعریف قوانین دسترسی', 'Access Grantees')}
+                          {t('قوانین دسترسی', 'Access Grantees')}
                         </button>
                         <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'summary' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                          {t('مجموع کاربران مجاز سیستم', 'Consolidated User Scope')}
+                          {t('مجموع کاربران مجاز حساب', 'Consolidated User Scope')}
                         </button>
                       </>
                     )}
@@ -583,11 +583,11 @@
                     {activeTab === 'permissions' && (
                       <div className="space-y-4 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
                         <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end shrink-0">
-                          <SelectField size="sm" label={t('نوع گیرنده دسترسی', 'Grantee Type')} value={permFormData.granteeType} onChange={(e) => setPermFormData({ ...permFormData, granteeType: e.target.value, granteeId: '' })} options={[{ value: 'user', label: t('کاربر مشخص', 'Specific User') }, { value: 'role', label: t('نقش کلان سیستم', 'System Role Group') }]} isRtl={isRtl} />
+                          <SelectField size="sm" label={t('نوع دسترسی', 'Grantee Type')} value={permFormData.granteeType} onChange={(e) => setPermFormData({ ...permFormData, granteeType: e.target.value, granteeId: '' })} options={[{ value: 'user', label: t('کاربر مشخص', 'Specific User') }, { value: 'role', label: t('نقش کاربر', 'User Role') }]} isRtl={isRtl} />
                           
                           <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username || u.name || u.email || '---' })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
                           
-                          <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده اطلاعات حساب', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
+                          <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده اطلاعات تراکنش‌ها', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
                           
                           <Button size="sm" variant="primary" icon={Plus} onClick={handleAddPermission}>{t('افزودن دسترسی', 'Grant Access')}</Button>
                         </div>

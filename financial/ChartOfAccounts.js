@@ -129,12 +129,12 @@
         if (chartFormData.id) {
           const { error } = await supabase.from('fm_coa_charts').update(payload).eq('id', chartFormData.id);
           if (error) throw error;
-          await logAction('ساختار حساب‌ها', chartFormData.id, 'update', `ویرایش ساختار کلان: ${payload.title}`);
+          await logAction('ساختار حساب‌ها', chartFormData.id, 'update', `ویرایش ساختار: ${payload.title}`);
         } else {
           const { data, error } = await supabase.from('fm_coa_charts').insert([payload]).select();
           if (error) throw error;
           if (data && data[0]) {
-            await logAction('ساختار حساب‌ها', data[0].id, 'create', `ایجاد ساختار کلان جدید: ${payload.title}`);
+            await logAction('ساختار حساب‌ها', data[0].id, 'create', `ایجاد ساختار جدید: ${payload.title}`);
           }
         }
         setIsChartModalOpen(false);
@@ -229,7 +229,7 @@
 
     const chartColumns = [
       { field: 'code', header_fa: 'کد ساختار', header_en: 'Code', width: '110px' },
-      { field: 'title', header_fa: 'عنوان ساختار کلان', header_en: 'Structure Title', width: '240px' },
+      { field: 'title', header_fa: 'عنوان ساختار', header_en: 'Structure Title', width: '240px' },
       { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Effective Start', width: '120px', type: 'date' },
       { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'Effective End', width: '120px', type: 'date' },
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Active', type: 'toggle', width: '90px' }
@@ -289,7 +289,7 @@
               onAdd={access.canCreate ? () => handleOpenChartModal() : undefined}
               actions={[
                 { id: 'design', icon: Network, tooltip: t('طراحی درخت حساب‌ها', 'Design Tree Structure'), onClick: (row) => handleOpenDesigner(row), className: 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50' },
-                { id: 'copy', icon: Copy, tooltip: t('کپی ساختار کلان', 'Duplicate Entire Structure'), onClick: (row) => handleOpenCopyModal(row), className: 'text-emerald-600 dark:text-emerald-400' },
+                { id: 'copy', icon: Copy, tooltip: t('کپی ساختار', 'Duplicate Entire Structure'), onClick: (row) => handleOpenCopyModal(row), className: 'text-emerald-600 dark:text-emerald-400' },
                 { id: 'update', icon: Edit, tooltip: t('ویرایش', 'Edit Definition'), onClick: (row) => handleOpenChartModal(row), requiredAccess: 'edit' },
                 { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete Structure'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'chart', data: row }), requiredAccess: 'delete', className: 'text-red-500 hover:text-red-600' }
               ]}
@@ -297,17 +297,17 @@
           </div>
         </div>
 
-        <Modal isOpen={isChartModalOpen} onClose={() => setIsChartModalOpen(false)} title={chartFormData.id ? t('ویرایش مشخصات ساختار کلان', 'Edit Structure Definition') : t('تعریف ساختار کلان حساب جدید', 'New Chart Model Setup')} language={language} width="max-w-2xl">
+        <Modal isOpen={isChartModalOpen} onClose={() => setIsChartModalOpen(false)} title={chartFormData.id ? t('ویرایش مشخصات ساختار', 'Edit Structure Definition') : t('تعریف ساختار حساب جدید', 'New Chart Model Setup')} language={language} width="max-w-2xl">
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField size="sm" formCode={formCode} label={t('کد ساختار حساب', 'Structure Code')} value={chartFormData.code || ''} onChange={e => setChartFormData({ ...chartFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
               <TextField size="sm" formCode={formCode} label={t('عنوان مدل کدینگ', 'Coding Model Title')} value={chartFormData.title || ''} onChange={e => setChartFormData({ ...chartFormData, title: e.target.value })} isRtl={isRtl} required />
-              <DatePicker size="sm" formCode={formCode} label={t('تاریخ شروع اعتبار کلان', 'Effective From')} value={chartFormData.start_date || ''} onChange={val => setChartFormData({ ...chartFormData, start_date: val })} isRtl={isRtl} />
-              <DatePicker size="sm" formCode={formCode} label={t('تاریخ پایان اعتبار کلان', 'Effective To')} value={chartFormData.end_date || ''} onChange={val => setChartFormData({ ...chartFormData, end_date: val })} isRtl={isRtl} />
+              <DatePicker size="sm" formCode={formCode} label={t('تاریخ شروع اعتبار', 'Effective From')} value={chartFormData.start_date || ''} onChange={val => setChartFormData({ ...chartFormData, start_date: val })} isRtl={isRtl} />
+              <DatePicker size="sm" formCode={formCode} label={t('تاریخ پایان اعتبار', 'Effective To')} value={chartFormData.end_date || ''} onChange={val => setChartFormData({ ...chartFormData, end_date: val })} isRtl={isRtl} />
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
-              <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1"><Info size={14} className="text-indigo-500" /> {t('تنظیم طول سگمنت‌های کدینگ جهت پیشنهاد اتوماتیک کدهای درخت', 'Segment Formatting Setup for Auto Suggested Increments')}</h4>
+              <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-1"><Info size={14} className="text-indigo-500" /> {t('برای تولید اتوماتیک کدها، طول هر کد را مشخص کنید', 'Segment Formatting Setup for Auto Suggested Increments')}</h4>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <TextField size="sm" type="number" formCode={formCode} label={t('طول کد گروه', 'Group Code Len')} value={chartFormData.len_group || '1'} onChange={e => setChartFormData({ ...chartFormData, len_group: e.target.value })} isRtl={isRtl} dir="ltr" />
                 <TextField size="sm" type="number" formCode={formCode} label={t('طول کد کل', 'GL Code Len')} value={chartFormData.len_general || '2'} onChange={e => setChartFormData({ ...chartFormData, len_general: e.target.value })} isRtl={isRtl} dir="ltr" />
@@ -317,12 +317,12 @@
             </div>
 
             <div className="flex items-center pt-1">
-              <ToggleField size="sm" formCode={formCode} label={t('ساختار فعال و معتبر باشد', 'Is Active Setup')} checked={chartFormData.is_active !== false} onChange={val => setChartFormData({ ...chartFormData, is_active: val })} isRtl={isRtl} />
+              <ToggleField size="sm" formCode={formCode} label={t('فعال', 'Is Active')} checked={chartFormData.is_active !== false} onChange={val => setChartFormData({ ...chartFormData, is_active: val })} isRtl={isRtl} />
             </div>
 
             <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
               <Button size="sm" variant="outline" onClick={() => setIsChartModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
-              {access.canEdit && <Button size="sm" variant="primary" icon={Save} onClick={handleSaveChart}>{t('ذخیره ساختار کلان', 'Save Setup')}</Button>}
+              {access.canEdit && <Button size="sm" variant="primary" icon={Save} onClick={handleSaveChart}>{t('ذخیره ساختار', 'Save Setup')}</Button>}
             </div>
           </div>
         </Modal>
@@ -345,7 +345,7 @@
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1"><AlertTriangle size={22} /></div>
             <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1"><Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}</div>
             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-1">
-              {t(`آیا از حذف کامل ساختار کلان "${deleteConfirm.data?.title}" و تمامی کدهای متصل به آن اطمینان دارید؟`, `Are you sure you want to delete structure "${deleteConfirm.data?.title}" and all nested accounts?`)}
+              {t(`آیا از حذف کامل ساختار "${deleteConfirm.data?.title}" و تمامی کدهای متصل به آن اطمینان دارید؟`, `Are you sure you want to delete structure "${deleteConfirm.data?.title}" and all nested accounts?`)}
             </p>
             <div className="flex gap-2 mt-4 w-full">
               <Button size="sm" variant="outline" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
