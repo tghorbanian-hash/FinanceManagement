@@ -475,7 +475,7 @@
       { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '130px' },
       { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: '160px' },
       {
-        field: 'accessLevel', header_fa: 'نهایت سطح دسترسی', header_en: 'Effective Access', width: '150px',
+        field: 'accessLevel', header_fa: 'سطح دسترسی', header_en: 'Effective Access', width: '150px',
         render: (v) => (
           <Badge variant={v === 'full' ? 'indigo' : 'amber'} size="sm">
             {v === 'full' ? t('کامل', 'Full Access') : t('فقط مشاهده', 'View Only')}
@@ -521,7 +521,7 @@
               />
             </div>
 
-            <div className="flex-1 flex flex-col overflow-auto p-4 gap-3 bg-slate-50/50 dark:bg-slate-900/20">
+            <div className="flex-1 flex flex-col overflow-auto p-4 gap-1 bg-slate-50/50 dark:bg-slate-900/20">
               {selectedNodeId || isCreatingNode ? (
                 <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm h-full">
                   <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
@@ -587,7 +587,7 @@
                           
                           <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username || u.name || u.email || '---' })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
                           
-                          <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده اطلاعات تراکنش‌ها', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
+                          <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده تراکنش‌ها', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
                           
                           <Button size="sm" variant="primary" icon={Plus} onClick={handleAddPermission}>{t('افزودن دسترسی', 'Grant Access')}</Button>
                         </div>
