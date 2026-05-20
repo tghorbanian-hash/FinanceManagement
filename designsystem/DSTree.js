@@ -1,4 +1,4 @@
-/* Filename: DSTree.js */
+/* Filename: designsystem/DSTree.js */
 (() => {
   const React = window.React;
   const { useState, useMemo, useEffect, useCallback, useRef } = React;
@@ -59,6 +59,36 @@
 
     const [expandedIds, setExpandedIds] = useState(new Set());
     const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+      if (selectedId && data && data.length > 0) {
+        const parentsToExpand = new Set();
+        let currentId = String(selectedId);
+        
+        let limit = 100;
+        while (currentId && limit > 0) {
+          limit--;
+          const node = data.find(n => String(n[idField]) === currentId);
+          if (node && node[parentField]) {
+            parentsToExpand.add(node[parentField]);
+            currentId = String(node[parentField]);
+          } else {
+            break;
+          }
+        }
+
+        if (parentsToExpand.size > 0) {
+          setExpandedIds(prev => {
+            const next = new Set(prev);
+            let changed = false;
+            parentsToExpand.forEach(p => {
+              if (!next.has(p)) { next.add(p); changed = true; }
+            });
+            return changed ? next : prev;
+          });
+        }
+      }
+    }, [selectedId, data, idField, parentField]);
 
     const buildTree = (nodes) => {
       const map = {};
@@ -269,6 +299,35 @@
     const [selectedRowId, setSelectedRowId] = useState(null);
     
     const colMenuRef = useRef(null);
+
+    useEffect(() => {
+      const activeId = editingId || selectedRowId || (selectedIds && selectedIds.length > 0 ? selectedIds[0] : null);
+      if (activeId && data && data.length > 0) {
+        const parentsToExpand = new Set();
+        let currentId = String(activeId);
+        let limit = 100;
+        while (currentId && limit > 0) {
+          limit--;
+          const node = data.find(n => String(n[idField]) === currentId);
+          if (node && node[parentField]) {
+            parentsToExpand.add(node[parentField]);
+            currentId = String(node[parentField]);
+          } else {
+            break;
+          }
+        }
+        if (parentsToExpand.size > 0) {
+          setExpandedIds(prev => {
+            const next = new Set(prev);
+            let changed = false;
+            parentsToExpand.forEach(p => {
+              if (!next.has(p)) { next.add(p); changed = true; }
+            });
+            return changed ? next : prev;
+          });
+        }
+      }
+    }, [editingId, selectedRowId, selectedIds, data, idField, parentField]);
 
     useEffect(() => {
       if (gridState && gridState.hiddenCols) {
