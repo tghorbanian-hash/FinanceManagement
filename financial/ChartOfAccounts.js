@@ -301,7 +301,7 @@
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <TextField size="sm" formCode={formCode} label={t('کد ساختار حساب', 'Structure Code')} value={chartFormData.code || ''} onChange={e => setChartFormData({ ...chartFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
-              <TextField size="sm" formCode={formCode} label={t('عنوان مدل کدینگ', 'Coding Model Title')} value={chartFormData.title || ''} onChange={e => setChartFormData({ ...chartFormData, title: e.target.value })} isRtl={isRtl} required />
+              <TextField size="sm" formCode={formCode} label={t('عنوان ساختار', 'Coding Model Title')} value={chartFormData.title || ''} onChange={e => setChartFormData({ ...chartFormData, title: e.target.value })} isRtl={isRtl} required />
               <DatePicker size="sm" formCode={formCode} label={t('تاریخ شروع اعتبار', 'Effective From')} value={chartFormData.start_date || ''} onChange={val => setChartFormData({ ...chartFormData, start_date: val })} isRtl={isRtl} />
               <DatePicker size="sm" formCode={formCode} label={t('تاریخ پایان اعتبار', 'Effective To')} value={chartFormData.end_date || ''} onChange={val => setChartFormData({ ...chartFormData, end_date: val })} isRtl={isRtl} />
             </div>
