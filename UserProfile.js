@@ -1,18 +1,18 @@
-/* Filename: general/UserProfile.js */
+/* Filename: UserProfile.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo, useCallback } = React;
+  const { useState, useEffect, useCallback, useRef } = React;
   
   const { 
-    Button, PageHeader, Card, 
-    TextField, SelectField, ToggleField, 
+    Button, PageHeader, 
+    TextField, SelectField, 
     Toast, Alert
   } = window.DesignSystem || window.DSCore || window.DSForms || {};
   
   const { 
     User, Settings, Shield, CreditCard, Save, 
     Key, Palette, Globe, CalendarDays, Building2, 
-    Tags, Fingerprint, Lock, Briefcase
+    Tags, Fingerprint, Lock, Camera, Loader2, Upload
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
@@ -21,23 +21,21 @@
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
     
-    // دریافت اطلاعات کاربر لاگین شده از سیستم
     const currentUser = window.NavigationSystem?.currentUser || { id: null, name: 'کاربر سیستم', email: '' };
 
     const [activeTab, setActiveTab] = useState('personal');
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
 
-    // --- State های اطلاعات نمایشی ---
     const [profileInfo, setProfileInfo] = useState({
       fullName: currentUser.name,
       username: currentUser.email || currentUser.username || '',
       partyRoles: [],
       userRoles: [],
-      department: '---'
+      department: '---',
+      avatarUrl: null
     });
 
-    // --- State های تنظیمات ---
     const [preferences, setPreferences] = useState({
       theme: 'system',
       language: 'fa',
@@ -45,15 +43,11 @@
       defaultCostTypeId: ''
     });
 
-    // --- State های رمز عبور ---
-    const [passwords, setPasswords] = useState({
-      current: '',
-      new: '',
-      confirm: ''
-    });
-
-    // --- State دیتای پایه ---
+    const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
     const [costTypes, setCostTypes] = useState([]);
+    
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const fileInputRef = useRef(null);
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
@@ -71,13 +65,9 @@
     const fetchUserData = async () => {
       if (!supabase || !currentUser.id) return;
       try {
-        // ۱. دریافت اطلاعات شخص مرتبط و نقش‌های شخصی
         const { data: userPartyData } = await supabase
-          .from('users') // با فرض اینکه جدول users ارتباطی با parties دارد
-          .select(`
-            party_id,
-            parties ( id, first_name, last_name, roles )
-          `)
+          .from('users')
+          .select(`party_id, parties ( id, first_name, last_name, roles ), avatar_url`)
           .eq('id', currentUser.id)
           .single();
 
@@ -88,7 +78,6 @@
           partyId = userPartyData.parties.id;
         }
 
-        // ۲. دریافت نقش‌های سیستمی کاربر
         const { data: systemRolesData } = await supabase
           .from('fm_user_roles')
           .select('fm_roles(id, title_fa, title_en)')
@@ -96,7 +85,6 @@
           
         const userRoles = systemRolesData?.map(ur => isRtl ? ur.fm_roles.title_fa : ur.fm_roles.title_en) || [];
 
-        // ۳. پیدا کردن دپارتمان از چارت سازمانی (با فرض وجود جدول fm_org_members)
         let departmentName = '---';
         if (partyId) {
           const { data: orgData } = await supabase
@@ -115,9 +103,9 @@
           ...prev,
           partyRoles,
           userRoles,
-          department: departmentName
+          department: departmentName,
+          avatarUrl: userPartyData?.avatar_url || null
         }));
-
       } catch (err) {
         console.error('Error fetching user profile data:', err);
       }
@@ -126,7 +114,7 @@
     const fetchPreferences = async () => {
       if (!supabase || !currentUser.id) return;
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('fm_user_preferences')
           .select('*')
           .eq('user_id', currentUser.id)
@@ -140,9 +128,7 @@
             defaultCostTypeId: data.default_cost_type_id || ''
           });
         }
-      } catch (err) {
-        console.error('Error fetching preferences:', err);
-      }
+      } catch (err) {}
     };
 
     const fetchCostTypes = async () => {
@@ -160,8 +146,34 @@
             label: `[${c.code}] ${isRtl ? c.title_fa : (c.title_en || c.title_fa)}`
           })));
         }
-      } catch (err) {
-        console.error('Error fetching cost types:', err);
+      } catch (err) {}
+    };
+
+    const handleAvatarUpload = async (event) => {
+      try {
+        if (!event.target.files || event.target.files.length === 0) return;
+        const file = event.target.files[0];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${currentUser.id}-${Math.random()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        setIsUploadingAvatar(true);
+
+        const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+
+        const { error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+        if (updateError) throw updateError;
+
+        setProfileInfo(prev => ({ ...prev, avatarUrl: publicUrl }));
+        showToast(t('تصویر پروفایل بروزرسانی شد.', 'Profile picture updated.'));
+      } catch (error) {
+        showToast(t('خطا در آپلود تصویر (ممکن است باکت avatars ایجاد نشده باشد).', 'Error uploading image.'), 'error');
+        console.error(error);
+      } finally {
+        setIsUploadingAvatar(false);
       }
     };
 
@@ -178,28 +190,18 @@
           updated_at: new Date().toISOString()
         };
 
-        const { error } = await supabase
-          .from('fm_user_preferences')
-          .upsert(payload, { onConflict: 'user_id' });
-
+        const { error } = await supabase.from('fm_user_preferences').upsert(payload, { onConflict: 'user_id' });
         if (error) throw error;
         
-        // اعمال تم به صورت آنی
-        if (preferences.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else if (preferences.theme === 'light') {
-            document.documentElement.classList.remove('dark');
-        } else {
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                document.documentElement.classList.add('dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-            }
+        if (preferences.theme === 'dark') document.documentElement.classList.add('dark');
+        else if (preferences.theme === 'light') document.documentElement.classList.remove('dark');
+        else {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
         }
 
         showToast(t('تنظیمات با موفقیت ذخیره شد.', 'Preferences saved successfully.'));
       } catch (err) {
-        console.error('Save preferences error:', err);
         showToast(t('خطا در ذخیره تنظیمات.', 'Error saving preferences.'), 'error');
       } finally {
         setIsLoading(false);
@@ -207,27 +209,17 @@
     };
 
     const handleChangePassword = async () => {
-      if (!passwords.new || !passwords.confirm) {
-        return showToast(t('لطفاً رمز عبور جدید را وارد کنید.', 'Please enter new password.'), 'error');
-      }
-      if (passwords.new !== passwords.confirm) {
-        return showToast(t('تکرار رمز عبور تطابق ندارد.', 'Passwords do not match.'), 'error');
-      }
+      if (!passwords.new || !passwords.confirm) return showToast(t('رمز عبور جدید را وارد کنید.', 'Enter new password.'), 'error');
+      if (passwords.new !== passwords.confirm) return showToast(t('تکرار رمز عبور تطابق ندارد.', 'Passwords do not match.'), 'error');
       
       setIsLoading(true);
       try {
-        // در Supabase برای تغییر رمز عبور کاربر لاگین شده
-        const { error } = await supabase.auth.updateUser({
-          password: passwords.new
-        });
-
+        const { error } = await supabase.auth.updateUser({ password: passwords.new });
         if (error) throw error;
-
-        showToast(t('رمز عبور با موفقیت تغییر کرد.', 'Password changed successfully.'));
+        showToast(t('رمز عبور تغییر کرد.', 'Password changed.'));
         setPasswords({ current: '', new: '', confirm: '' });
       } catch (err) {
-        console.error('Password change error:', err);
-        showToast(t('خطا در تغییر رمز عبور. ممکن است نیاز به ورود مجدد داشته باشید.', 'Error changing password. You may need to login again.'), 'error');
+        showToast(t('خطا در تغییر رمز عبور.', 'Error changing password.'), 'error');
       } finally {
         setIsLoading(false);
       }
@@ -237,23 +229,7 @@
       { id: 'personal', label: t('اطلاعات کاربری', 'User Info'), icon: User },
       { id: 'preferences', label: t('تنظیمات پایه', 'Basic Preferences'), icon: Settings },
       { id: 'financial', label: t('تنظیمات مالی', 'Financial Prefs'), icon: CreditCard },
-      { id: 'security', label: t('امنیت و رمز عبور', 'Security'), icon: Shield }
-    ];
-
-    const themeOptions = [
-      { value: 'light', label: t('روشن (Light)', 'Light') },
-      { value: 'dark', label: t('تاریک (Dark)', 'Dark') },
-      { value: 'system', label: t('خودکار (پیرو سیستم)', 'System Default') }
-    ];
-
-    const languageOptions = [
-      { value: 'fa', label: 'فارسی' },
-      { value: 'en', label: 'English' }
-    ];
-
-    const calendarOptions = [
-      { value: 'jalali', label: t('شمسی (Jalali)', 'Jalali') },
-      { value: 'gregorian', label: t('میلادی (Gregorian)', 'Gregorian') }
+      { id: 'security', label: t('امنیت و رمز', 'Security'), icon: Shield }
     ];
 
     const formatRoleFa = (role) => {
@@ -262,235 +238,209 @@
     };
 
     return (
-      <div className="flex flex-col h-full p-4 md:p-6 bg-[#f8fafc] dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="flex flex-col h-full p-2 md:p-3 bg-slate-100 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
-          title={t('پروفایل کاربری و تنظیمات', 'User Profile & Settings')} 
+          title={t('پروفایل کاربری', 'User Profile')} 
           icon={User}
-          description={t('مدیریت اطلاعات شخصی، تغییر رمز عبور و شخصی‌سازی تنظیمات سیستم', 'Manage personal info, change password, and customize system preferences')}
+          description={t('مدیریت اطلاعات و تنظیمات سیستم', 'Manage info and system preferences')}
           language={language}
           breadcrumbs={[{ label: t('داشبورد', 'Dashboard') }, { label: t('پروفایل من', 'My Profile') }]}
         />
 
-        <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 mt-6 animate-in fade-in duration-300">
+        <div className="flex-1 flex flex-col md:flex-row gap-2 mt-2 min-h-0">
           
-          {/* ستون راست: کارت خلاصه پروفایل (Bento Style) */}
-          <div className="w-full md:w-[320px] shrink-0 flex flex-col gap-4">
-            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col items-center text-center shadow-sm">
-                <div className="w-24 h-24 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 border-4 border-white dark:border-slate-800 shadow-md">
-                    <User size={40} strokeWidth={1.5} />
+          <div className="w-full md:w-[260px] shrink-0 flex flex-col gap-2 min-h-0 overflow-y-auto custom-scrollbar">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col items-center text-center shadow-sm shrink-0">
+                <div className="relative group w-20 h-20 mb-3">
+                  <div className="w-full h-full rounded-full bg-indigo-50 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-500 border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
+                      {isUploadingAvatar ? (
+                        <Loader2 size={24} className="animate-spin text-indigo-500" />
+                      ) : profileInfo.avatarUrl ? (
+                        <img src={profileInfo.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <User size={32} strokeWidth={1.5} />
+                      )}
+                  </div>
+                  <label className="absolute inset-0 bg-black/50 text-white rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity backdrop-blur-sm">
+                      <Camera size={18} className="mb-1" />
+                      <span className="text-[9px] font-bold">{t('تغییر تصویر', 'Change')}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} ref={fileInputRef} disabled={isUploadingAvatar} />
+                  </label>
                 </div>
-                <h2 className="text-lg font-black text-slate-800 dark:text-white mb-1">{profileInfo.fullName}</h2>
-                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 dir-ltr mb-4">{profileInfo.username}</p>
-                
-                <div className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800">
-                    <Building2 size={16} className="text-slate-400" />
-                    <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300">
-                        {profileInfo.department}
-                    </span>
+                <h2 className="text-[14px] font-black text-slate-800 dark:text-white mb-0.5">{profileInfo.fullName}</h2>
+                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 dir-ltr mb-3 truncate w-full">{profileInfo.username}</p>
+                <div className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700">
+                    <Building2 size={14} className="text-slate-400" />
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{profileInfo.department}</span>
                 </div>
             </div>
 
-            <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl p-2 flex flex-col gap-1 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 flex flex-col gap-1 shadow-sm shrink-0">
                 {tabs.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[13px] font-bold transition-all duration-200 ${
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-[12px] font-bold transition-colors ${
                             activeTab === tab.id 
                             ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400' 
-                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                         }`}
                     >
-                        <tab.icon size={18} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+                        <tab.icon size={16} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
                         {tab.label}
                     </button>
                 ))}
             </div>
           </div>
 
-          {/* ستون چپ: محتوای تب‌ها */}
-          <div className="flex-1 min-h-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-            
-            <div className="p-5 border-b border-slate-100 dark:border-slate-700/50 shrink-0">
-                <h3 className="text-base font-black text-slate-800 dark:text-white flex items-center gap-2">
-                    {React.createElement(tabs.find(t => t.id === activeTab)?.icon || User, { size: 20, className: 'text-indigo-500' })}
+          <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm flex flex-col min-h-0">
+            <div className="p-3 border-b border-slate-100 dark:border-slate-700 shrink-0 bg-slate-50/50 dark:bg-slate-800/50 rounded-t-xl">
+                <h3 className="text-[13px] font-black text-slate-800 dark:text-white flex items-center gap-2">
+                    {React.createElement(tabs.find(t => t.id === activeTab)?.icon || User, { size: 16, className: 'text-indigo-500' })}
                     {tabs.find(t => t.id === activeTab)?.label}
                 </h3>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-5">
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
                 
-                {/* تب اطلاعات کاربری */}
                 {activeTab === 'personal' && (
-                    <div className="flex flex-col gap-6 max-w-2xl">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('نام و نام خانوادگی', 'Full Name')}</label>
-                                <div className="h-10 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center text-[13px] font-bold text-slate-800 dark:text-slate-200">
+                    <div className="flex flex-col gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{t('نام کامل', 'Full Name')}</label>
+                                <div className="h-8 px-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200">
                                     {profileInfo.fullName}
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('نام کاربری / ایمیل', 'Username / Email')}</label>
-                                <div className="h-10 px-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center text-[13px] font-bold text-slate-800 dark:text-slate-200 dir-ltr justify-end">
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{t('نام کاربری', 'Username')}</label>
+                                <div className="h-8 px-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200 dir-ltr justify-end">
                                     {profileInfo.username}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-1.5 mt-2">
-                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <Fingerprint size={14} /> {t('نقش‌های اختصاص یافته به شخص (حقیقی/حقوقی)', 'Assigned Party Roles')}
-                            </label>
-                            <div className="min-h-[48px] p-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-2 items-center">
-                                {profileInfo.partyRoles.length > 0 ? profileInfo.partyRoles.map((role, idx) => (
-                                    <span key={idx} className="px-2.5 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[11px] font-bold rounded-md">
-                                        {isRtl ? formatRoleFa(role) : role}
-                                    </span>
-                                )) : <span className="text-[12px] text-slate-400 px-2">{t('نقشی یافت نشد', 'No roles found')}</span>}
-                            </div>
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                          <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                  <Fingerprint size={12} /> {t('نقش‌های شخص (حقیقی/حقوقی)', 'Party Roles')}
+                              </label>
+                              <div className="min-h-[32px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
+                                  {profileInfo.partyRoles.length > 0 ? profileInfo.partyRoles.map((role, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold rounded">
+                                          {isRtl ? formatRoleFa(role) : role}
+                                      </span>
+                                  )) : <span className="text-[11px] text-slate-400 px-1">{t('ندارد', 'None')}</span>}
+                              </div>
+                          </div>
 
-                        <div className="flex flex-col gap-1.5 mt-2">
-                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <Shield size={14} /> {t('سطوح دسترسی سیستمی (کاربر)', 'System Access Roles')}
-                            </label>
-                            <div className="min-h-[48px] p-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-2 items-center">
-                                {profileInfo.userRoles.length > 0 ? profileInfo.userRoles.map((role, idx) => (
-                                    <span key={idx} className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold rounded-md">
-                                        {role}
-                                    </span>
-                                )) : <span className="text-[12px] text-slate-400 px-2">{t('دسترسی خاصی تخصیص نیافته', 'No specific access assigned')}</span>}
-                            </div>
+                          <div className="flex flex-col gap-1">
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                  <Shield size={12} /> {t('دسترسی‌های سیستمی', 'System Roles')}
+                              </label>
+                              <div className="min-h-[32px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
+                                  {profileInfo.userRoles.length > 0 ? profileInfo.userRoles.map((role, idx) => (
+                                      <span key={idx} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded">
+                                          {role}
+                                      </span>
+                                  )) : <span className="text-[11px] text-slate-400 px-1">{t('ندارد', 'None')}</span>}
+                              </div>
+                          </div>
                         </div>
                     </div>
                 )}
 
-                {/* تب تنظیمات پایه */}
                 {activeTab === 'preferences' && (
-                    <div className="flex flex-col gap-6 max-w-xl">
-                        <Alert 
-                            type="info" 
-                            message={t('این تنظیمات تنها برای حساب کاربری شما اعمال می‌شود و در تمامی دستگاه‌ها همگام‌سازی می‌گردد.', 'These settings apply only to your account and sync across all devices.')} 
-                            className="mb-2"
-                        />
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="flex flex-col gap-3">
+                        <Alert type="info" message={t('تنظیمات پایه‌ای مختص به حساب کاربری شما', 'Basic settings applied to your account.')} className="mb-1 py-2 px-3 text-[11px]" />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <SelectField 
                                 size="sm" 
-                                label={<span className="flex items-center gap-1.5"><Palette size={14}/> {t('تم رنگی سیستم', 'System Theme')}</span>}
+                                label={t('تم رنگی سیستم', 'System Theme')}
                                 value={preferences.theme} 
                                 onChange={e => setPreferences({...preferences, theme: e.target.value})} 
-                                options={themeOptions}
+                                options={[ {value: 'light', label: t('روشن', 'Light')}, {value: 'dark', label: t('تاریک', 'Dark')}, {value: 'system', label: t('خودکار', 'System Default')} ]}
                                 isRtl={isRtl} 
                             />
-                            
                             <SelectField 
                                 size="sm" 
-                                label={<span className="flex items-center gap-1.5"><Globe size={14}/> {t('زبان پیش‌فرض', 'Default Language')}</span>}
+                                label={t('زبان پیش‌فرض', 'Default Language')}
                                 value={preferences.language} 
                                 onChange={e => setPreferences({...preferences, language: e.target.value})} 
-                                options={languageOptions}
+                                options={[ {value: 'fa', label: 'فارسی'}, {value: 'en', label: 'English'} ]}
                                 isRtl={isRtl} 
                             />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <SelectField 
                                 size="sm" 
-                                label={<span className="flex items-center gap-1.5"><CalendarDays size={14}/> {t('تقویم پیش‌فرض', 'Default Calendar')}</span>}
+                                label={t('تقویم پیش‌فرض', 'Default Calendar')}
                                 value={preferences.calendarType} 
                                 onChange={e => setPreferences({...preferences, calendarType: e.target.value})} 
-                                options={calendarOptions}
+                                options={[ {value: 'jalali', label: t('شمسی', 'Jalali')}, {value: 'gregorian', label: t('میلادی', 'Gregorian')} ]}
                                 isRtl={isRtl} 
                             />
-                        </div>
-
-                        <div className="pt-6 border-t border-slate-100 dark:border-slate-700/50 flex justify-end">
-                            <Button variant="primary" size="md" icon={Save} onClick={handleSavePreferences} isLoading={isLoading}>
-                                {t('ذخیره تنظیمات', 'Save Preferences')}
-                            </Button>
                         </div>
                     </div>
                 )}
 
-                {/* تب تنظیمات مالی */}
                 {activeTab === 'financial' && (
-                    <div className="flex flex-col gap-6 max-w-xl">
-                        <Alert 
-                            type="info" 
-                            message={t('تنظیم مقادیر پیش‌فرض در این بخش، باعث تسریع در ورود اطلاعات فرم‌های عملیاتی حوزه مالی می‌گردد.', 'Setting default values here will speed up data entry in financial operational forms.')} 
-                            className="mb-2"
-                        />
-                        
-                        <div className="grid grid-cols-1 gap-5">
+                    <div className="flex flex-col gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                             <SelectField 
                                 size="sm" 
-                                label={<span className="flex items-center gap-1.5"><Tags size={14}/> {t('نوع هزینه پیش‌فرض (در ثبت تراکنش‌ها)', 'Default Cost Type')}</span>}
+                                label={t('نوع هزینه پیش‌فرض', 'Default Cost Type')}
                                 value={preferences.defaultCostTypeId} 
                                 onChange={e => setPreferences({...preferences, defaultCostTypeId: e.target.value})} 
-                                options={[{value: '', label: t('--- انتخاب نشده ---', '--- Not Selected ---')}, ...costTypes]}
+                                options={[{value: '', label: t('---', '---')}, ...costTypes]}
                                 isRtl={isRtl} 
                             />
-                        </div>
-
-                        <div className="pt-6 border-t border-slate-100 dark:border-slate-700/50 flex justify-end">
-                            <Button variant="primary" size="md" icon={Save} onClick={handleSavePreferences} isLoading={isLoading}>
-                                {t('ذخیره تنظیمات مالی', 'Save Financial Prefs')}
-                            </Button>
+                            {/* فضا برای تنظیمات مالی آینده */}
                         </div>
                     </div>
                 )}
 
-                {/* تب امنیت و رمز عبور */}
                 {activeTab === 'security' && (
-                    <div className="flex flex-col gap-6 max-w-md">
-                        <div className="flex flex-col gap-4 p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700 rounded-xl">
-                            <h4 className="text-[13px] font-black text-slate-800 dark:text-slate-200 mb-2 flex items-center gap-2">
-                                <Lock size={16} className="text-amber-500" />
-                                {t('تغییر رمز عبور', 'Change Password')}
-                            </h4>
-                            
-                            {/* فیلد رمز فعلی معمولاً در Supabase نیاز نیست (در صورت لاگین بودن)، اما برای UI گذاشته شده */}
-                            <TextField 
-                                size="sm" 
-                                type="password"
-                                label={t('رمز عبور فعلی', 'Current Password')} 
-                                value={passwords.current} 
-                                onChange={e => setPasswords({...passwords, current: e.target.value})} 
-                                isRtl={isRtl} 
-                                dir="ltr"
-                            />
-                            
-                            <TextField 
-                                size="sm" 
-                                type="password"
-                                label={t('رمز عبور جدید', 'New Password')} 
-                                value={passwords.new} 
-                                onChange={e => setPasswords({...passwords, new: e.target.value})} 
-                                isRtl={isRtl} 
-                                dir="ltr"
-                            />
-
-                            <TextField 
-                                size="sm" 
-                                type="password"
-                                label={t('تکرار رمز عبور جدید', 'Confirm New Password')} 
-                                value={passwords.confirm} 
-                                onChange={e => setPasswords({...passwords, confirm: e.target.value})} 
-                                isRtl={isRtl} 
-                                dir="ltr"
-                            />
-
-                            <div className="pt-2 flex justify-end">
-                                <Button variant="primary" size="sm" icon={Key} onClick={handleChangePassword} isLoading={isLoading}>
-                                    {t('بروزرسانی رمز عبور', 'Update Password')}
-                                </Button>
-                            </div>
-                        </div>
+                    <div className="flex flex-col gap-3 max-w-sm">
+                        <TextField 
+                            size="sm" type="password"
+                            label={t('رمز عبور فعلی', 'Current Password')} 
+                            value={passwords.current} 
+                            onChange={e => setPasswords({...passwords, current: e.target.value})} 
+                            isRtl={isRtl} dir="ltr"
+                        />
+                        <TextField 
+                            size="sm" type="password"
+                            label={t('رمز عبور جدید', 'New Password')} 
+                            value={passwords.new} 
+                            onChange={e => setPasswords({...passwords, new: e.target.value})} 
+                            isRtl={isRtl} dir="ltr"
+                        />
+                        <TextField 
+                            size="sm" type="password"
+                            label={t('تکرار رمز جدید', 'Confirm Password')} 
+                            value={passwords.confirm} 
+                            onChange={e => setPasswords({...passwords, confirm: e.target.value})} 
+                            isRtl={isRtl} dir="ltr"
+                        />
                     </div>
                 )}
 
+            </div>
+
+            {/* نوار عملیات (فوتر فرم) */}
+            <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end items-center shrink-0 rounded-b-xl gap-2 h-12">
+                {activeTab === 'personal' && (
+                    <span className="text-[11px] text-slate-500 font-bold ml-auto">{t('اطلاعات شخصی فقط جهت نمایش است.', 'Personal info is read-only.')}</span>
+                )}
+                {(activeTab === 'preferences' || activeTab === 'financial') && (
+                    <Button variant="primary" size="sm" icon={Save} onClick={handleSavePreferences} isLoading={isLoading}>
+                        {t('ذخیره تغییرات', 'Save Changes')}
+                    </Button>
+                )}
+                {activeTab === 'security' && (
+                    <Button variant="primary" size="sm" icon={Key} onClick={handleChangePassword} isLoading={isLoading}>
+                        {t('تغییر رمز عبور', 'Update Password')}
+                    </Button>
+                )}
             </div>
           </div>
 
