@@ -228,11 +228,11 @@
     };
 
     const chartColumns = [
-      { field: 'code', header_fa: 'کد ساختار', header_en: 'Code', width: '110px' },
-      { field: 'title', header_fa: 'عنوان ساختار', header_en: 'Structure Title', width: '240px' },
+      { field: 'code', header_fa: 'کد ساختار', header_en: 'Code', width: '120px' },
+      { field: 'title', header_fa: 'عنوان ساختار', header_en: 'Structure Title', width: '180px' },
       { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Effective Start', width: '120px', type: 'date' },
       { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'Effective End', width: '120px', type: 'date' },
-      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Active', type: 'toggle', width: '90px' }
+      { field: 'is_active', header_fa: 'وضعیت', header_en: 'Active', type: 'toggle', width: '120px' }
     ];
 
     const viewConfig = useMemo(() => ({
