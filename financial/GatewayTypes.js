@@ -264,11 +264,18 @@
           is_active: formData.isActive
         };
 
-        const { error } = currentRecord?.id 
-          ? await supabase.from('fm_gateways').update(payload).eq('id', currentRecord.id)
-          : await supabase.from('fm_gateways').insert([payload]);
+        const isNew = !currentRecord?.id;
+
+        const { error } = isNew 
+          ? await supabase.from('fm_gateways').insert([payload])
+          : await supabase.from('fm_gateways').update(payload).eq('id', currentRecord.id);
 
         if (error) throw error;
+        
+        if (isNew && window.AutoNumberingService) {
+           await window.AutoNumberingService.consumeNext('GATEWAY_TYPE');
+        }
+
         setIsModalOpen(false);
         fetchData();
       } catch (err) {
@@ -343,9 +350,15 @@
       }
     };
 
-    const handleOpenModal = (record = null) => {
+    const handleOpenModal = async (record = null) => {
+      let nextCode = '';
+      if (!record && window.AutoNumberingService) {
+        const preview = await window.AutoNumberingService.previewNext('GATEWAY_TYPE');
+        if (preview) nextCode = preview.formattedCode;
+      }
+
       setFormData(record ? { ...record } : { 
-        code: '', title: '', providerId: '', currencyId: '', accountId: '', minAmount: '', maxAmount: '', 
+        code: nextCode, title: '', providerId: '', currencyId: '', accountId: '', minAmount: '', maxAmount: '', 
         validFrom: '', validTo: '', isActive: true 
       });
       setCurrentRecord(record);

@@ -130,18 +130,32 @@
       setNewTargetParentId(null);
     };
 
-    const handleAddTreeRoot = () => {
+    const handleAddTreeRoot = async () => {
       setSelectedTreeNodeId(null);
-      setTreeFormData({ code: '', titleFa: '', titleEn: '', parentId: null, isActive: true });
       setIsCreatingNode(true);
       setNewTargetParentId(null);
+      
+      let nextCode = '';
+      if (window.AutoNumberingService) {
+        const preview = await window.AutoNumberingService.previewNext('INCOME_TYPE');
+        if (preview) nextCode = preview.formattedCode;
+      }
+      
+      setTreeFormData({ code: nextCode, titleFa: '', titleEn: '', parentId: null, isActive: true });
     };
 
-    const handleAddTreeChild = (parentNode) => {
+    const handleAddTreeChild = async (parentNode) => {
       setSelectedTreeNodeId(null);
-      setTreeFormData({ code: '', titleFa: '', titleEn: '', parentId: parentNode.id, isActive: true });
       setIsCreatingNode(true);
       setNewTargetParentId(parentNode.id);
+      
+      let nextCode = '';
+      if (window.AutoNumberingService) {
+        const preview = await window.AutoNumberingService.previewNext('INCOME_TYPE');
+        if (preview) nextCode = preview.formattedCode;
+      }
+      
+      setTreeFormData({ code: nextCode, titleFa: '', titleEn: '', parentId: parentNode.id, isActive: true });
     };
 
     const handleCancelTreeForm = () => {
@@ -203,6 +217,11 @@
         if (isCreatingNode) {
           const { data, error } = await supabase.from('fm_income_types').insert([payload]).select();
           if (error) throw error;
+          
+          if (window.AutoNumberingService) {
+             await window.AutoNumberingService.consumeNext('INCOME_TYPE');
+          }
+          
           if (data && data[0]) {
             targetNodeId = data[0].id;
             await logAction('انواع درآمد', targetNodeId, 'create', `ایجاد نوع درآمد جدید: ${payload.title_fa}`);
@@ -372,7 +391,7 @@
                <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
             </div>
             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-2">
-              {t(`آیا از حذف نوع درآمد "${deleteConfirm.data?.titleFa}" اطمینان دارید؟`, `Are you sure you want to delete "${deleteConfirm.data?.titleEn || deleteConfirm.data?.titleFa}"?`)}
+              {t(`آیا از حذف نوع درآمد "${deleteConfirm.data?.titleFa}" اطمینان دارید Dorset؟`, `Are you sure you want to delete "${deleteConfirm.data?.titleEn || deleteConfirm.data?.titleFa}"?`)}
             </p>
             <div className="flex gap-2 mt-5 w-full">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, data: null })}>{t('انصراف', 'Cancel')}</Button>
