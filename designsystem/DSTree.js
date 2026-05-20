@@ -69,8 +69,8 @@
         while (currentId && limit > 0) {
           limit--;
           const node = data.find(n => String(n[idField]) === currentId);
-          if (node && node[parentField]) {
-            parentsToExpand.add(node[parentField]);
+          if (node && node[parentField] != null) {
+            parentsToExpand.add(String(node[parentField]));
             currentId = String(node[parentField]);
           } else {
             break;
@@ -93,12 +93,14 @@
     const buildTree = (nodes) => {
       const map = {};
       const roots = [];
-      nodes.forEach(node => { map[node[idField]] = { ...node, children: [] }; });
+      nodes.forEach(node => { map[String(node[idField])] = { ...node, children: [] }; });
       nodes.forEach(node => {
-        if (node[parentField] && map[node[parentField]]) {
-          map[node[parentField]].children.push(map[node[idField]]);
+        const strId = String(node[idField]);
+        const strParentId = node[parentField] != null ? String(node[parentField]) : null;
+        if (strParentId && map[strParentId]) {
+          map[strParentId].children.push(map[strId]);
         } else {
-          roots.push(map[node[idField]]);
+          roots.push(map[strId]);
         }
       });
       return roots;
@@ -128,7 +130,7 @@
     useEffect(() => {
       if (searchTerm) {
         const extractIds = (nodes, acc) => {
-          nodes.forEach(n => { if (n.children.length > 0) { acc.add(n[idField]); extractIds(n.children, acc); } });
+          nodes.forEach(n => { if (n.children.length > 0) { acc.add(String(n[idField])); extractIds(n.children, acc); } });
           return acc;
         };
         setExpandedIds(extractIds(treeData, new Set(expandedIds)));
@@ -137,15 +139,16 @@
 
     const toggleExpand = (id, e) => {
       if (e) e.stopPropagation();
+      const strId = String(id);
       const newExpanded = new Set(expandedIds);
-      if (newExpanded.has(id)) newExpanded.delete(id);
-      else newExpanded.add(id);
+      if (newExpanded.has(strId)) newExpanded.delete(strId);
+      else newExpanded.add(strId);
       setExpandedIds(newExpanded);
     };
 
     const expandAll = () => {
       const allIds = new Set();
-      const collectIds = (nodes) => { nodes.forEach(n => { if (n.children?.length) { allIds.add(n[idField]); collectIds(n.children); } }); };
+      const collectIds = (nodes) => { nodes.forEach(n => { if (n.children?.length) { allIds.add(String(n[idField])); collectIds(n.children); } }); };
       collectIds(buildTree(data));
       setExpandedIds(allIds);
     };
@@ -153,13 +156,14 @@
     const collapseAll = () => setExpandedIds(new Set());
 
     const renderNode = (node, depth = 0) => {
-      const isExpanded = expandedIds.has(node[idField]);
-      const isSelected = selectedId === node[idField];
+      const strId = String(node[idField]);
+      const isExpanded = expandedIds.has(strId);
+      const isSelected = String(selectedId) === strId;
       const hasChildren = node.children && node.children.length > 0;
       const isNodeActive = node[activeField] !== false;
 
       return (
-        <div key={node[idField]} className="select-none relative">
+        <div key={strId} className="select-none relative">
           <div 
             onClick={() => onSelect && onSelect(node)}
             className={`flex items-center gap-2 py-1 px-2 my-0.5 cursor-pointer rounded-lg transition-all border border-transparent group
@@ -172,7 +176,7 @@
             {hasChildren ? (
               <div 
                 className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors z-10 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600 shadow-sm shrink-0 cursor-pointer"
-                onClick={(e) => toggleExpand(node[idField], e)}
+                onClick={(e) => toggleExpand(strId, e)}
               >
                 <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
                   <ChevronDown size={12} />
@@ -208,7 +212,7 @@
               {onAddChild && access.canCreate && <button onClick={(e) => { 
                 e.stopPropagation(); 
                 const nExp = new Set(expandedIds);
-                nExp.add(node[idField]);
+                nExp.add(strId);
                 setExpandedIds(nExp);
                 onAddChild(node); 
               }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"><Plus size={14}/></button>}
@@ -315,8 +319,8 @@
         while (currentId && limit > 0) {
           limit--;
           const node = data.find(n => String(n[idField]) === currentId);
-          if (node && node[parentField]) {
-            parentsToExpand.add(node[parentField]);
+          if (node && node[parentField] != null) {
+            parentsToExpand.add(String(node[parentField]));
             currentId = String(node[parentField]);
           } else {
             break;
@@ -356,12 +360,14 @@
     const buildTree = (nodes) => {
       const map = {};
       const roots = [];
-      nodes.forEach(node => { map[node[idField]] = { ...node, children: [] }; });
+      nodes.forEach(node => { map[String(node[idField])] = { ...node, children: [] }; });
       nodes.forEach(node => {
-        if (node[parentField] && map[node[parentField]]) {
-          map[node[parentField]].children.push(map[node[idField]]);
+        const strId = String(node[idField]);
+        const strParentId = node[parentField] != null ? String(node[parentField]) : null;
+        if (strParentId && map[strParentId]) {
+          map[strParentId].children.push(map[strId]);
         } else {
-          roots.push(map[node[idField]]);
+          roots.push(map[strId]);
         }
       });
       return roots;
@@ -387,7 +393,7 @@
     useEffect(() => {
       if (searchTerm) {
         const extractIds = (nodes, acc) => {
-          nodes.forEach(n => { if (n.children.length > 0) { acc.add(n[idField]); extractIds(n.children, acc); } });
+          nodes.forEach(n => { if (n.children.length > 0) { acc.add(String(n[idField])); extractIds(n.children, acc); } });
           return acc;
         };
         setExpandedIds(extractIds(treeData, new Set(expandedIds)));
@@ -398,7 +404,7 @@
       let result = [];
       nodes.forEach(node => {
         result.push({ ...node, _depth: depth });
-        if (expandedIds.has(node[idField]) && node.children?.length > 0) {
+        if (expandedIds.has(String(node[idField])) && node.children?.length > 0) {
           result = result.concat(flattenTree(node.children, depth + 1));
         }
       });
@@ -417,15 +423,16 @@
 
     const toggleExpand = (id, e) => {
       if (e) e.stopPropagation();
+      const strId = String(id);
       const newExpanded = new Set(expandedIds);
-      if (newExpanded.has(id)) newExpanded.delete(id);
-      else newExpanded.add(id);
+      if (newExpanded.has(strId)) newExpanded.delete(strId);
+      else newExpanded.add(strId);
       setExpandedIds(newExpanded);
     };
 
     const expandAll = () => {
       const allIds = new Set();
-      data.forEach(n => allIds.add(n[idField]));
+      data.forEach(n => allIds.add(String(n[idField])));
       setExpandedIds(allIds);
     };
     const collapseAll = () => setExpandedIds(new Set());
@@ -528,15 +535,16 @@
             </thead>
             <tbody className="z-10 relative">
               {flatData.length > 0 ? flatData.map((row, rowIndex) => {
-                const isSelectedCheckbox = selectedIds.includes(row[idField]);
-                const isSelectedRow = selectedRowId === row[idField];
-                const isEditing = editingId === row[idField];
+                const strId = String(row[idField]);
+                const isSelectedCheckbox = selectedIds.map(String).includes(strId);
+                const isSelectedRow = String(selectedRowId) === strId;
+                const isEditing = String(editingId) === strId;
                 const hasChildren = row.children && row.children.length > 0;
-                const isExpanded = expandedIds.has(row[idField]);
+                const isExpanded = expandedIds.has(strId);
 
                 return (
                   <tr 
-                    key={row[idField]} 
+                    key={strId} 
                     onClick={() => setSelectedRowId(row[idField])}
                     className={`bg-white dark:bg-slate-800 transition-colors group border-b border-slate-100 dark:border-slate-700/50 
                       ${isSelectedRow || isEditing ? 'bg-indigo-50/50 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
@@ -554,7 +562,7 @@
                             {hasChildren ? (
                               <div 
                                 className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors z-10 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600 shadow-sm shrink-0 cursor-pointer"
-                                onClick={(e) => toggleExpand(row[idField], e)}
+                                onClick={(e) => toggleExpand(strId, e)}
                               >
                                 <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
                                   <ChevronDown size={12} />
@@ -637,7 +645,7 @@
                               <button onClick={(e) => { 
                                 e.stopPropagation(); 
                                 const newExp = new Set(expandedIds);
-                                newExp.add(row[idField]);
+                                newExp.add(strId);
                                 setExpandedIds(newExp);
                                 onAddChild(row); 
                               }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-sm transition-all">

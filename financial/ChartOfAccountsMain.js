@@ -93,7 +93,7 @@
           safeFetch(supabase.from('sec_users').select('*')),
           safeFetch(supabase.from('sec_roles').select('*')),
           safeFetch(supabase.from('sec_user_roles').select('*')),
-          safeFetch(supabase.from('fm_parties').select('id, first_name, last_name, full_name, company_name, party_type'))
+          safeFetch(supabase.from('parties').select('id, first_name, last_name, company_name, party_type'))
         ]);
 
         if (currRes.data) setCurrencies(currRes.data);
@@ -110,7 +110,7 @@
       let depth = 1;
       let currentParentId = parentId;
       while (currentParentId) {
-        const pNode = nodes.find(n => n.id === currentParentId);
+        const pNode = nodes.find(n => String(n.id) === String(currentParentId));
         if (pNode) {
           depth += 1;
           currentParentId = pNode.parentId;
@@ -122,10 +122,10 @@
     }, []);
 
     const suggestNextCode = useCallback((nodes, parentId, depth, currentChart) => {
-      const siblings = nodes.filter(n => n.parentId === (parentId || null));
+      const siblings = nodes.filter(n => String(n.parentId || '') === String(parentId || ''));
       let parentPrefix = '';
       if (parentId) {
-        const pNode = nodes.find(n => n.id === parentId);
+        const pNode = nodes.find(n => String(n.id) === String(parentId));
         if (pNode) parentPrefix = pNode.code || '';
       }
 
@@ -176,7 +176,7 @@
 
         const isChainInactive = (pId, list) => {
           if (!pId) return false;
-          const parent = list.find(l => l.id === pId);
+          const parent = list.find(l => String(l.id) === String(pId));
           if (!parent) return false;
           if (!parent.isActive) return true;
           return isChainInactive(parent.parentId, list);
@@ -248,7 +248,7 @@
 
     const validateNodeUniqueness = () => {
       const pId = nodeFormData.parentId || null;
-      const siblings = rawAccounts.filter(n => n.parentId === pId && n.id !== nodeFormData.id);
+      const siblings = rawAccounts.filter(n => String(n.parentId || '') === String(pId || '') && String(n.id) !== String(nodeFormData.id));
 
       const dupFa = siblings.some(s => (s.titleFa || '').trim() === (nodeFormData.titleFa || '').trim());
       if (dupFa) {
@@ -265,7 +265,7 @@
         }
       }
 
-      const codeDup = rawAccounts.some(n => n.id !== nodeFormData.id && n.code === nodeFormData.code);
+      const codeDup = rawAccounts.some(n => String(n.id) !== String(nodeFormData.id) && String(n.code) === String(nodeFormData.code));
       if (codeDup) {
         showToast(t('کد حساب وارد شده در کل ساختار تکراری است', 'Account code must be unique globally'), 'error');
         return false;
@@ -308,7 +308,7 @@
              await logAction('حساب کدینگ', targetId, 'create', `ایجاد حساب: ${payload.code} - ${payload.title_fa}`);
           }
         } else {
-          if (nodeFormData.parentId === selectedNodeId) {
+          if (String(nodeFormData.parentId) === String(selectedNodeId)) {
             return showToast(t('گره نمی‌تواند زیرمجموعه خودش قرار گیرد', 'A node cannot be a child of itself'), 'error');
           }
           const { error } = await supabase.from('fm_coa_accounts').update(payload).eq('id', selectedNodeId);
@@ -329,7 +329,7 @@
     };
 
     const handleDeleteNode = (node) => {
-      const hasChildren = rawAccounts.some(n => n.parentId === node.id);
+      const hasChildren = rawAccounts.some(n => String(n.parentId) === String(node.id));
       if (hasChildren) {
         return showToast(t('این حساب دارای زیرمجموعه است و حذف آن امکان‌پذیر نیست', 'Account has children and cannot be removed'), 'error');
       }
@@ -361,12 +361,12 @@
 
     const activeNodePermissions = useMemo(() => {
       if (!selectedNodeId) return [];
-      return accountPermissions.filter(p => p.account_id === selectedNodeId);
+      return accountPermissions.filter(p => String(p.account_id) === String(selectedNodeId));
     }, [accountPermissions, selectedNodeId]);
 
     const handleAddPermission = async () => {
       if (!permFormData.granteeId || !selectedNodeId) return;
-      const duplicate = activeNodePermissions.some(p => p.grantee_type === permFormData.granteeType && p.grantee_id === permFormData.granteeId);
+      const duplicate = activeNodePermissions.some(p => p.grantee_type === permFormData.granteeType && String(p.grantee_id) === String(permFormData.granteeId));
       if (duplicate) {
         return showToast(t('این دسترسی قبلاً برای حساب ثبت شده است', 'Access role/user already specified'), 'error');
       }
@@ -419,11 +419,13 @@
           const userParty = systemParties.find(p => String(p.id) === String(user.party_id || user.person_id));
           let fNameStr = '';
           if (userParty) {
-              if (userParty.full_name) fNameStr = userParty.full_name;
-              else if (userParty.party_type === 'company' && userParty.company_name) fNameStr = userParty.company_name;
-              else fNameStr = `${userParty.first_name || ''} ${userParty.last_name || ''}`.trim();
+              if (userParty.party_type === 'legal' && userParty.company_name) {
+                  fNameStr = userParty.company_name;
+              } else {
+                  fNameStr = `${userParty.first_name || ''} ${userParty.last_name || ''}`.trim();
+              }
           }
-          if (!fNameStr) {
+          if (!fNameStr || fNameStr === '') {
               const fname = user.first_name || user.name || '';
               const lname = user.last_name || user.family || '';
               fNameStr = (fname || lname) ? `${fname} ${lname}`.trim() : '---';
