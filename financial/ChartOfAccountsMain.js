@@ -80,7 +80,7 @@
         if (!supabase) return;
         const [currRes, userRes, roleRes, userRoleMapRes] = await Promise.all([
           supabase.from('fm_currencies').select('id, code, name_fa, name_en'),
-          supabase.from('sec_users').select('id, username, is_active'),
+          supabase.from('sec_users').select('id, username, first_name, last_name, is_active'),
           supabase.from('sec_roles').select('*'),
           supabase.from('sec_user_roles').select('user_id, role_id')
         ]);
@@ -398,6 +398,7 @@
           result.push({
             id: user.id,
             username: user.username,
+            fullName: (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '---',
             accessLevel: maxAccess,
             reason: reasons.join(' / ')
           });
@@ -434,7 +435,8 @@
     ];
 
     const consolidatedColumns = [
-      { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '140px' },
+      { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '130px' },
+      { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: '160px' },
       {
         field: 'accessLevel', header_fa: 'نهایت سطح دسترسی', header_en: 'Effective Access', width: '150px',
         render: (v) => (
@@ -477,6 +479,8 @@
                 onAddRoot={access.canCreate ? handleAddTreeRoot : undefined}
                 onAddChild={access.canCreate ? handleAddTreeChild : undefined}
                 onDelete={access.canDelete ? handleDeleteNode : undefined}
+                onImport={(file) => showToast(t(`فایل ${file.name} جهت پردازش بارگذاری شد.`, `File ${file.name} uploaded for processing.`), 'info')}
+                onDownloadSample={() => showToast(t('در حال دانلود نمونه فایل اکسل...', 'Downloading Excel Sample...'), 'info')}
               />
             </div>
 
@@ -499,30 +503,32 @@
                     )}
                   </div>
 
-                  <div className="flex-1 p-4 overflow-y-auto min-h-0">
+                  <div className="flex-1 flex flex-col p-4 overflow-y-auto min-h-0">
                     {activeTab === 'details' && (
-                      <div className="space-y-4 animate-in fade-in duration-200">
-                        <Alert type="info" icon={Info} message={<span>{t('سطح گره جاری:', 'Current Element Hierarchy Level:')} <strong className="text-indigo-600 dark:text-indigo-300">{levelLabels[nodeDepth]}</strong></span>} />
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <TextField size="sm" formCode={formCode} label={t('کد حساب (ترکیبی اتوماتیک)', 'Account Code')} value={nodeFormData.code || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
-                          <SelectField size="sm" formCode={formCode} label={t('ارز مبنای تراکنش', 'Transaction Base Currency')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => ({ value: c.id, label: `${c.code} - ${isRtl ? c.name_fa : c.name_en}` }))]} isRtl={isRtl} />
-                        </div>
+                      <div className="flex flex-col h-full min-h-0 animate-in fade-in duration-200">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                          <Alert type="info" icon={Info} message={<span>{t('سطح گره جاری:', 'Current Element Hierarchy Level:')} <strong className="text-indigo-600 dark:text-indigo-300">{levelLabels[nodeDepth]}</strong></span>} />
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TextField size="sm" formCode={formCode} label={t('کد حساب (ترکیبی اتوماتیک)', 'Account Code')} value={nodeFormData.code || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
+                            <SelectField size="sm" formCode={formCode} label={t('نوع ارز', 'Currency Type')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => ({ value: c.id, label: `${c.code} - ${isRtl ? c.name_fa : c.name_en}` }))]} isRtl={isRtl} />
+                          </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <TextField size="sm" formCode={formCode} label={t('عنوان فارسی حساب', 'Persian Title')} value={nodeFormData.titleFa || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleFa: e.target.value })} isRtl={isRtl} required />
-                          <TextField size="sm" formCode={formCode} label={t('عنوان انگلیسی حساب', 'English Title')} value={nodeFormData.titleEn || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleEn: e.target.value })} isRtl={isRtl} dir="ltr" />
-                        </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <TextField size="sm" formCode={formCode} label={t('عنوان فارسی حساب', 'Persian Title')} value={nodeFormData.titleFa || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleFa: e.target.value })} isRtl={isRtl} required />
+                            <TextField size="sm" formCode={formCode} label={t('عنوان انگلیسی حساب', 'English Title')} value={nodeFormData.titleEn || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, titleEn: e.target.value })} isRtl={isRtl} dir="ltr" />
+                          </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                          <SelectField size="sm" formCode={formCode} label={t('نوع حساب', 'Account Category')} value={nodeFormData.accountType || 'main'} onChange={(e) => setNodeFormData({ ...nodeFormData, accountType: e.target.value })} options={[{ value: 'main', label: t('حساب اصلی', 'Main Account') }, { value: 'intermediate', label: t('حساب واسط / کنترلی', 'Intermediate Account') }]} isRtl={isRtl} />
-                          <div className="flex flex-row items-center gap-6 pt-5 pb-1">
-                            <ToggleField size="sm" formCode={formCode} label={t('کنترل موجودی', 'Control Inventory')} checked={!!nodeFormData.controlInventory} onChange={(v) => setNodeFormData({ ...nodeFormData, controlInventory: v })} isRtl={isRtl} />
-                            <ToggleField size="sm" formCode={formCode} label={t('فعال', 'Active')} checked={nodeFormData.isActive !== false} onChange={(v) => setNodeFormData({ ...nodeFormData, isActive: v })} isRtl={isRtl} />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <SelectField size="sm" formCode={formCode} label={t('نوع حساب', 'Account Category')} value={nodeFormData.accountType || 'main'} onChange={(e) => setNodeFormData({ ...nodeFormData, accountType: e.target.value })} options={[{ value: 'main', label: t('حساب اصلی', 'Main Account') }, { value: 'intermediate', label: t('حساب واسط / کنترلی', 'Intermediate Account') }]} isRtl={isRtl} />
+                            <div className="grid grid-cols-2 gap-4 pt-5 pb-1 items-center">
+                              <ToggleField size="sm" formCode={formCode} label={t('کنترل موجودی', 'Control Inventory')} checked={!!nodeFormData.controlInventory} onChange={(v) => setNodeFormData({ ...nodeFormData, controlInventory: v })} isRtl={isRtl} />
+                              <ToggleField size="sm" formCode={formCode} label={t('فعال', 'Active')} checked={nodeFormData.isActive !== false} onChange={(v) => setNodeFormData({ ...nodeFormData, isActive: v })} isRtl={isRtl} />
+                            </div>
                           </div>
                         </div>
 
-                        <div className="pt-4 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
+                        <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2 shrink-0">
                           <Button size="sm" variant="ghost" onClick={() => { setIsCreatingNode(false); setSelectedNodeId(null); setNodeFormData({}); }}>{t('انصراف', 'Cancel')}</Button>
                           {access.canEdit && <Button size="sm" variant="primary" icon={Save} onClick={handleSaveNodeForm}>{t('ذخیره تغییرات حساب', 'Save Account')}</Button>}
                         </div>
@@ -543,7 +549,7 @@
 
                         <div className="flex-1 min-h-[250px]">
                           <DataGrid
-                            data={activeNodePermissions} columns={permColumns} language={language} formCode={formCode}
+                            data={activeNodePermissions} columns={permColumns} language={language} formCode={formCode} hideImport={true}
                             actions={[{ id: 'delete', icon: Trash2, tooltip: t('حذف دسترسی', 'Revoke Permission'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'permission', data: row }), className: 'text-red-500 hover:text-red-600' }]}
                           />
                         </div>
@@ -554,7 +560,7 @@
                       <div className="space-y-3 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
                         <Alert type="warning" icon={Shield} message={t('لیست زیر مجموع تمامی کاربرانی است که به صورت مستقیم یا از طریق تفویض نقش‌های خود، اجازه تعامل با این حساب را کسب کرده‌اند.', 'Consolidated aggregate list of all operators with computed effective system access level.')} />
                         <div className="flex-1 min-h-[300px]">
-                          <DataGrid data={consolidatedUsersList} columns={consolidatedColumns} language={language} formCode={formCode} />
+                          <DataGrid data={consolidatedUsersList} columns={consolidatedColumns} language={language} formCode={formCode} hideImport={true} />
                         </div>
                       </div>
                     )}
