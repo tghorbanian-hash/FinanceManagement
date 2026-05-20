@@ -55,6 +55,7 @@
     const [systemUsers, setSystemUsers] = useState([]);
     const [systemRoles, setSystemRoles] = useState([]);
     const [userRolesMapping, setUserRolesMapping] = useState([]);
+    const [systemParties, setSystemParties] = useState([]);
 
     const [accountPermissions, setAccountPermissions] = useState([]);
     const [permFormData, setPermFormData] = useState({ granteeType: 'user', granteeId: '', accessLevel: 'view' });
@@ -87,17 +88,19 @@
     const fetchLookups = useCallback(async () => {
       try {
         if (!supabase) return;
-        const [currRes, userRes, roleRes, userRoleMapRes] = await Promise.all([
+        const [currRes, userRes, roleRes, userRoleMapRes, partyRes] = await Promise.all([
           safeFetch(supabase.from('fm_currencies').select('*')),
           safeFetch(supabase.from('sec_users').select('*')),
           safeFetch(supabase.from('sec_roles').select('*')),
-          safeFetch(supabase.from('sec_user_roles').select('*'))
+          safeFetch(supabase.from('sec_user_roles').select('*')),
+          safeFetch(supabase.from('fm_parties').select('id, first_name, last_name, full_name, company_name, party_type'))
         ]);
 
         if (currRes.data) setCurrencies(currRes.data);
         if (userRes.data) setSystemUsers(userRes.data.filter(u => u.is_active !== false));
         if (roleRes.data) setSystemRoles(roleRes.data);
         if (userRoleMapRes.data) setUserRolesMapping(userRoleMapRes.data);
+        if (partyRes.data) setSystemParties(partyRes.data);
       } catch (err) {
         console.error('Error fetching lookups:', err);
       }
@@ -295,9 +298,14 @@
         if (isCreatingNode) {
           const { data, error } = await supabase.from('fm_coa_accounts').insert([payload]).select();
           if (error) throw error;
-          if (data && data[0]) {
+          if (data && data.length > 0) {
             targetId = data[0].id;
-            await logAction('حساب کدینگ', targetId, 'create', `ایجاد حساب: ${payload.code} - ${payload.title_fa}`);
+          } else {
+            const { data: fetchNew } = await supabase.from('fm_coa_accounts').select('id').eq('code', payload.code).single();
+            if (fetchNew) targetId = fetchNew.id;
+          }
+          if (targetId) {
+             await logAction('حساب کدینگ', targetId, 'create', `ایجاد حساب: ${payload.code} - ${payload.title_fa}`);
           }
         } else {
           if (nodeFormData.parentId === selectedNodeId) {
@@ -309,7 +317,11 @@
           await logAction('حساب کدینگ', targetId, 'update', `ویرایش حساب: ${payload.code} - ${payload.title_fa}`);
         }
 
-        await fetchDesignerData(targetId);
+        if (targetId) {
+            await fetchDesignerData(targetId);
+        } else {
+            await fetchDesignerData();
+        }
         showToast(t('اطلاعات حساب با موفقیت ثبت شد', 'Account specifications updated successfully'));
       } catch (err) {
         showToast(t('خطا در ذخیره اطلاعات گره حساب', 'Error saving account specification'), 'error');
@@ -384,7 +396,7 @@
         let maxAccess = null;
         const reasons = [];
 
-        const directPerm = activeNodePermissions.find(p => p.grantee_type === 'user' && p.grantee_id === String(user.id));
+        const directPerm = activeNodePermissions.find(p => p.grantee_type === 'user' && String(p.grantee_id) === String(user.id));
         if (directPerm) {
           maxAccess = directPerm.access_level;
           reasons.push(t('دسترسی مستقیم', 'Direct Access'));
@@ -404,9 +416,18 @@
         });
 
         if (maxAccess) {
-          const fname = user.first_name || user.name || '';
-          const lname = user.last_name || user.family || '';
-          const fNameStr = (fname || lname) ? `${fname} ${lname}`.trim() : '---';
+          const userParty = systemParties.find(p => String(p.id) === String(user.party_id || user.person_id));
+          let fNameStr = '';
+          if (userParty) {
+              if (userParty.full_name) fNameStr = userParty.full_name;
+              else if (userParty.party_type === 'company' && userParty.company_name) fNameStr = userParty.company_name;
+              else fNameStr = `${userParty.first_name || ''} ${userParty.last_name || ''}`.trim();
+          }
+          if (!fNameStr) {
+              const fname = user.first_name || user.name || '';
+              const lname = user.last_name || user.family || '';
+              fNameStr = (fname || lname) ? `${fname} ${lname}`.trim() : '---';
+          }
           
           result.push({
             id: user.id,
@@ -419,7 +440,7 @@
       });
 
       return result;
-    }, [selectedNodeId, systemUsers, activeNodePermissions, userRolesMapping, systemRoles, t]);
+    }, [selectedNodeId, systemUsers, activeNodePermissions, userRolesMapping, systemRoles, systemParties, t]);
 
     const permColumns = [
       {

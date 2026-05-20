@@ -136,7 +136,7 @@
     }, [searchTerm, treeData, idField]);
 
     const toggleExpand = (id, e) => {
-      e.stopPropagation();
+      if (e) e.stopPropagation();
       const newExpanded = new Set(expandedIds);
       if (newExpanded.has(id)) newExpanded.delete(id);
       else newExpanded.add(id);
@@ -172,7 +172,7 @@
             {hasChildren ? (
               <div 
                 className="w-5 h-5 flex items-center justify-center text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors z-10 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-600 shadow-sm shrink-0 cursor-pointer"
-                onClick={(e) => { e.stopPropagation(); toggleExpand(node[idField], e); }}
+                onClick={(e) => toggleExpand(node[idField], e)}
               >
                 <div className={`transition-transform duration-200 ${isExpanded ? '' : (isRtl ? 'rotate-90' : '-rotate-90')}`}>
                   <ChevronDown size={12} />
@@ -205,7 +205,13 @@
             </div>
 
             <div className={`flex items-center gap-0.5 shrink-0 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-              {onAddChild && access.canCreate && <button onClick={(e) => { e.stopPropagation(); onAddChild(node); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"><Plus size={14}/></button>}
+              {onAddChild && access.canCreate && <button onClick={(e) => { 
+                e.stopPropagation(); 
+                const nExp = new Set(expandedIds);
+                nExp.add(node[idField]);
+                setExpandedIds(nExp);
+                onAddChild(node); 
+              }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded"><Plus size={14}/></button>}
               {onDelete && access.canDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(node); }} title={t('حذف', 'Delete')} className="p-1 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"><Trash2 size={14}/></button>}
             </div>
           </div>
@@ -628,7 +634,13 @@
                         ) : (
                           <div className="flex items-center justify-center gap-0.5 opacity-100">
                             {onAddChild && access.canCreate && (
-                              <button onClick={(e) => { e.stopPropagation(); onAddChild(row); }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-sm transition-all">
+                              <button onClick={(e) => { 
+                                e.stopPropagation(); 
+                                const newExp = new Set(expandedIds);
+                                newExp.add(row[idField]);
+                                setExpandedIds(newExp);
+                                onAddChild(row); 
+                              }} title={t('افزودن زیرمجموعه', 'Add Child')} className="p-1.5 rounded-md text-slate-400 dark:text-slate-500 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 hover:shadow-sm transition-all">
                                 <Plus size={14} strokeWidth={2} />
                               </button>
                             )}
