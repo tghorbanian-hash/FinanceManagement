@@ -245,7 +245,8 @@
       setNodeDepth(nextDepth);
       setNodeFormData({ code: suggested, titleFa: '', titleEn: '', parentId: parentNode.id, currencyId: parentNode.currencyId || '', isActive: true, accountType: 'main', controlInventory: false });
       setIsCreatingNode(true);
-    };
+      setActiveTab('details');
+      };
 
     const validateNodeUniqueness = () => {
       const pId = nodeFormData.parentId || null;
