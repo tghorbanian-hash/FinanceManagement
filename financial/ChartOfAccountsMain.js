@@ -230,6 +230,7 @@
       setNodeDepth(1);
       setNodeFormData({ code: suggested, titleFa: '', titleEn: '', parentId: null, currencyId: '', isActive: true, accountType: 'main', controlInventory: false });
       setIsCreatingNode(true);
+      setActiveTab('details');
     };
 
     const handleAddTreeChild = (parentNode) => {
