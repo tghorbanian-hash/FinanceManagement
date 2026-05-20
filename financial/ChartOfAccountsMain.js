@@ -167,7 +167,7 @@
           code: a.code,
           titleFa: a.title_fa,
           titleEn: a.title_en,
-          title: isRtl ? `${a.code} - ${a.title_fa}` : `${a.code} - ${a.title_en || a.title_fa}`,
+          title: isRtl ? a.title_fa : (a.title_en || a.title_fa),
           currencyId: a.currency_id,
           isActive: a.is_active,
           accountType: a.account_type,
@@ -246,7 +246,7 @@
       setNodeFormData({ code: suggested, titleFa: '', titleEn: '', parentId: parentNode.id, currencyId: parentNode.currencyId || '', isActive: true, accountType: 'main', controlInventory: false });
       setIsCreatingNode(true);
       setActiveTab('details');
-      };
+    };
 
     const validateNodeUniqueness = () => {
       const pId = nodeFormData.parentId || null;
