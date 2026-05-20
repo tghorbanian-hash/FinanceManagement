@@ -75,18 +75,27 @@
       }
     }, [supabase, currentUser]);
 
+    const safeFetch = async (query) => {
+      try {
+        const res = await query;
+        return res.error ? { data: null, error: res.error } : res;
+      } catch (e) {
+        return { data: null, error: e };
+      }
+    };
+
     const fetchLookups = useCallback(async () => {
       try {
         if (!supabase) return;
         const [currRes, userRes, roleRes, userRoleMapRes] = await Promise.all([
-          supabase.from('fm_currencies').select('id, code, name_fa, name_en'),
-          supabase.from('sec_users').select('id, username, first_name, last_name, is_active'),
-          supabase.from('sec_roles').select('*'),
-          supabase.from('sec_user_roles').select('user_id, role_id')
+          safeFetch(supabase.from('fm_currencies').select('*')),
+          safeFetch(supabase.from('sec_users').select('*')),
+          safeFetch(supabase.from('sec_roles').select('*')),
+          safeFetch(supabase.from('sec_user_roles').select('*'))
         ]);
 
         if (currRes.data) setCurrencies(currRes.data);
-        if (userRes.data) setSystemUsers(userRes.data.filter(u => u.is_active));
+        if (userRes.data) setSystemUsers(userRes.data.filter(u => u.is_active !== false));
         if (roleRes.data) setSystemRoles(roleRes.data);
         if (userRoleMapRes.data) setUserRolesMapping(userRoleMapRes.data);
       } catch (err) {
@@ -184,7 +193,7 @@
         }
 
         if (retainNodeId) {
-          const match = mapped.find(m => m.id === retainNodeId);
+          const match = mapped.find(m => String(m.id) === String(retainNodeId));
           if (match) {
             setSelectedNodeId(match.id);
             setNodeFormData({ ...match });
@@ -375,17 +384,17 @@
         let maxAccess = null;
         const reasons = [];
 
-        const directPerm = activeNodePermissions.find(p => p.grantee_type === 'user' && p.grantee_id === user.id);
+        const directPerm = activeNodePermissions.find(p => p.grantee_type === 'user' && p.grantee_id === String(user.id));
         if (directPerm) {
           maxAccess = directPerm.access_level;
           reasons.push(t('دسترسی مستقیم', 'Direct Access'));
         }
 
-        const userRoles = userRolesMapping.filter(m => m.user_id === user.id).map(m => m.role_id);
-        const rolePerms = activeNodePermissions.filter(p => p.grantee_type === 'role' && userRoles.includes(p.grantee_id));
+        const userRoles = userRolesMapping.filter(m => String(m.user_id) === String(user.id)).map(m => String(m.role_id));
+        const rolePerms = activeNodePermissions.filter(p => p.grantee_type === 'role' && userRoles.includes(String(p.grantee_id)));
 
         rolePerms.forEach(rp => {
-          const roleObj = systemRoles.find(r => r.id === rp.grantee_id);
+          const roleObj = systemRoles.find(r => String(r.id) === String(rp.grantee_id));
           const rTitle = roleObj ? (roleObj.title || roleObj.name) : t('نقش سیستم', 'System Role');
           reasons.push(`${t('ارث‌بری از نقش:', 'Inherited via Role:')} ${rTitle}`);
           
@@ -395,10 +404,14 @@
         });
 
         if (maxAccess) {
+          const fname = user.first_name || user.name || '';
+          const lname = user.last_name || user.family || '';
+          const fNameStr = (fname || lname) ? `${fname} ${lname}`.trim() : '---';
+          
           result.push({
             id: user.id,
-            username: user.username,
-            fullName: (user.first_name || user.last_name) ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : '---',
+            username: user.username || user.name || user.email || '---',
+            fullName: fNameStr,
             accessLevel: maxAccess,
             reason: reasons.join(' / ')
           });
@@ -417,9 +430,10 @@
         field: 'grantee_id', header_fa: 'نام کاربری / عنوان نقش', header_en: 'Name/Title', width: '220px',
         render: (v, row) => {
           if (row.grantee_type === 'user') {
-            return systemUsers.find(u => u.id === v)?.username || v;
+            const u = systemUsers.find(su => String(su.id) === String(v));
+            return u ? (u.username || u.name || u.email || v) : v;
           } else {
-            const role = systemRoles.find(r => r.id === v);
+            const role = systemRoles.find(r => String(r.id) === String(v));
             return role ? (role.title || role.name) : v;
           }
         }
@@ -486,7 +500,7 @@
 
             <div className="flex-1 flex flex-col overflow-auto p-4 gap-3 bg-slate-50/50 dark:bg-slate-900/20">
               {selectedNodeId || isCreatingNode ? (
-                <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm">
+                <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm h-full">
                   <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
                     <button onClick={() => setActiveTab('details')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
                       {t('مشخصات و الزامات حساب', 'Account Parameters')}
@@ -511,7 +525,11 @@
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <TextField size="sm" formCode={formCode} label={t('کد حساب (ترکیبی اتوماتیک)', 'Account Code')} value={nodeFormData.code || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
-                            <SelectField size="sm" formCode={formCode} label={t('نوع ارز', 'Currency Type')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => ({ value: c.id, label: `${c.code} - ${isRtl ? c.name_fa : c.name_en}` }))]} isRtl={isRtl} />
+                            <SelectField size="sm" formCode={formCode} label={t('نوع ارز', 'Currency Type')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => {
+                               const cNameFa = c.name_fa || c.title_fa || c.name || c.title || '';
+                               const cNameEn = c.name_en || c.title_en || c.name || c.title || '';
+                               return { value: c.id, label: `${c.code || c.id} - ${isRtl ? cNameFa : cNameEn}` };
+                            })]} isRtl={isRtl} />
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -521,9 +539,13 @@
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                             <SelectField size="sm" formCode={formCode} label={t('نوع حساب', 'Account Category')} value={nodeFormData.accountType || 'main'} onChange={(e) => setNodeFormData({ ...nodeFormData, accountType: e.target.value })} options={[{ value: 'main', label: t('حساب اصلی', 'Main Account') }, { value: 'intermediate', label: t('حساب واسط / کنترلی', 'Intermediate Account') }]} isRtl={isRtl} />
-                            <div className="grid grid-cols-2 gap-4 pt-5 pb-1 items-center">
-                              <ToggleField size="sm" formCode={formCode} label={t('کنترل موجودی', 'Control Inventory')} checked={!!nodeFormData.controlInventory} onChange={(v) => setNodeFormData({ ...nodeFormData, controlInventory: v })} isRtl={isRtl} />
-                              <ToggleField size="sm" formCode={formCode} label={t('فعال', 'Active')} checked={nodeFormData.isActive !== false} onChange={(v) => setNodeFormData({ ...nodeFormData, isActive: v })} isRtl={isRtl} />
+                            <div className="flex flex-row items-center gap-6 pt-5 pb-1 w-full">
+                              <div className="flex-1">
+                                <ToggleField size="sm" formCode={formCode} label={t('کنترل موجودی', 'Control Inventory')} checked={!!nodeFormData.controlInventory} onChange={(v) => setNodeFormData({ ...nodeFormData, controlInventory: v })} isRtl={isRtl} wrapperClassName="w-full" />
+                              </div>
+                              <div className="flex-1">
+                                <ToggleField size="sm" formCode={formCode} label={t('فعال', 'Active')} checked={nodeFormData.isActive !== false} onChange={(v) => setNodeFormData({ ...nodeFormData, isActive: v })} isRtl={isRtl} wrapperClassName="w-full" />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -537,10 +559,10 @@
 
                     {activeTab === 'permissions' && (
                       <div className="space-y-4 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
-                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end shrink-0">
                           <SelectField size="sm" label={t('نوع گیرنده دسترسی', 'Grantee Type')} value={permFormData.granteeType} onChange={(e) => setPermFormData({ ...permFormData, granteeType: e.target.value, granteeId: '' })} options={[{ value: 'user', label: t('کاربر مشخص', 'Specific User') }, { value: 'role', label: t('نقش کلان سیستم', 'System Role Group') }]} isRtl={isRtl} />
                           
-                          <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
+                          <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username || u.name || u.email || '---' })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
                           
                           <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده اطلاعات حساب', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
                           
