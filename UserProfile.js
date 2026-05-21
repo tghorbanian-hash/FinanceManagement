@@ -65,46 +65,75 @@
     const fetchUserData = async () => {
       if (!supabase || !currentUser.id) return;
       try {
-        const { data: userPartyData } = await supabase
-          .from('users')
-          .select(`party_id, parties ( id, first_name, last_name, roles ), avatar_url`)
+        const { data: userData, error: userErr } = await supabase
+          .from('sec_users')
+          .select('id, username, party_id, avatar_url')
           .eq('id', currentUser.id)
           .single();
 
+        if (userErr) throw userErr;
+
         let partyRoles = [];
-        let partyId = null;
-        if (userPartyData?.parties) {
-          partyRoles = userPartyData.parties.roles || [];
-          partyId = userPartyData.parties.id;
-        }
-
-        const { data: systemRolesData } = await supabase
-          .from('fm_user_roles')
-          .select('fm_roles(id, title_fa, title_en)')
-          .eq('user_id', currentUser.id);
-          
-        const userRoles = systemRolesData?.map(ur => isRtl ? ur.fm_roles.title_fa : ur.fm_roles.title_en) || [];
-
+        let partyId = userData?.party_id;
+        let fullName = currentUser.name || '';
         let departmentName = '---';
+
         if (partyId) {
-          const { data: orgData } = await supabase
-            .from('fm_org_members')
-            .select('fm_org_chart(title_fa, title_en)')
-            .eq('party_id', partyId)
-            .limit(1)
+          const { data: partyData } = await supabase
+            .from('parties')
+            .select('id, first_name, last_name, company_name, party_type, roles')
+            .eq('id', partyId)
             .single();
+          
+          if (partyData) {
+            partyRoles = partyData.roles || [];
+            fullName = partyData.party_type === 'legal' ? partyData.company_name : `${partyData.first_name || ''} ${partyData.last_name || ''}`.trim();
+          }
+
+          const { data: personnelData } = await supabase
+            .from('fm_org_chart_personnel')
+            .select('node_id, from_date, to_date')
+            .eq('person_id', partyId);
             
-          if (orgData?.fm_org_chart) {
-            departmentName = isRtl ? orgData.fm_org_chart.title_fa : orgData.fm_org_chart.title_en;
+          if (personnelData && personnelData.length > 0) {
+            const today = new Date().toISOString().split('T')[0];
+            let activeNodeId = null;
+            for (const p of personnelData) {
+               const fDate = p.from_date || '1900-01-01';
+               const tDate = p.to_date || '2099-12-31';
+               if (today >= fDate && today <= tDate) {
+                   activeNodeId = p.node_id;
+                   break;
+               }
+            }
+            if (activeNodeId) {
+               const { data: nodeData } = await supabase
+                 .from('fm_org_chart_nodes')
+                 .select('title, is_active')
+                 .eq('id', activeNodeId)
+                 .single();
+               if (nodeData && nodeData.is_active) {
+                  departmentName = nodeData.title;
+               }
+            }
           }
         }
 
+        const { data: sysRolesData } = await supabase
+          .from('sec_user_roles')
+          .select('sec_roles(id, title)')
+          .eq('user_id', currentUser.id);
+          
+        const userRoles = sysRolesData?.map(ur => ur.sec_roles?.title).filter(Boolean) || [];
+
         setProfileInfo(prev => ({
           ...prev,
+          fullName: fullName || currentUser.name,
+          username: userData?.username || currentUser.email || '',
           partyRoles,
           userRoles,
           department: departmentName,
-          avatarUrl: userPartyData?.avatar_url || null
+          avatarUrl: userData?.avatar_url || null
         }));
       } catch (err) {
         console.error('Error fetching user profile data:', err);
@@ -164,7 +193,7 @@
 
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-        const { error: updateError } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+        const { error: updateError } = await supabase.from('sec_users').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
         if (updateError) throw updateError;
 
         setProfileInfo(prev => ({ ...prev, avatarUrl: publicUrl }));
@@ -233,7 +262,7 @@
     ];
 
     const formatRoleFa = (role) => {
-        const rolesMap = { 'vendor': 'تامین‌کننده', 'customer': 'مشتری', 'employee': 'کارمند', 'broker': 'بروکر', 'shareholder': 'سهامدار', 'exchange': 'صرافی' };
+        const rolesMap = { 'system_user': 'کاربر سیستم', 'vendor': 'تامین‌کننده', 'supplier': 'تامین‌کننده', 'customer': 'مشتری', 'employee': 'کارمند', 'broker': 'بروکر', 'shareholder': 'سهامدار', 'exchange': 'صرافی' };
         return rolesMap[role.toLowerCase()] || role;
     };
 
@@ -393,13 +422,21 @@
                                 options={[{value: '', label: t('---', '---')}, ...costTypes]}
                                 isRtl={isRtl} 
                             />
-                            {/* فضا برای تنظیمات مالی آینده */}
                         </div>
                     </div>
                 )}
 
                 {activeTab === 'security' && (
-                    <div className="flex flex-col gap-3 max-w-sm">
+                    <form autoComplete="off" onSubmit={e => e.preventDefault()} className="flex flex-col gap-3 max-w-sm">
+                        <input type="text" autoComplete="username" style={{ display: 'none' }} />
+                        <input type="password" autoComplete="current-password" style={{ display: 'none' }} />
+                        
+                        <div className="bg-blue-50/80 border border-blue-100 p-3 rounded-xl mb-2 shadow-sm">
+                          <p className="text-[11px] font-medium text-blue-700 leading-relaxed text-justify">
+                             {t('راهنما: رمز عبور باید بین ۸ تا ۱۴ کاراکتر باشد و شامل حداقل یک حرف بزرگ، یک حرف کوچک، یک عدد و یک علامت (مانند @, #, $) باشد.', 'Hint: Password must be 8-14 chars, including uppercase, lowercase, number, and symbol.')}
+                          </p>
+                        </div>
+
                         <TextField 
                             size="sm" type="password"
                             label={t('رمز عبور فعلی', 'Current Password')} 
@@ -421,12 +458,11 @@
                             onChange={e => setPasswords({...passwords, confirm: e.target.value})} 
                             isRtl={isRtl} dir="ltr"
                         />
-                    </div>
+                    </form>
                 )}
 
             </div>
 
-            {/* نوار عملیات (فوتر فرم) */}
             <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end items-center shrink-0 rounded-b-xl gap-2 h-12">
                 {activeTab === 'personal' && (
                     <span className="text-[11px] text-slate-500 font-bold ml-auto">{t('اطلاعات شخصی فقط جهت نمایش است.', 'Personal info is read-only.')}</span>

@@ -357,6 +357,13 @@
 
             {authView === 'reset' && (
               <form onSubmit={handleResetPasswordSubmit} className="space-y-4 animate-in fade-in slide-in-from-right-4">
+                
+                <div className="bg-blue-50/80 border border-blue-100 p-3 rounded-xl mb-4 shadow-sm">
+                  <p className="text-[11px] font-medium text-blue-700 leading-relaxed text-justify">
+                     {t('راهنما: رمز عبور باید بین ۸ تا ۱۴ کاراکتر باشد و شامل حداقل یک حرف بزرگ، یک حرف کوچک، یک عدد و یک علامت (مانند @, #, $) باشد.', 'Hint: Password must be 8-14 chars, including uppercase, lowercase, number, and symbol.')}
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-[12px] font-bold text-slate-700 mb-1.5 ml-1">
                     {t.newPassword || (isRtl ? 'کلمه عبور جدید' : 'New Password')}
