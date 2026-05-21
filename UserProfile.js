@@ -21,15 +21,15 @@
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
     
-    const currentUser = window.NavigationSystem?.currentUser || { id: null, name: 'کاربر سیستم', email: '' };
+    const currentUser = window.NavigationSystem?.currentUser || { id: null, name: '', email: '' };
 
     const [activeTab, setActiveTab] = useState('personal');
     const [isLoading, setIsLoading] = useState(false);
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
 
     const [profileInfo, setProfileInfo] = useState({
-      fullName: currentUser.name,
-      username: currentUser.email || currentUser.username || '',
+      fullName: 'در حال بارگذاری...',
+      username: 'در حال بارگذاری...',
       partyRoles: [],
       userRoles: [],
       department: '---',
@@ -71,33 +71,40 @@
           .eq('id', currentUser.id)
           .single();
 
-        if (userErr) throw userErr;
+        if (userErr) {
+            console.error('Error fetching sec_users:', userErr);
+            throw userErr;
+        }
 
         let partyRoles = [];
-        let partyId = userData?.party_id;
-        let fullName = currentUser.name || '';
+        let fetchedFullName = '';
         let departmentName = '---';
 
-        if (partyId) {
-          const { data: partyData } = await supabase
+        if (userData?.party_id) {
+          const { data: partyData, error: partyErr } = await supabase
             .from('parties')
             .select('id, first_name, last_name, company_name, party_type, roles')
-            .eq('id', partyId)
+            .eq('id', userData.party_id)
             .single();
           
-          if (partyData) {
+          if (partyErr) {
+              console.error('Error fetching party:', partyErr);
+          } else if (partyData) {
             partyRoles = partyData.roles || [];
-            fullName = partyData.party_type === 'legal' ? partyData.company_name : `${partyData.first_name || ''} ${partyData.last_name || ''}`.trim();
+            fetchedFullName = partyData.party_type === 'legal' ? partyData.company_name : `${partyData.first_name || ''} ${partyData.last_name || ''}`.trim();
           }
 
-          const { data: personnelData } = await supabase
+          const { data: personnelData, error: persErr } = await supabase
             .from('fm_org_chart_personnel')
             .select('node_id, from_date, to_date')
-            .eq('person_id', partyId);
+            .eq('person_id', userData.party_id);
             
-          if (personnelData && personnelData.length > 0) {
+          if (persErr) {
+              console.error('Error fetching personnel:', persErr);
+          } else if (personnelData && personnelData.length > 0) {
             const today = new Date().toISOString().split('T')[0];
             let activeNodeId = null;
+            
             for (const p of personnelData) {
                const fDate = p.from_date || '1900-01-01';
                const tDate = p.to_date || '2099-12-31';
@@ -106,37 +113,61 @@
                    break;
                }
             }
+
             if (activeNodeId) {
-               const { data: nodeData } = await supabase
+               const { data: nodeData, error: nodeErr } = await supabase
                  .from('fm_org_chart_nodes')
                  .select('title, is_active')
                  .eq('id', activeNodeId)
                  .single();
-               if (nodeData && nodeData.is_active) {
+                 
+               if (nodeErr) {
+                   console.error('Error fetching node:', nodeErr);
+               } else if (nodeData && nodeData.is_active) {
                   departmentName = nodeData.title;
                }
             }
           }
         }
 
-        const { data: sysRolesData } = await supabase
+        const { data: sysRolesData, error: sysRolesErr } = await supabase
           .from('sec_user_roles')
-          .select('sec_roles(id, title)')
+          .select('role_id')
           .eq('user_id', currentUser.id);
           
-        const userRoles = sysRolesData?.map(ur => ur.sec_roles?.title).filter(Boolean) || [];
+        let userRoles = [];
+        if (sysRolesErr) {
+            console.error('Error fetching sec_user_roles:', sysRolesErr);
+        } else if (sysRolesData && sysRolesData.length > 0) {
+            const roleIds = sysRolesData.map(r => r.role_id);
+            const { data: rolesRows, error: rolesErr } = await supabase
+                .from('sec_roles')
+                .select('title')
+                .in('id', roleIds);
+                
+            if (rolesErr) {
+                console.error('Error fetching sec_roles:', rolesErr);
+            } else {
+                userRoles = rolesRows?.map(r => r.title).filter(Boolean) || [];
+            }
+        }
 
         setProfileInfo(prev => ({
           ...prev,
-          fullName: fullName || currentUser.name,
-          username: userData?.username || currentUser.email || '',
+          fullName: fetchedFullName || '---',
+          username: userData?.username || '---',
           partyRoles,
           userRoles,
           department: departmentName,
           avatarUrl: userData?.avatar_url || null
         }));
       } catch (err) {
-        console.error('Error fetching user profile data:', err);
+        console.error('Error in fetchUserData:', err);
+        setProfileInfo(prev => ({
+          ...prev,
+          fullName: 'خطا در دریافت اطلاعات',
+          username: 'خطا'
+        }));
       }
     };
 
@@ -183,24 +214,33 @@
         if (!event.target.files || event.target.files.length === 0) return;
         const file = event.target.files[0];
         const fileExt = file.name.split('.').pop();
-        const fileName = `${currentUser.id}-${Math.random()}.${fileExt}`;
+        const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`;
         const filePath = `avatars/${fileName}`;
 
         setIsUploadingAvatar(true);
 
         const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file);
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+             console.error("Storage upload error:", uploadError);
+             throw new Error(isRtl ? 'خطا در آپلود عکس. آیا باکت avatars در Storage وجود دارد و public است؟' : 'Storage upload failed.');
+        }
 
         const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
         const { error: updateError } = await supabase.from('sec_users').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
-        if (updateError) throw updateError;
+        if (updateError) {
+             console.error("View update error:", updateError);
+             const { error: updateErr2 } = await supabase.from('sec.users').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+             if (updateErr2) {
+                 console.error("Base table update error:", updateErr2);
+                 throw new Error(isRtl ? 'خطا در ذخیره آدرس عکس در دیتابیس.' : 'Database update failed.');
+             }
+        }
 
         setProfileInfo(prev => ({ ...prev, avatarUrl: publicUrl }));
-        showToast(t('تصویر پروفایل بروزرسانی شد.', 'Profile picture updated.'));
+        showToast(t('تصویر پروفایل با موفقیت بروزرسانی شد.', 'Profile picture updated successfully.'));
       } catch (error) {
-        showToast(t('خطا در آپلود تصویر (ممکن است باکت avatars ایجاد نشده باشد).', 'Error uploading image.'), 'error');
-        console.error(error);
+        showToast(error.message || t('خطا در آپلود تصویر.', 'Error uploading image.'), 'error');
       } finally {
         setIsUploadingAvatar(false);
       }
@@ -245,10 +285,10 @@
       try {
         const { error } = await supabase.auth.updateUser({ password: passwords.new });
         if (error) throw error;
-        showToast(t('رمز عبور تغییر کرد.', 'Password changed.'));
+        showToast(t('رمز عبور با موفقیت تغییر کرد.', 'Password changed successfully.'));
         setPasswords({ current: '', new: '', confirm: '' });
       } catch (err) {
-        showToast(t('خطا در تغییر رمز عبور.', 'Error changing password.'), 'error');
+        showToast(t('خطا در تغییر رمز عبور. با مدیر سیستم تماس بگیرید.', 'Error changing password.'), 'error');
       } finally {
         setIsLoading(false);
       }
@@ -428,8 +468,8 @@
 
                 {activeTab === 'security' && (
                     <form autoComplete="off" onSubmit={e => e.preventDefault()} className="flex flex-col gap-3 max-w-sm">
-                        <input type="text" autoComplete="username" style={{ display: 'none' }} />
-                        <input type="password" autoComplete="current-password" style={{ display: 'none' }} />
+                        <input type="text" name="hidden_username" autoComplete="off" style={{ display: 'none' }} />
+                        <input type="password" name="hidden_password" autoComplete="new-password" style={{ display: 'none' }} />
                         
                         <div className="bg-blue-50/80 border border-blue-100 p-3 rounded-xl mb-2 shadow-sm">
                           <p className="text-[11px] font-medium text-blue-700 leading-relaxed text-justify">
@@ -443,6 +483,7 @@
                             value={passwords.current} 
                             onChange={e => setPasswords({...passwords, current: e.target.value})} 
                             isRtl={isRtl} dir="ltr"
+                            autoComplete="new-password"
                         />
                         <TextField 
                             size="sm" type="password"
@@ -450,6 +491,7 @@
                             value={passwords.new} 
                             onChange={e => setPasswords({...passwords, new: e.target.value})} 
                             isRtl={isRtl} dir="ltr"
+                            autoComplete="new-password"
                         />
                         <TextField 
                             size="sm" type="password"
@@ -457,6 +499,7 @@
                             value={passwords.confirm} 
                             onChange={e => setPasswords({...passwords, confirm: e.target.value})} 
                             isRtl={isRtl} dir="ltr"
+                            autoComplete="new-password"
                         />
                     </form>
                 )}
