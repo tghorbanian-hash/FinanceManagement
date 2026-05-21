@@ -219,6 +219,7 @@
     const headerMenuRef = useRef(null);
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
+    const dragGroupItem = useRef(null); const dragOverGroupItem = useRef(null);
 
     const lastSyncState = useRef(null);
 
@@ -398,7 +399,33 @@
       dragRowItem.current = null; dragOverRowItem.current = null;
     };
 
-    const handleGroupDrop = (e) => { e.preventDefault(); const field = e.dataTransfer.getData('colField'); if (field && !groupCols.includes(field)) { setGroupCols([...groupCols, field]); setPage(1); } };
+    const handleGroupDragStart = (e, index) => {
+      dragGroupItem.current = index;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    };
+    const handleGroupDragEnter = (e, index) => { dragOverGroupItem.current = index; };
+    const handleGroupDragEnd = () => {
+      if (dragGroupItem.current !== null && dragOverGroupItem.current !== null && dragGroupItem.current !== dragOverGroupItem.current) {
+        const newGroups = [...groupCols];
+        const dragged = newGroups[dragGroupItem.current];
+        newGroups.splice(dragGroupItem.current, 1);
+        newGroups.splice(dragOverGroupItem.current, 0, dragged);
+        setGroupCols(newGroups);
+        setPage(1);
+      }
+      dragGroupItem.current = null; dragOverGroupItem.current = null;
+    };
+
+    const handleGroupDrop = (e) => { 
+      e.preventDefault(); 
+      const field = e.dataTransfer.getData('colField'); 
+      if (field && !groupCols.includes(field)) { 
+        setGroupCols([...groupCols, field]); 
+        setPage(1); 
+      } 
+    };
+    
     const removeGroupCol = (field) => { setGroupCols(groupCols.filter(f => f !== field)); setCollapsedGroups([]); setPage(1); };
     const toggleGroupCollapse = (groupKey) => { setCollapsedGroups(prev => prev.includes(groupKey) ? prev.filter(k => k !== groupKey) : [...prev, groupKey]); };
     const expandAllGroups = () => setCollapsedGroups([]);
@@ -441,7 +468,7 @@
       if (field === 'ROW_REORDER_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: 0, zIndex: isHeader ? 45 : (isFooter ? 25 : 15), backgroundColor: bg };
       if (field === 'SELECT_COL') return { position: 'sticky', [isRtl ? 'right' : 'left']: rowReorderable ? 30 : 0, zIndex: isHeader ? 45 : (isFooter ? 25 : 15), backgroundColor: bg };
 
-      if (!pinnedCols.includes(field)) return { zIndex: isHeader ? 30 : (isFooter ? 10 : 1) };
+      if (!pinnedCols.includes(field)) return isHeader ? { zIndex: 30 } : (isFooter ? { zIndex: 10 } : {});
       
       let offset = (rowReorderable ? 30 : 0) + (selectable ? 40 : 0); 
       for (let col of visibleColumns) {
@@ -492,10 +519,15 @@
                   {groupCols.map((field, idx) => {
                     const colDef = columns.find(c => c.field === field);
                     return (
-                      <div key={field} className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-[12px] font-bold shadow-sm">
+                      <div key={field} 
+                           draggable
+                           onDragStart={(e) => { e.stopPropagation(); handleGroupDragStart(e, idx); }}
+                           onDragEnter={(e) => handleGroupDragEnter(e, idx)}
+                           onDragEnd={handleGroupDragEnd}
+                           onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                           className="flex items-center gap-1 bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-[12px] font-bold shadow-sm cursor-grab active:cursor-grabbing">
                         <span>{colDef ? t(colDef.header_fa, colDef.header_en) : field}</span>
                         <button onClick={() => removeGroupCol(field)} className="text-indigo-400 dark:text-indigo-500 hover:text-red-500 dark:hover:text-red-400 rounded-full p-0.5 ml-1"><X size={12} /></button>
-                        {idx < groupCols.length - 1 && <ChevronLeft size={12} className="text-slate-300 dark:text-slate-600 ml-1" />}
                       </div>
                     );
                   })}
