@@ -329,7 +329,7 @@
             {authView === 'otp' && (
               <form onSubmit={(e) => handleResetNext(e, 'reset')} className="space-y-5 animate-in fade-in slide-in-from-right-4">
                 <p className="text-[12px] font-medium text-slate-600 text-center mb-6">
-                  {t.enterOtpDesc || (isRtl ? 'کد ۵ رقمی پیامک شده را وارد کنید (شبیه‌سازی: هر کدی قابل قبول است)' : 'Enter the 5-digit code sent to you (Simulation: any code works)')}
+                  {t.enterOtpDesc || (isRtl ? 'کد 5 رقمی پیامک شده را وارد کنید (شبیه‌سازی: هر کدی قابل قبول است)' : 'Enter the 5-digit code sent to you (Simulation: any code works)')}
                 </p>
                 <div>
                   <div className="relative">
@@ -360,7 +360,7 @@
                 
                 <div className="bg-blue-50/80 border border-blue-100 p-3 rounded-xl mb-4 shadow-sm">
                   <p className="text-[11px] font-medium text-blue-700 leading-relaxed text-justify">
-                     {t('راهنما: رمز عبور باید بین ۸ تا ۱۴ کاراکتر باشد و شامل حداقل یک حرف بزرگ، یک حرف کوچک، یک عدد و یک علامت (مانند @, #, $) باشد.', 'Hint: Password must be 8-14 chars, including uppercase, lowercase, number, and symbol.')}
+                     {isRtl ? 'راهنما: رمز عبور باید بین 8 تا 14 کاراکتر باشد و شامل حداقل یک حرف بزرگ، یک حرف کوچک، یک عدد و یک علامت (مانند @, #, $) باشد.' : 'Hint: Password must be 8-14 chars, including uppercase, lowercase, number, and symbol.'}
                   </p>
                 </div>
 
@@ -408,7 +408,7 @@
           </div>
 
           <div className="text-center mt-6 text-[11px] text-slate-400 font-medium">
-            {isRtl ? 'تمامی حقوق برای شرکت توسعه نرم‌افزار محفوظ است. © ۲۰۲۶' : 'All rights reserved © 2026'}
+            {isRtl ? 'تمامی حقوق برای شرکت توسعه نرم‌افزار محفوظ است. © 2026' : 'All rights reserved © 2026'}
           </div>
         </div>
 
