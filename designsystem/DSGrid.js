@@ -214,6 +214,7 @@
     const [showColMenu, setShowColMenu] = useState(false);
     const [activeHeaderMenu, setActiveHeaderMenu] = useState(null);
     const [selectedRows, setSelectedRows] = useState([]);
+    const [draggableRowIndex, setDraggableRowIndex] = useState(null);
     
     const colMenuRef = useRef(null);
     const headerMenuRef = useRef(null);
@@ -397,6 +398,7 @@
         if (onRowReorder) onRowReorder(dragRowItem.current, dragOverRowItem.current);
       }
       dragRowItem.current = null; dragOverRowItem.current = null;
+      setDraggableRowIndex(null);
     };
 
     const handleGroupDragStart = (e, index) => {
@@ -728,7 +730,7 @@
                 const isSelected = selectedRows.includes(row.id);
                 const isActive = activeRowId !== null && activeRowId === row.id;
                 const isHighlighted = isSelected || isActive;
-                const isDragging = rowReorderable;
+                const isDragging = rowReorderable && draggableRowIndex === rowIndex;
 
                 return (
                   <tr 
@@ -737,11 +739,15 @@
                     onClick={() => onRowClick && onRowClick(row)}
                     draggable={isDragging}
                     onDragStart={(e) => handleRowDragStart(e, rowIndex)} onDragEnter={(e) => handleRowDragEnter(e, rowIndex)} onDragEnd={handleRowDragEnd} onDragOver={(e) => e.preventDefault()}
-                    className={`bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700/50 transition-colors group ${isHighlighted ? 'bg-indigo-50/80 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                    className={`bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700/50 transition-colors group ${isHighlighted ? 'bg-indigo-50/80 dark:bg-indigo-900/30' : 'hover:bg-slate-50 dark:hover:bg-slate-700/50'} ${isDragging ? 'opacity-50' : ''}`}
                   >
                     {rowReorderable && (
                       <td style={{...getStickyStyles('ROW_REORDER_COL', false), backgroundColor: 'inherit'}} className={`p-0 text-center bg-inherit ${!isHighlighted ? 'group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50' : ''} ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
-                        <div className="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-indigo-500 dark:hover:text-indigo-400 py-1.5 px-2 w-full flex items-center justify-center">
+                        <div 
+                          onMouseDown={() => setDraggableRowIndex(rowIndex)}
+                          onMouseUp={() => setDraggableRowIndex(null)}
+                          className="cursor-grab active:cursor-grabbing text-slate-300 dark:text-slate-600 hover:text-indigo-500 dark:hover:text-indigo-400 py-1.5 px-2 w-full flex items-center justify-center"
+                        >
                           <GripVertical size={14} />
                         </div>
                       </td>
