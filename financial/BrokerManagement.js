@@ -3,16 +3,37 @@
   const React = window.React;
   const { useState, useEffect, useMemo, useRef } = React;
   
-  const { 
-    Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, SelectField, ToggleField, CheckboxField, DatePicker,
-    LogTimeline
-  } = window.DesignSystem || window.DSCore || window.DSForms || window.DSGrid || window.DSFeedback || {};
+  // --- Safe Component Destructuring ---
+  const Fallback = () => null;
+  const DS = window.DesignSystem || {};
+  const DSCore = window.DSCore || DS;
+  const DSForms = window.DSForms || DS;
+  const DSGrid = window.DSGrid || DS;
+  const DSFeedback = window.DSFeedback || DS;
+
+  const Button = DSCore.Button || DS.Button || Fallback;
+  const PageHeader = DSCore.PageHeader || DS.PageHeader || Fallback;
+  const Modal = DSFeedback.Modal || DS.Modal || Fallback;
+  const AdvancedFilter = DSGrid.AdvancedFilter || DS.AdvancedFilter || Fallback;
+  const DataGrid = DSGrid.DataGrid || DS.DataGrid || Fallback;
+  const TextField = DSForms.TextField || DS.TextField || Fallback;
+  const SelectField = DSForms.SelectField || DS.SelectField || Fallback;
+  const ToggleField = DSForms.ToggleField || DS.ToggleField || Fallback;
+  const CheckboxField = DSForms.CheckboxField || DS.CheckboxField || Fallback;
+  const DatePicker = DSForms.DatePicker || DS.DatePicker || Fallback;
+  const LogTimeline = DSFeedback.LogTimeline || DS.LogTimeline || Fallback;
   
-  const { 
-    Edit, Trash2, Save, 
-    AlertTriangle, Lock, Plus, Briefcase, Percent, History
-  } = window.LucideIcons || {};
+  const LucideIcons = window.LucideIcons || {};
+  const FallbackIcon = () => null;
+  const Edit = LucideIcons.Edit || FallbackIcon;
+  const Trash2 = LucideIcons.Trash2 || FallbackIcon;
+  const Save = LucideIcons.Save || FallbackIcon;
+  const AlertTriangle = LucideIcons.AlertTriangle || FallbackIcon;
+  const Lock = LucideIcons.Lock || FallbackIcon;
+  const Plus = LucideIcons.Plus || FallbackIcon;
+  const Briefcase = LucideIcons.Briefcase || FallbackIcon;
+  const Percent = LucideIcons.Percent || FallbackIcon;
+  const History = LucideIcons.History || FallbackIcon;
   
   const supabase = window.supabase;
 
