@@ -86,18 +86,30 @@
         userData = pubUser;
         
         if (!userData) {
+            const { data: altUser } = await supabase.from('sec_users').select('*').eq('user_id', userId).single();
+            userData = altUser;
+            if (!userData) {
+                const { data: authUser } = await supabase.from('sec_users').select('*').eq('auth_id', userId).single();
+                userData = authUser;
+            }
+        }
+        
+        if (!userData) {
              throw new Error('User record not found in database');
         }
 
+        const partyId = userData.party_id || userData.person_id || userData.personnel_id;
+        const fetchedUsername = userData.username || userData.user_name || userData.email || '---';
+
         let partyRoles = [];
-        let fetchedFullName = userData.full_name || '';
+        let fetchedFullName = userData.full_name || userData.fullname || '';
         let departmentName = '---';
 
-        if (userData.party_id) {
+        if (partyId) {
           const { data: partyData, error: partyErr } = await supabase
             .from('parties')
             .select('id, first_name, last_name, company_name, party_type, roles')
-            .eq('id', userData.party_id)
+            .eq('id', partyId)
             .single();
           
           if (!partyErr && partyData) {
@@ -115,16 +127,22 @@
             }
           }
 
-          const { data: personnelData, error: persErr } = await supabase
-            .from('fm_org_chart_personnel')
-            .select('node_id, from_date, to_date')
-            .eq('person_id', userData.party_id);
+          let orgData = null;
+          const res1 = await supabase.from('fm_org_chart_personnel').select('node_id, from_date, to_date').eq('person_id', partyId);
+          if (!res1.error && res1.data && res1.data.length > 0) {
+              orgData = res1.data;
+          } else {
+              const res2 = await supabase.from('fm_org_chart_personnel').select('node_id, from_date, to_date').eq('personnel_id', partyId);
+              if (!res2.error && res2.data && res2.data.length > 0) {
+                  orgData = res2.data;
+              }
+          }
             
-          if (!persErr && personnelData && personnelData.length > 0) {
+          if (orgData && orgData.length > 0) {
             const today = new Date().toISOString().split('T')[0];
             let activeNodeId = null;
             
-            for (const p of personnelData) {
+            for (const p of orgData) {
                const fDate = p.from_date && p.from_date.length >= 10 ? p.from_date.substring(0,10).replace(/\//g, '-') : '1000-01-01';
                const tDate = p.to_date && p.to_date.length >= 10 ? p.to_date.substring(0,10).replace(/\//g, '-') : '9999-12-31';
                
@@ -133,7 +151,7 @@
                    break;
                }
             }
-            if (!activeNodeId) activeNodeId = personnelData[0].node_id;
+            if (!activeNodeId) activeNodeId = orgData[0].node_id;
 
             if (activeNodeId) {
                const { data: nodeData } = await supabase
@@ -150,13 +168,13 @@
         }
 
         let userRoles = [];
-        const { data: sysRolesData } = await supabase
-          .from('sec_user_roles')
-          .select('role_id')
-          .eq('user_id', userId);
+        let rolesRes = await supabase.from('sec_user_roles').select('role_id').eq('user_id', userData.id);
+        if ((rolesRes.error || !rolesRes.data || rolesRes.data.length === 0) && userData.id !== userId) {
+             rolesRes = await supabase.from('sec_user_roles').select('role_id').eq('user_id', userId);
+        }
           
-        if (sysRolesData && sysRolesData.length > 0) {
-            const roleIds = sysRolesData.map(r => r.role_id);
+        if (rolesRes.data && rolesRes.data.length > 0) {
+            const roleIds = rolesRes.data.map(r => r.role_id);
             const { data: rolesRows } = await supabase
                 .from('sec_roles')
                 .select('title')
@@ -169,8 +187,8 @@
 
         setProfileInfo(prev => ({
           ...prev,
-          fullName: fetchedFullName || userData.username || 'بدون نام',
-          username: userData.username || '---',
+          fullName: fetchedFullName || fetchedUsername || 'بدون نام',
+          username: fetchedUsername,
           partyRoles,
           userRoles,
           department: departmentName,
@@ -387,27 +405,27 @@
                 
                 {activeTab === 'personal' && (
                     <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{t('نام کامل', 'Full Name')}</label>
-                                <div className="h-8 px-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200">
+                                <div className="min-h-[36px] px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200">
                                     {profileInfo.fullName}
                                 </div>
                             </div>
                             <div className="flex flex-col gap-1">
                                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{t('نام کاربری', 'Username')}</label>
-                                <div className="h-8 px-2.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200 dir-ltr justify-end">
+                                <div className="min-h-[36px] px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200 dir-ltr justify-end">
                                     {profileInfo.username}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
                           <div className="flex flex-col gap-1">
                               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                   <Fingerprint size={12} /> {t('نقش‌های شخص (حقیقی/حقوقی)', 'Party Roles')}
                               </label>
-                              <div className="min-h-[32px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
+                              <div className="min-h-[36px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
                                   {profileInfo.partyRoles.length > 0 ? profileInfo.partyRoles.map((role, idx) => (
                                       <span key={idx} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold rounded">
                                           {isRtl ? formatRoleFa(role) : role}
@@ -420,7 +438,7 @@
                               <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                   <Shield size={12} /> {t('دسترسی‌های سیستمی', 'System Roles')}
                               </label>
-                              <div className="min-h-[32px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
+                              <div className="min-h-[36px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
                                   {profileInfo.userRoles.length > 0 ? profileInfo.userRoles.map((role, idx) => (
                                       <span key={idx} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded">
                                           {role}
@@ -466,7 +484,7 @@
 
                 {activeTab === 'financial' && (
                     <div className="flex flex-col gap-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <SelectField 
                                 size="sm" 
                                 label={t('نوع هزینه پیش‌فرض', 'Default Cost Type')}
