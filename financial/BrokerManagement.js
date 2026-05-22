@@ -99,6 +99,7 @@
   const BrokerManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+    const currentUser = window.NavigationSystem?.currentUser?.name || 'مدیر سیستم';
     
     const [data, setData] = useState([]);
     const [allParties, setAllParties] = useState([]);
@@ -250,6 +251,18 @@
       }
     };
 
+    const logAction = async (entityType, recordId, action, details = '', oldData = null, newData = null) => {
+      try {
+        if (!supabase) return;
+        await supabase.from('fm_record_logs').insert([{
+          entity_type: entityType, record_id: String(recordId), action: action, user_name: currentUser,
+          details: details, old_data: oldData, new_data: newData
+        }]);
+      } catch (err) {
+        console.error('Failed to log action:', err);
+      }
+    };
+
     const openLogModal = async (entityType, recordId) => {
       setLogModal({ isOpen: true, recordId });
       setIsLogsLoading(true);
@@ -277,6 +290,15 @@
         return;
       }
 
+      if (formData.validFrom && formData.validTo) {
+          const fromDate = new Date(formData.validFrom);
+          const toDate = new Date(formData.validTo);
+          if (toDate < fromDate) {
+              alert(t('تاریخ پایان اعتبار نمی‌تواند قبل از تاریخ شروع باشد.', 'Valid To date cannot be earlier than Valid From date.'));
+              return;
+          }
+      }
+
       setIsLoading(true);
       try {
         const payload = {
@@ -288,17 +310,24 @@
           updated_at: new Date().toISOString()
         };
 
-        const { error } = currentRecord?.id 
-          ? await supabase.from('fm_brokers').update(payload).eq('id', currentRecord.id)
-          : await supabase.from('fm_brokers').insert([payload]);
-
-        if (error) {
-          if (error.code === '23505') {
-            alert(t('این بروکر قبلاً ثبت شده است.', 'This broker is already registered.'));
-          } else {
-            throw error;
+        if (currentRecord?.id) {
+          const { error } = await supabase.from('fm_brokers').update(payload).eq('id', currentRecord.id);
+          if (error) {
+             if (error.code === '23505') alert(t('این بروکر قبلاً ثبت شده است.', 'This broker is already registered.'));
+             else throw error;
+             return;
           }
-          return;
+          await logAction('fm_brokers', currentRecord.id, 'update', `ویرایش اطلاعات بروکر`, currentRecord, { ...currentRecord, ...payload });
+        } else {
+          const { data: newRec, error } = await supabase.from('fm_brokers').insert([payload]).select();
+          if (error) {
+             if (error.code === '23505') alert(t('این بروکر قبلاً ثبت شده است.', 'This broker is already registered.'));
+             else throw error;
+             return;
+          }
+          if (newRec && newRec.length > 0) {
+             await logAction('fm_brokers', newRec[0].id, 'create', `تعریف بروکر جدید`, null, newRec[0]);
+          }
         }
         
         setIsModalOpen(false);
@@ -375,12 +404,14 @@
 
     const handleToggleActive = async (row, newValue) => {
       try {
+        const oldRec = data.find(item => item.id === row.id);
         const { error } = await supabase
           .from('fm_brokers')
           .update({ is_active: newValue })
           .eq('id', row.id);
         
         if (error) throw error;
+        await logAction('fm_brokers', row.id, 'update', newValue ? 'فعال‌سازی بروکر' : 'غیرفعال‌سازی بروکر', oldRec, { ...oldRec, is_active: newValue });
         setData(prev => prev.map(item => item.id === row.id ? { ...item, is_active: newValue } : item));
       } catch (err) {
         console.error("Toggle Error:", err);
@@ -391,11 +422,17 @@
       setIsLoading(true);
       try {
         if (deleteConfirm.type === 'single') {
+          const oldRec = data.find(c => c.id === deleteConfirm.data.id);
           const { error } = await supabase.from('fm_brokers').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
+          await logAction('fm_brokers', deleteConfirm.data.id, 'delete', `حذف بروکر`, oldRec, null);
         } else if (deleteConfirm.type === 'bulk') {
+          const oldRecords = deleteConfirm.data.map(id => data.find(c => c.id === id)).filter(Boolean);
           const { error } = await supabase.from('fm_brokers').delete().in('id', deleteConfirm.data);
           if (error) throw error;
+          for (const oldRec of oldRecords) {
+              await logAction('fm_brokers', oldRec.id, 'delete', `حذف گروهی بروکر`, oldRec, null);
+          }
         }
         
         setSelectedIds([]);

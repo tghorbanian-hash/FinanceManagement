@@ -93,6 +93,15 @@
             return;
         }
 
+        if (contractFormData.fromDate && contractFormData.toDate) {
+            const fromDate = new Date(contractFormData.fromDate);
+            const toDate = new Date(contractFormData.toDate);
+            if (toDate < fromDate) {
+                showToast(t('تاریخ پایان اعتبار نمی‌تواند قبل از تاریخ شروع باشد.', 'Valid To date cannot be earlier than Valid From date.'), 'error');
+                return;
+            }
+        }
+
         setIsLoading(true);
         try {
             const payload = {
