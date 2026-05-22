@@ -5,8 +5,9 @@
   
   const { 
     Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, SelectField, ToggleField, CheckboxField, DatePicker
-  } = window.DesignSystem || window.DSCore || window.DSForms || window.DSGrid || {};
+    TextField, SelectField, ToggleField, CheckboxField, DatePicker,
+    LogTimeline
+  } = window.DesignSystem || window.DSCore || window.DSForms || window.DSGrid || window.DSFeedback || {};
   
   const { 
     Edit, Trash2, Save, 
@@ -91,8 +92,11 @@
     const [selectedIds, setSelectedIds] = useState([]);
     
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
-    const [logModal, setLogModal] = useState({ isOpen: false, recordId: null, tableName: '' });
     
+    const [logModal, setLogModal] = useState({ isOpen: false, recordId: null });
+    const [recordLogs, setRecordLogs] = useState([]);
+    const [isLogsLoading, setIsLogsLoading] = useState(false);
+
     const [formData, setFormData] = useState({
       partyId: '',
       accountId: '',
@@ -222,6 +226,27 @@
         console.error('Fetch Error:', err);
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const openLogModal = async (entityType, recordId) => {
+      setLogModal({ isOpen: true, recordId });
+      setIsLogsLoading(true);
+      try {
+        if (!supabase) throw new Error("Supabase is not initialized");
+        const { data, error } = await supabase
+          .from('fm_record_logs')
+          .select('*')
+          .eq('entity_type', entityType)
+          .eq('record_id', String(recordId))
+          .order('timestamp', { ascending: false });
+        if (error) throw error;
+        setRecordLogs(data || []);
+      } catch (err) {
+        console.error(err);
+        alert(t('خطا در دریافت تاریخچه تغییرات', 'Error fetching logs'));
+      } finally {
+        setIsLogsLoading(false);
       }
     };
 
@@ -500,7 +525,7 @@
               actions={[
                 { icon: Edit, tooltip: t('ویرایش مشخصات', 'Edit Details'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Percent, tooltip: t('قراردادها و کارمزدها', 'Contracts & Commissions'), onClick: (row) => { setSelectedBroker(row); setIsContractsModalOpen(true); }, className: 'text-slate-400 hover:text-emerald-600' },
-                { icon: History, tooltip: t('تاریخچه سیستم', 'System Log'), onClick: (row) => setLogModal({ isOpen: true, recordId: row.id, tableName: 'fm_brokers' }), className: 'text-slate-400 hover:text-blue-600' },
+                { icon: History, tooltip: t('تاریخچه تغییرات رکورد', 'System Log'), onClick: (row) => openLogModal('fm_brokers', row.id), className: 'text-slate-400 hover:text-blue-600' },
                 { icon: Trash2, tooltip: t('حذف بروکر', 'Delete Broker'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
               bulkActions={[
@@ -518,7 +543,7 @@
         >
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2 flex items-end gap-2">
+              <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <SelectField 
                     size="sm" 
@@ -543,7 +568,7 @@
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <SearchableAccountSelect 
                   accounts={accounts}
                   value={formData.accountId} 
@@ -676,20 +701,12 @@
 
         <Modal 
           isOpen={logModal.isOpen} 
-          onClose={() => setLogModal({ isOpen: false, recordId: null, tableName: '' })} 
-          title={t('تاریخچه تغییرات', 'Change History')} 
-          width="max-w-4xl" 
+          onClose={() => setLogModal({ isOpen: false, recordId: null })} 
+          title={t('لاگ‌های سیستمی رکورد', 'System Logs')} 
+          width="max-w-xl" 
           language={language}
         >
-          <div className="h-[500px] flex flex-col p-4 bg-slate-50 dark:bg-slate-800/50">
-             {window.SystemLog && logModal.recordId ? (
-                <window.SystemLog tableName={logModal.tableName} recordId={logModal.recordId} language={language} />
-             ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-500 font-bold">
-                   {t('ماژول لاگ سیستم در دسترس نیست.', 'System Log module is not available.')}
-                </div>
-             )}
-          </div>
+          <LogTimeline logs={recordLogs} isLoading={isLogsLoading} language={language} />
         </Modal>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
