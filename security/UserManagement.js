@@ -151,9 +151,20 @@
 
       setIsLoading(true);
       try {
+        let fullName = '';
+        const party = allParties.find(p => p.id === formData.partyId);
+        if (party) {
+            if (party.party_type === 'legal' && party.company_name) {
+                fullName = party.company_name;
+            } else {
+                fullName = `${party.first_name || ''} ${party.last_name || ''}`.trim();
+            }
+        }
+
         const payload = {
           username: formData.username,
           party_id: formData.partyId || null,
+          full_name: fullName,
           user_type: formData.userType,
           is_active: formData.isActive,
           email: formData.email,
