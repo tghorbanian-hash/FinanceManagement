@@ -11,7 +11,7 @@
   
   const { 
     Edit, Trash2, Save, Plus,
-    AlertTriangle, Lock, Briefcase
+    AlertTriangle, Lock, Briefcase, Info
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
@@ -69,7 +69,7 @@
                 .from('fm_broker_contracts')
                 .select('*')
                 .eq('broker_id', brokerId)
-                .order('from_date', { ascending: false });
+                .order('created_at', { ascending: false });
                 
             if (error) throw error;
             setContractsData(data || []);
@@ -82,8 +82,8 @@
     };
 
     const handleSaveContract = async () => {
-        if (!contractFormData.currencyId || !contractFormData.fromDate || contractFormData.commissionPct === null || contractFormData.commissionPct === '') {
-            showToast(t('فیلدهای ارز، تاریخ شروع و درصد کارمزد الزامی هستند.', 'Currency, From Date, and Commission fields are required.'), 'error');
+        if (!contractFormData.fromDate || contractFormData.commissionPct === null || contractFormData.commissionPct === '') {
+            showToast(t('فیلدهای تاریخ شروع و درصد کارمزد الزامی هستند.', 'From Date and Commission fields are required.'), 'error');
             return;
         }
 
@@ -97,7 +97,7 @@
         try {
             const payload = {
                 broker_id: broker.id,
-                currency_id: contractFormData.currencyId,
+                currency_id: contractFormData.currencyId || null,
                 from_date: contractFormData.fromDate,
                 to_date: contractFormData.toDate || null,
                 min_amount: contractFormData.minAmount || 0,
@@ -141,42 +141,49 @@
     };
 
     const getCurrencyName = (currencyId) => {
-        if (!currencyId) return '-';
+        if (!currencyId) return t('همه ارزها', 'All Currencies');
         const c = currencies.find(x => x.id === currencyId);
         if (!c) return '-';
         return c.title;
     };
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '-';
-      try {
-        return new Date(dateString).toLocaleDateString(isRtl ? 'fa-IR' : 'en-US');
-      } catch (e) {
-        return dateString;
-      }
-    };
-
     const contractColumns = [
+        {
+            field: 'status',
+            header_fa: 'وضعیت',
+            header_en: 'Status',
+            width: '90px',
+            render: (_, row) => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const isExpired = row.to_date && new Date(row.to_date) < today;
+                return isExpired ? 
+                    <Badge variant="rose" size="sm">{t('منقضی شده', 'Expired')}</Badge> : 
+                    <Badge variant="emerald" size="sm">{t('معتبر', 'Valid')}</Badge>;
+            }
+        },
         { 
             field: 'currency_id', 
             header_fa: 'ارز', 
             header_en: 'Currency', 
-            width: '100px',
-            render: (val) => <Badge variant="indigo" size="sm">{getCurrencyName(val)}</Badge>
+            width: '120px',
+            render: (val) => val ? 
+                <Badge variant="indigo" size="sm">{getCurrencyName(val)}</Badge> : 
+                <Badge variant="slate" size="sm">{t('همه ارزها', 'All Currencies')}</Badge>
         },
         { 
             field: 'from_date', 
             header_fa: 'از تاریخ', 
             header_en: 'From Date', 
             width: '120px',
-            render: (val) => <span dir="ltr" className="text-[12px]">{formatDate(val)}</span>
+            type: 'date'
         },
         { 
             field: 'to_date', 
             header_fa: 'تا تاریخ', 
             header_en: 'To Date', 
             width: '120px',
-            render: (val) => <span dir="ltr" className="text-[12px]">{formatDate(val)}</span>
+            type: 'date'
         },
         { 
             field: 'min_amount', 
@@ -197,7 +204,7 @@
             header_fa: 'درصد کارمزد', 
             header_en: 'Commission %', 
             width: '100px',
-            render: (val) => <Badge variant="emerald" size="sm" className="font-bold">{val} %</Badge>
+            render: (val) => <Badge variant="sky" size="sm" className="font-bold">{val} %</Badge>
         }
     ];
 
@@ -215,19 +222,24 @@
                     <span>{brokerName}</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
-                    <SelectField 
-                        size="sm" 
-                        label={t('ارز تراکنش', 'Currency')} 
-                        value={contractFormData.currencyId} 
-                        onChange={e => setContractFormData({...contractFormData, currencyId: e.target.value})} 
-                        isRtl={isRtl}
-                        required
-                        options={[
-                            { value: '', label: `-- ${t('انتخاب', 'Select')} --` },
-                            ...currencies.map(c => ({ value: c.id, label: c.title }))
-                        ]}
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end pb-3">
+                    <div className="relative">
+                        <SelectField 
+                            size="sm" 
+                            label={t('ارز تراکنش', 'Currency')} 
+                            value={contractFormData.currencyId} 
+                            onChange={e => setContractFormData({...contractFormData, currencyId: e.target.value})} 
+                            isRtl={isRtl}
+                            options={[
+                                { value: '', label: `-- ${t('همه ارزها', 'All Currencies')} --` },
+                                ...currencies.map(c => ({ value: c.id, label: c.title }))
+                            ]}
+                        />
+                        <div className="absolute -bottom-4 left-0 right-0 flex items-center gap-1 text-[9px] text-slate-500 dark:text-slate-400">
+                            <Info size={10} />
+                            <span className="whitespace-nowrap">{t('اختیاری (خالی = همه)', 'Optional (Empty = All)')}</span>
+                        </div>
+                    </div>
                     <DatePicker 
                         size="sm" 
                         label={t('از تاریخ', 'From Date')} 
@@ -313,7 +325,7 @@
                     actions={[
                         { icon: Edit, tooltip: t('ویرایش ردیف', 'Edit Tier'), onClick: (row) => setContractFormData({
                             id: row.id,
-                            currencyId: row.currency_id,
+                            currencyId: row.currency_id || '',
                             fromDate: row.from_date ? row.from_date.substring(0, 10) : '',
                             toDate: row.to_date ? row.to_date.substring(0, 10) : '',
                             minAmount: row.min_amount || 0,
