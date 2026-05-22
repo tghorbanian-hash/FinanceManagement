@@ -1,17 +1,12 @@
-/* * Filename: financial/BrokerManagement.js 
- * * راهنما برای خطای 404 (PGRST205):
- * اگر خطای پیدا نشدن جدول دریافت کردید، به دلیل کش شدن اسکیما در سوپابیس است.
- * لطفا کد زیر را در بخش SQL Editor سوپابیس اجرا کنید تا کش اسکیما رفرش شود:
- * NOTIFY pgrst, reload_schema;
- */
+/* Filename: financial/BrokerManagement.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo } = React;
+  const { useState, useEffect, useMemo, useRef } = React;
   
   const { 
     Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
     TextField, SelectField, ToggleField, CheckboxField, DatePicker
-  } = window.DesignSystem || {};
+  } = window.DesignSystem || window.DSCore || window.DSForms || window.DSGrid || {};
   
   const { 
     Edit, Trash2, Save, 
@@ -20,6 +15,65 @@
   
   const supabase = window.supabase;
 
+  // --- کامپوننت محلی برای انتخاب حساب ---
+  const SearchableAccountSelect = ({ accounts, value, onChange, disabled, placeholder, isRtl }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [search, setSearch] = useState('');
+    const wrapperRef = useRef(null);
+    
+    const selectedAcc = accounts.find(a => String(a.id) === String(value));
+    const displaySelected = selectedAcc ? `${selectedAcc.code} - ${isRtl ? selectedAcc.titleFa : selectedAcc.titleEn}` : '';
+
+    useEffect(() => {
+      const handleClickOutside = (event) => { 
+        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false); 
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filtered = accounts.filter(a => {
+        const searchLower = search.toLowerCase();
+        const codeStr = a.code || '';
+        const titleStr = (isRtl ? a.titleFa : a.titleEn) || '';
+        const pathStr = (isRtl ? a.pathFa : a.pathEn) || '';
+        return codeStr.includes(searchLower) || titleStr.includes(searchLower) || pathStr.includes(searchLower);
+    });
+
+    return (
+      <div className="relative w-full flex flex-col gap-1.5" ref={wrapperRef}>
+        <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">
+          {isRtl ? 'حساب مرتبط (آخرین سطح)' : 'Linked Account'}
+        </label>
+        <div className="relative w-full">
+          <input 
+            type="text" 
+            className={`w-full h-8 px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 outline-none transition-all focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 focus:border-indigo-400 disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 cursor-pointer`}
+            value={isOpen ? search : displaySelected} 
+            onChange={e => { setSearch(e.target.value); setIsOpen(true); }} 
+            onFocus={() => { setIsOpen(true); setSearch(''); }} 
+            disabled={disabled} 
+            placeholder={placeholder} 
+            dir={isRtl ? 'rtl' : 'ltr'}
+          />
+          {isOpen && !disabled && (
+            <div className={`absolute z-[9999] w-[350px] mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
+              {filtered.length > 0 ? filtered.map(acc => (
+                <div key={acc.id} className="px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-indigo-500/20 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0" onMouseDown={(e) => { e.preventDefault(); onChange(acc.id); setIsOpen(false); }}>
+                  <div className="font-bold text-slate-800 dark:text-slate-200 text-right dir-ltr">{acc.code} - {isRtl ? acc.titleFa : acc.titleEn}</div>
+                  <div className="text-slate-500 dark:text-slate-400 truncate mt-0.5 text-[10px] text-right" title={isRtl ? acc.pathFa : acc.pathEn}>{isRtl ? acc.pathFa : acc.pathEn}</div>
+                </div>
+              )) : (
+                <div className="p-3 text-center text-slate-500 text-[12px]">{isRtl ? 'موردی یافت نشد' : 'No results'}</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+  // -------------------------------------------------------------
+
   const BrokerManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
@@ -27,6 +81,7 @@
     const [data, setData] = useState([]);
     const [allParties, setAllParties] = useState([]);
     const [partiesDropdown, setPartiesDropdown] = useState([]);
+    const [accounts, setAccounts] = useState([]);
 
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState({});
@@ -40,6 +95,7 @@
     
     const [formData, setFormData] = useState({
       partyId: '',
+      accountId: '',
       validFrom: '',
       validTo: '',
       isActive: true
@@ -86,8 +142,51 @@
     };
 
     useEffect(() => {
+      fetchDropdownData();
       fetchData();
     }, []);
+
+    const fetchDropdownData = async () => {
+        try {
+          const { data: coaData } = await supabase
+            .from('fm_coa_accounts')
+            .select('id, parent_id, title_fa, title_en, code');
+          if (coaData) {
+            const parentIds = new Set(coaData.map(c => c.parent_id).filter(Boolean));
+            const leaves = coaData.filter(c => !parentIds.has(c.id));
+            
+            const buildPath = (node) => {
+              let pathFa = node.title_fa || '';
+              let pathEn = node.title_en || node.title_fa || '';
+              let current = node;
+              while(current.parent_id) {
+                const parent = coaData.find(c => c.id === current.parent_id);
+                if(parent) {
+                  pathFa = (parent.title_fa || '') + ' > ' + pathFa;
+                  pathEn = (parent.title_en || parent.title_fa || '') + ' > ' + pathEn;
+                  current = parent;
+                } else { break; }
+              }
+              return { pathFa, pathEn };
+            };
+  
+            const accOptions = leaves.map(leaf => {
+              const paths = buildPath(leaf);
+              return {
+                id: leaf.id,
+                code: leaf.code,
+                titleFa: leaf.title_fa,
+                titleEn: leaf.title_en,
+                pathFa: paths.pathFa,
+                pathEn: paths.pathEn
+              };
+            });
+            setAccounts(accOptions);
+          }
+        } catch (err) {
+          console.error('Fetch Accounts Error:', err);
+        }
+    };
 
     const fetchData = async () => {
       setIsLoading(true);
@@ -97,7 +196,7 @@
           { data: brokersData, error: bError }
         ] = await Promise.all([
           supabase.from('parties').select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email'),
-          supabase.from('fm_brokers').select('*').order('created_at', { ascending: false })
+          supabase.from('fm_brokers').select('*, account:fm_coa_accounts(id, title_fa, title_en, code)').order('created_at', { ascending: false })
         ]);
           
         if (pData && !pError) {
@@ -111,7 +210,13 @@
         }
 
         if (bError) throw bError;
-        setData(brokersData || []);
+        
+        const mappedData = (brokersData || []).map(item => ({
+            ...item,
+            accountName: item.account ? `[${item.account.code}] ${isRtl ? item.account.title_fa : item.account.title_en}` : '---'
+        }));
+
+        setData(mappedData);
 
       } catch (err) {
         console.error('Fetch Error:', err);
@@ -130,6 +235,7 @@
       try {
         const payload = {
           party_id: formData.partyId,
+          account_id: formData.accountId || null,
           valid_from: formData.validFrom || null,
           valid_to: formData.validTo || null,
           is_active: formData.isActive,
@@ -260,11 +366,13 @@
     const handleOpenModal = (record = null) => {
       setFormData(record ? {
         partyId: record.party_id || '',
+        accountId: record.account_id || '',
         validFrom: record.valid_from ? record.valid_from.substring(0, 10) : '',
         validTo: record.valid_to ? record.valid_to.substring(0, 10) : '',
         isActive: record.is_active ?? true
       } : { 
         partyId: '',
+        accountId: '',
         validFrom: '',
         validTo: '',
         isActive: true
@@ -280,15 +388,6 @@
       return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
     };
 
-    const formatDate = (dateString) => {
-      if (!dateString) return '-';
-      try {
-        return new Date(dateString).toLocaleDateString(isRtl ? 'fa-IR' : 'en-US');
-      } catch (e) {
-        return dateString;
-      }
-    };
-
     const columns = [
       { 
         field: 'party_id', 
@@ -297,19 +396,25 @@
         width: '250px',
         render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200">{getPartyName(val)}</span>
       },
+      {
+        field: 'accountName',
+        header_fa: 'حساب مرتبط',
+        header_en: 'Linked Account',
+        width: '220px'
+      },
       { 
         field: 'valid_from', 
         header_fa: 'تاریخ اعتبار از', 
         header_en: 'Valid From', 
         width: '140px',
-        render: (val) => <span className="text-[12px] text-slate-600 dark:text-slate-400" dir="ltr">{formatDate(val)}</span>
+        type: 'date'
       },
       { 
         field: 'valid_to', 
         header_fa: 'تاریخ اعتبار تا', 
         header_en: 'Valid To', 
         width: '140px',
-        render: (val) => <span className="text-[12px] text-slate-600 dark:text-slate-400" dir="ltr">{formatDate(val)}</span>
+        type: 'date'
       },
       { 
         field: 'is_active', 
@@ -361,7 +466,7 @@
         <PageHeader 
           title={t('مدیریت بروکرها', 'Broker Management')} 
           icon={Briefcase}
-          description={t('تعریف بروکرها، سوابق قرارداد و درصدهای کارمزد تراکنش‌ها', 'Manage brokers, contract histories, and commission percentages')}
+          description={t('تعریف بروکرها، حساب‌های مرتبط و سوابق قرارداد', 'Manage brokers, linked accounts, and contract histories')}
           language={language}
           breadcrumbs={[{ label: t('مالی', 'Financial') }, { label: t('بروکرها', 'Brokers') }]}
           viewConfig={viewConfig}
@@ -438,6 +543,16 @@
                 />
               </div>
 
+              <div className="md:col-span-2">
+                <SearchableAccountSelect 
+                  accounts={accounts}
+                  value={formData.accountId} 
+                  onChange={val => setFormData({...formData, accountId: val})} 
+                  isRtl={isRtl} 
+                  placeholder={t('جستجوی حساب...', 'Search Account...')}
+                />
+              </div>
+
               <DatePicker 
                 size="sm" 
                 label={t('تاریخ اعتبار از', 'Valid From')} 
@@ -456,7 +571,7 @@
                 dir="ltr" 
               />
 
-              <div className="md:col-span-2 flex items-center mt-2">
+              <div className="md:col-span-2 flex items-center mt-2 border-t border-slate-100 dark:border-slate-700/50 pt-3">
                  <ToggleField size="sm" label={t('بروکر فعال است', 'Is Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
               </div>
             </div>

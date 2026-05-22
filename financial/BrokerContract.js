@@ -5,7 +5,8 @@
   
   const { 
     Button, DataGrid, Modal,
-    TextField, SelectField, CurrencyField, Badge
+    TextField, SelectField, CurrencyField, Badge,
+    DatePicker, Toast
   } = window.DesignSystem || {};
   
   const { 
@@ -22,6 +23,7 @@
     const [currencies, setCurrencies] = useState([]);
     const [contractsData, setContractsData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [toast, setToast] = useState({ show: false, message: '', type: 'info' });
     
     const [contractFormData, setContractFormData] = useState({
       id: null,
@@ -35,13 +37,20 @@
 
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, data: null });
 
+    const showToast = (message, type = 'error') => {
+        setToast({ show: true, message, type });
+        setTimeout(() => setToast({ show: false, message: '', type: 'info' }), 4000);
+    };
+
     useEffect(() => {
       const initCurrencies = async () => {
          try {
-             const { data } = await supabase.from('fm_currencies').select('id, code, title_fa, title_en').eq('is_active', true);
+             const { data, error } = await supabase.from('fm_currencies').select('id, code, title').eq('is_active', true);
+             if (error) throw error;
              if (data) setCurrencies(data);
          } catch (e) {
              console.error('Error fetching currencies:', e);
+             showToast(t('خطا در دریافت لیست ارزها.', 'Error fetching currencies.'), 'error');
          }
       };
       initCurrencies();
@@ -66,14 +75,21 @@
             setContractsData(data || []);
         } catch (err) {
             console.error('Fetch Contracts Error:', err);
+            showToast(t('خطا در دریافت لیست قراردادها.', 'Error fetching contracts.'), 'error');
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleSaveContract = async () => {
-        if (!contractFormData.currencyId || !contractFormData.fromDate || contractFormData.commissionPct === null) {
-            alert(t('فیلدهای ارز، تاریخ شروع و درصد کارمزد الزامی هستند.', 'Currency, From Date, and Commission fields are required.'));
+        if (!contractFormData.currencyId || !contractFormData.fromDate || contractFormData.commissionPct === null || contractFormData.commissionPct === '') {
+            showToast(t('فیلدهای ارز، تاریخ شروع و درصد کارمزد الزامی هستند.', 'Currency, From Date, and Commission fields are required.'), 'error');
+            return;
+        }
+
+        const commissionValue = Number(contractFormData.commissionPct);
+        if (commissionValue > 100 || commissionValue < 0) {
+            showToast(t('درصد کارمزد نمی‌تواند بیشتر از 100 یا کمتر از صفر باشد.', 'Commission percentage cannot be greater than 100 or less than 0.'), 'error');
             return;
         }
 
@@ -86,7 +102,7 @@
                 to_date: contractFormData.toDate || null,
                 min_amount: contractFormData.minAmount || 0,
                 max_amount: contractFormData.maxAmount || null,
-                commission_pct: contractFormData.commissionPct,
+                commission_pct: commissionValue,
                 updated_at: new Date().toISOString()
             };
 
@@ -96,11 +112,12 @@
 
             if (error) throw error;
 
+            showToast(t('قرارداد با موفقیت ذخیره شد.', 'Contract saved successfully.'), 'success');
             setContractFormData({ id: null, currencyId: '', fromDate: '', toDate: '', minAmount: 0, maxAmount: 0, commissionPct: 0 });
             fetchContracts(broker.id);
         } catch (err) {
             console.error('Save Contract Error:', err);
-            alert(t('خطا در ذخیره قرارداد.', 'Error saving contract.'));
+            showToast(t('خطا در ذخیره قرارداد.', 'Error saving contract.'), 'error');
         } finally {
             setIsLoading(false);
         }
@@ -112,11 +129,12 @@
             const { error } = await supabase.from('fm_broker_contracts').delete().eq('id', deleteConfirm.data.id);
             if (error) throw error;
             
+            showToast(t('قرارداد با موفقیت حذف شد.', 'Contract deleted successfully.'), 'success');
             fetchContracts(broker.id);
             setDeleteConfirm({ isOpen: false, data: null });
         } catch (err) {
             console.error("Delete error:", err);
-            alert(t('خطا در حذف اطلاعات.', 'Deletion error.'));
+            showToast(t('خطا در حذف اطلاعات.', 'Deletion error.'), 'error');
         } finally {
             setIsLoading(false);
         }
@@ -126,7 +144,7 @@
         if (!currencyId) return '-';
         const c = currencies.find(x => x.id === currencyId);
         if (!c) return '-';
-        return isRtl ? c.title_fa : c.title_en || c.title_fa;
+        return c.title;
     };
 
     const formatDate = (dateString) => {
@@ -184,14 +202,20 @@
     ];
 
     return (
-        <div className="flex flex-col h-[600px] w-full" dir={isRtl ? 'rtl' : 'ltr'}>
+        <div className="flex flex-col h-[600px] w-full relative" dir={isRtl ? 'rtl' : 'ltr'}>
+            {toast.show && (
+                <div className={`fixed bottom-4 ${isRtl ? 'right-4' : 'left-4'} z-50`}>
+                    <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, show: false })} />
+                </div>
+            )}
+            
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 shrink-0">
                 <div className="flex items-center gap-2 mb-4 text-indigo-700 dark:text-indigo-300 font-bold">
                     <Briefcase size={18} />
                     <span>{brokerName}</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                     <SelectField 
                         size="sm" 
                         label={t('ارز تراکنش', 'Currency')} 
@@ -201,27 +225,23 @@
                         required
                         options={[
                             { value: '', label: `-- ${t('انتخاب', 'Select')} --` },
-                            ...currencies.map(c => ({ value: c.id, label: isRtl ? c.title_fa : (c.title_en || c.title_fa) }))
+                            ...currencies.map(c => ({ value: c.id, label: c.title }))
                         ]}
                     />
-                    <TextField 
+                    <DatePicker 
                         size="sm" 
-                        type="date"
                         label={t('از تاریخ', 'From Date')} 
                         value={contractFormData.fromDate} 
-                        onChange={e => setContractFormData({...contractFormData, fromDate: e.target.value})} 
+                        onChange={val => setContractFormData({...contractFormData, fromDate: val})} 
                         isRtl={isRtl} 
                         required
-                        dir="ltr" 
                     />
-                    <TextField 
+                    <DatePicker 
                         size="sm" 
-                        type="date"
                         label={t('تا تاریخ (اختیاری)', 'To Date (Opt)')} 
                         value={contractFormData.toDate} 
-                        onChange={e => setContractFormData({...contractFormData, toDate: e.target.value})} 
+                        onChange={val => setContractFormData({...contractFormData, toDate: val})} 
                         isRtl={isRtl} 
-                        dir="ltr" 
                     />
                     <CurrencyField 
                         size="sm" 
@@ -243,9 +263,16 @@
                                 size="sm" 
                                 type="number"
                                 step="0.01"
+                                min="0"
+                                max="100"
                                 label={t('درصد کارمزد', 'Commission %')} 
                                 value={contractFormData.commissionPct} 
-                                onChange={e => setContractFormData({...contractFormData, commissionPct: e.target.value})} 
+                                onChange={e => {
+                                    let v = e.target.value;
+                                    if (v !== '' && Number(v) > 100) v = '100';
+                                    if (v !== '' && Number(v) < 0) v = '0';
+                                    setContractFormData({...contractFormData, commissionPct: v});
+                                }} 
                                 isRtl={isRtl} 
                                 required
                                 dir="ltr" 
