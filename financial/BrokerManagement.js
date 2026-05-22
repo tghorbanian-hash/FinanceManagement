@@ -5,12 +5,12 @@
   
   const { 
     Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, SelectField, ToggleField, Badge, CheckboxField, CurrencyField
+    TextField, SelectField, ToggleField, CheckboxField
   } = window.DesignSystem || {};
   
   const { 
-    Users, Edit, Trash2, Save, 
-    AlertTriangle, Lock, Plus, Briefcase, Percent, FileText
+    Edit, Trash2, Save, 
+    AlertTriangle, Lock, Plus, Briefcase, Percent
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
@@ -22,8 +22,6 @@
     const [data, setData] = useState([]);
     const [allParties, setAllParties] = useState([]);
     const [partiesDropdown, setPartiesDropdown] = useState([]);
-    const [currencies, setCurrencies] = useState([]);
-    const [contractsData, setContractsData] = useState([]);
 
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState({});
@@ -32,7 +30,7 @@
     const [currentRecord, setCurrentRecord] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
     
-    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null, table: null });
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
     
     const [formData, setFormData] = useState({
       partyId: '',
@@ -57,19 +55,8 @@
 
     const [isContractsModalOpen, setIsContractsModalOpen] = useState(false);
     const [selectedBroker, setSelectedBroker] = useState(null);
-    const [contractFormData, setContractFormData] = useState({
-      id: null,
-      currencyId: '',
-      fromDate: '',
-      toDate: '',
-      minAmount: 0,
-      maxAmount: 0,
-      commissionPct: 0
-    });
 
-    const PARTY_ROLES = [
-      { id: 'system_user', label: t('کاربر سیستم', 'System User') },
-      { id: 'employee', label: t('پرسنل / کارمند', 'Employee') },
+    const EXTERNAL_PARTY_ROLES = [
       { id: 'customer', label: t('مشتری', 'Customer') },
       { id: 'supplier', label: t('تامین‌کننده', 'Supplier') },
       { id: 'shareholder', label: t('سهامدار', 'Shareholder') },
@@ -101,12 +88,10 @@
       try {
         const [
           { data: pData, error: pError },
-          { data: brokersData, error: bError },
-          { data: curData, error: curError }
+          { data: brokersData, error: bError }
         ] = await Promise.all([
           supabase.from('parties').select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email'),
-          supabase.from('fm_brokers').select('*').order('created_at', { ascending: false }),
-          supabase.from('fm_currencies').select('id, code, title_fa, title_en').eq('is_active', true)
+          supabase.from('fm_brokers').select('*').order('created_at', { ascending: false })
         ]);
           
         if (pData && !pError) {
@@ -119,10 +104,6 @@
           })));
         }
 
-        if (curData && !curError) {
-            setCurrencies(curData);
-        }
-
         if (bError) throw bError;
         setData(brokersData || []);
 
@@ -131,24 +112,6 @@
       } finally {
         setIsLoading(false);
       }
-    };
-
-    const fetchContracts = async (brokerId) => {
-        setIsLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('fm_broker_contracts')
-                .select('*')
-                .eq('broker_id', brokerId)
-                .order('from_date', { ascending: false });
-                
-            if (error) throw error;
-            setContractsData(data || []);
-        } catch (err) {
-            console.error('Fetch Contracts Error:', err);
-        } finally {
-            setIsLoading(false);
-        }
     };
 
     const handleSaveBroker = async () => {
@@ -252,41 +215,6 @@
       }
     };
 
-    const handleSaveContract = async () => {
-        if (!contractFormData.currencyId || !contractFormData.fromDate || contractFormData.commissionPct === null) {
-            alert(t('فیلدهای ارز، تاریخ شروع و درصد کارمزد الزامی هستند.', 'Currency, From Date, and Commission fields are required.'));
-            return;
-        }
-
-        setIsLoading(true);
-        try {
-            const payload = {
-                broker_id: selectedBroker.id,
-                currency_id: contractFormData.currencyId,
-                from_date: contractFormData.fromDate,
-                to_date: contractFormData.toDate || null,
-                min_amount: contractFormData.minAmount || 0,
-                max_amount: contractFormData.maxAmount || null,
-                commission_pct: contractFormData.commissionPct,
-                updated_at: new Date().toISOString()
-            };
-
-            const { error } = contractFormData.id
-                ? await supabase.from('fm_broker_contracts').update(payload).eq('id', contractFormData.id)
-                : await supabase.from('fm_broker_contracts').insert([payload]);
-
-            if (error) throw error;
-
-            setContractFormData({ id: null, currencyId: '', fromDate: '', toDate: '', minAmount: 0, maxAmount: 0, commissionPct: 0 });
-            fetchContracts(selectedBroker.id);
-        } catch (err) {
-            console.error('Save Contract Error:', err);
-            alert(t('خطا در ذخیره قرارداد.', 'Error saving contract.'));
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
     const handleToggleActive = async (row, newValue) => {
       try {
         const { error } = await supabase
@@ -304,24 +232,17 @@
     const executeDelete = async () => {
       setIsLoading(true);
       try {
-        const table = deleteConfirm.table || 'fm_brokers';
-        
         if (deleteConfirm.type === 'single') {
-          const { error } = await supabase.from(table).delete().eq('id', deleteConfirm.data.id);
+          const { error } = await supabase.from('fm_brokers').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
         } else if (deleteConfirm.type === 'bulk') {
-          const { error } = await supabase.from(table).delete().in('id', deleteConfirm.data);
+          const { error } = await supabase.from('fm_brokers').delete().in('id', deleteConfirm.data);
           if (error) throw error;
         }
         
-        if (table === 'fm_brokers') {
-            setSelectedIds([]);
-            fetchData();
-        } else if (table === 'fm_broker_contracts') {
-            fetchContracts(selectedBroker.id);
-        }
-
-        setDeleteConfirm({ isOpen: false, type: null, data: null, table: null });
+        setSelectedIds([]);
+        fetchData();
+        setDeleteConfirm({ isOpen: false, type: null, data: null });
       } catch (err) {
         console.error("Delete error:", err);
         alert(t('خطا در حذف اطلاعات. ممکن است رکوردهای وابسته وجود داشته باشد.', 'Deletion error. There might be dependent records.'));
@@ -346,25 +267,11 @@
       setIsModalOpen(true);
     };
 
-    const handleOpenContractsModal = (broker) => {
-        setSelectedBroker(broker);
-        setContractFormData({ id: null, currencyId: '', fromDate: '', toDate: '', minAmount: 0, maxAmount: 0, commissionPct: 0 });
-        setIsContractsModalOpen(true);
-        fetchContracts(broker.id);
-    };
-
     const getPartyName = (partyId) => {
       if (!partyId) return '-';
       const p = allParties.find(x => x.id === partyId);
       if (!p) return '-';
       return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
-    };
-
-    const getCurrencyName = (currencyId) => {
-        if (!currencyId) return '-';
-        const c = currencies.find(x => x.id === currencyId);
-        if (!c) return '-';
-        return isRtl ? c.title_fa : c.title_en || c.title_fa;
     };
 
     const formatDate = (dateString) => {
@@ -406,51 +313,6 @@
         type: 'toggle',
         onToggle: (row, val) => handleToggleActive(row, val)
       }
-    ];
-
-    const contractColumns = [
-        { 
-            field: 'currency_id', 
-            header_fa: 'ارز', 
-            header_en: 'Currency', 
-            width: '100px',
-            render: (val) => <Badge variant="indigo" size="sm">{getCurrencyName(val)}</Badge>
-        },
-        { 
-            field: 'from_date', 
-            header_fa: 'از تاریخ', 
-            header_en: 'From Date', 
-            width: '120px',
-            render: (val) => <span dir="ltr" className="text-[12px]">{formatDate(val)}</span>
-        },
-        { 
-            field: 'to_date', 
-            header_fa: 'تا تاریخ', 
-            header_en: 'To Date', 
-            width: '120px',
-            render: (val) => <span dir="ltr" className="text-[12px]">{formatDate(val)}</span>
-        },
-        { 
-            field: 'min_amount', 
-            header_fa: 'از مبلغ', 
-            header_en: 'Min Amount', 
-            width: '120px',
-            render: (val) => <span dir="ltr" className="font-medium text-slate-700 dark:text-slate-300">{Number(val).toLocaleString()}</span>
-        },
-        { 
-            field: 'max_amount', 
-            header_fa: 'تا مبلغ', 
-            header_en: 'Max Amount', 
-            width: '120px',
-            render: (val) => <span dir="ltr" className="font-medium text-slate-700 dark:text-slate-300">{val ? Number(val).toLocaleString() : '∞'}</span>
-        },
-        { 
-            field: 'commission_pct', 
-            header_fa: 'درصد کارمزد', 
-            header_en: 'Commission %', 
-            width: '100px',
-            render: (val) => <Badge variant="emerald" size="sm" className="font-bold">{val} %</Badge>
-        }
     ];
 
     const filteredData = useMemo(() => {
@@ -526,11 +388,11 @@
               }}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش مشخصات', 'Edit Details'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
-                { icon: Percent, tooltip: t('قراردادها و کارمزدها', 'Contracts & Commissions'), onClick: (row) => handleOpenContractsModal(row), className: 'text-slate-400 hover:text-emerald-600' },
-                { icon: Trash2, tooltip: t('حذف بروکر', 'Delete Broker'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, table: 'fm_brokers' }), className: 'text-slate-400 hover:text-red-600' }
+                { icon: Percent, tooltip: t('قراردادها و کارمزدها', 'Contracts & Commissions'), onClick: (row) => { setSelectedBroker(row); setIsContractsModalOpen(true); }, className: 'text-slate-400 hover:text-emerald-600' },
+                { icon: Trash2, tooltip: t('حذف بروکر', 'Delete Broker'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
               bulkActions={[
-                { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids, table: 'fm_brokers' }) }
+                { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }) }
               ]}
             />
           </div>
@@ -614,7 +476,7 @@
                   size="sm" 
                   label={t('نوع شخص', 'Party Type')} 
                   value={quickPartyData.partyType} 
-                  onChange={e => setQuickPartyData({...quickPartyData, partyType: e.target.value, companyName: '', firstName: '', lastName: ''})} 
+                  onChange={e => setQuickPartyData({...quickPartyData, partyType: e.target.value, companyName: '', firstName: '', lastName: '', roles: ['broker']})} 
                   isRtl={isRtl}
                   options={[
                     { value: 'real', label: t('حقیقی (فرد)', 'Real Person') },
@@ -645,7 +507,7 @@
             <div className="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-3 block">{t('نقش‌های مرتبط', 'Associated Roles')}</label>
                <div className="flex flex-wrap gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                 {PARTY_ROLES.map(role => (
+                 {EXTERNAL_PARTY_ROLES.map(role => (
                    <CheckboxField 
                      key={role.id} 
                      size="sm" 
@@ -679,123 +541,20 @@
             width="max-w-5xl"
             language={language}
         >
-            <div className="flex flex-col h-[600px]">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 shrink-0">
-                    <div className="flex items-center gap-2 mb-4 text-indigo-700 dark:text-indigo-300 font-bold">
-                        <Briefcase size={18} />
-                        <span>{selectedBroker ? getPartyName(selectedBroker.party_id) : ''}</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                        <SelectField 
-                            size="sm" 
-                            label={t('ارز تراکنش', 'Currency')} 
-                            value={contractFormData.currencyId} 
-                            onChange={e => setContractFormData({...contractFormData, currencyId: e.target.value})} 
-                            isRtl={isRtl}
-                            required
-                            options={[
-                                { value: '', label: `-- ${t('انتخاب', 'Select')} --` },
-                                ...currencies.map(c => ({ value: c.id, label: isRtl ? c.title_fa : (c.title_en || c.title_fa) }))
-                            ]}
-                        />
-                        <TextField 
-                            size="sm" 
-                            type="date"
-                            label={t('از تاریخ', 'From Date')} 
-                            value={contractFormData.fromDate} 
-                            onChange={e => setContractFormData({...contractFormData, fromDate: e.target.value})} 
-                            isRtl={isRtl} 
-                            required
-                            dir="ltr" 
-                        />
-                        <TextField 
-                            size="sm" 
-                            type="date"
-                            label={t('تا تاریخ (اختیاری)', 'To Date (Opt)')} 
-                            value={contractFormData.toDate} 
-                            onChange={e => setContractFormData({...contractFormData, toDate: e.target.value})} 
-                            isRtl={isRtl} 
-                            dir="ltr" 
-                        />
-                        <CurrencyField 
-                            size="sm" 
-                            label={t('از مبلغ تراکنش', 'Min Amount')} 
-                            value={contractFormData.minAmount} 
-                            onChange={val => setContractFormData({...contractFormData, minAmount: val})} 
-                            isRtl={isRtl} 
-                        />
-                        <CurrencyField 
-                            size="sm" 
-                            label={t('تا مبلغ تراکنش (0=نامحدود)', 'Max Amount (0=Unlimit)')} 
-                            value={contractFormData.maxAmount} 
-                            onChange={val => setContractFormData({...contractFormData, maxAmount: val})} 
-                            isRtl={isRtl} 
-                        />
-                        <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                                <TextField 
-                                    size="sm" 
-                                    type="number"
-                                    step="0.01"
-                                    label={t('درصد کارمزد', 'Commission %')} 
-                                    value={contractFormData.commissionPct} 
-                                    onChange={e => setContractFormData({...contractFormData, commissionPct: e.target.value})} 
-                                    isRtl={isRtl} 
-                                    required
-                                    dir="ltr" 
-                                />
-                            </div>
-                            <Button 
-                                variant="primary" 
-                                size="sm" 
-                                icon={contractFormData.id ? Save : Plus} 
-                                onClick={handleSaveContract} 
-                                isLoading={isLoading}
-                                className="h-8 mb-[1px]"
-                                title={contractFormData.id ? t('بروزرسانی', 'Update') : t('افزودن', 'Add')}
-                            >
-                                {contractFormData.id ? t('ثبت', 'Save') : t('افزودن', 'Add')}
-                            </Button>
-                            {contractFormData.id && (
-                                <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    onClick={() => setContractFormData({ id: null, currencyId: '', fromDate: '', toDate: '', minAmount: 0, maxAmount: 0, commissionPct: 0 })} 
-                                    className="h-8 mb-[1px] px-2 text-slate-500"
-                                    title={t('انصراف از ویرایش', 'Cancel Edit')}
-                                >
-                                    ✕
-                                </Button>
-                            )}
-                        </div>
-                    </div>
+            {selectedBroker && window.BrokerContract ? (
+                <window.BrokerContract 
+                    broker={selectedBroker} 
+                    brokerName={getPartyName(selectedBroker.party_id)} 
+                    language={language} 
+                />
+            ) : (
+                <div className="p-8 text-center text-slate-500 font-bold">
+                    {t('در حال بارگذاری فرم قراردادها...', 'Loading contracts form...')}
                 </div>
-
-                <div className="flex-1 min-h-0 p-4">
-                    <DataGrid 
-                        data={contractsData}
-                        columns={contractColumns} 
-                        language={language}
-                        isLoading={isLoading}
-                        actions={[
-                            { icon: Edit, tooltip: t('ویرایش ردیف', 'Edit Tier'), onClick: (row) => setContractFormData({
-                                id: row.id,
-                                currencyId: row.currency_id,
-                                fromDate: row.from_date ? row.from_date.substring(0, 10) : '',
-                                toDate: row.to_date ? row.to_date.substring(0, 10) : '',
-                                minAmount: row.min_amount || 0,
-                                maxAmount: row.max_amount || 0,
-                                commissionPct: row.commission_pct || 0
-                            }), className: 'text-slate-400 hover:text-indigo-600' },
-                            { icon: Trash2, tooltip: t('حذف ردیف', 'Delete Tier'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row, table: 'fm_broker_contracts' }), className: 'text-slate-400 hover:text-red-600' }
-                        ]}
-                    />
-                </div>
-            </div>
+            )}
         </Modal>
 
-        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null, table: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
+        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
           <div className="p-4 flex flex-col gap-3 items-center text-center">
             <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
                <AlertTriangle size={22} />
@@ -810,7 +569,7 @@
               }
             </p>
             <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null, table: null })}>{t('انصراف', 'Cancel')}</Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500">{t('تایید حذف', 'Delete')}</Button>
             </div>
           </div>
