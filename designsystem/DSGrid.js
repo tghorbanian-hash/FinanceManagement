@@ -484,7 +484,12 @@
       if (col.type === 'toggle') return <ToggleField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'checkbox') return <CheckboxField checked={!!val} disabled isRtl={isRtl} wrapperClassName="pointer-events-none" />;
       if (col.type === 'badge') return <Badge variant={col.badgeColor ? col.badgeColor(val) : 'gray'}>{val}</Badge>;
-      if (col.type === 'date') return <span dir="ltr" className="font-mono text-[12px] font-medium text-slate-800 dark:text-slate-200">{formatGlobalDate(val, globalMode)}</span>;
+      if (col.type === 'date') return <span dir="ltr" className="font-mono text-[12px] font-medium text-slate-800 dark:text-slate-200 block truncate" title={val ? formatGlobalDate(val, globalMode) : ''}>{formatGlobalDate(val, globalMode)}</span>;
+      
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'string' || typeof val === 'number') {
+        return <div className="truncate w-full" title={val}>{val}</div>;
+      }
       return val;
     };
 
@@ -702,7 +707,7 @@
               </tr>
             </thead>
 
-            <tbody className="z-10 relative">
+            <tbody className="relative">
               {paginatedData.length > 0 ? paginatedData.map((row, rowIndex) => {
                 if (row.isGroupHeader) {
                   const isCollapsed = collapsedGroups.includes(row.groupKey);
@@ -747,7 +752,7 @@
                       </td>
                     )}
                     {visibleColumns.map((col) => (
-                      <td key={`${row.id || rowIndex}-${col.field}`} style={{...getStickyStyles(col.field), backgroundColor: 'inherit'}} className={`p-1.5 text-[12px] text-slate-700 dark:text-slate-300 truncate bg-inherit ${!isHighlighted ? 'group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50' : ''} ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
+                      <td key={`${row.id || rowIndex}-${col.field}`} style={{...getStickyStyles(col.field), backgroundColor: 'inherit'}} className={`p-1.5 text-[12px] text-slate-700 dark:text-slate-300 bg-inherit ${!isHighlighted ? 'group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50' : ''} ${isRtl ? 'border-l border-slate-100 dark:border-slate-700/50' : 'border-r border-slate-100 dark:border-slate-700/50'}`}>
                         {renderCellContent(col, row, rowIndex)}
                       </td>
                     ))}
