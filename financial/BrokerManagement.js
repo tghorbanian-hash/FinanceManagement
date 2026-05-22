@@ -1,16 +1,21 @@
-/* Filename: financial/BrokerManagement.js */
+/* * Filename: financial/BrokerManagement.js 
+ * * راهنما برای خطای 404 (PGRST205):
+ * اگر خطای پیدا نشدن جدول دریافت کردید، به دلیل کش شدن اسکیما در سوپابیس است.
+ * لطفا کد زیر را در بخش SQL Editor سوپابیس اجرا کنید تا کش اسکیما رفرش شود:
+ * NOTIFY pgrst, reload_schema;
+ */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo } = React;
   
   const { 
     Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, SelectField, ToggleField, CheckboxField
+    TextField, SelectField, ToggleField, CheckboxField, DatePicker
   } = window.DesignSystem || {};
   
   const { 
     Edit, Trash2, Save, 
-    AlertTriangle, Lock, Plus, Briefcase, Percent
+    AlertTriangle, Lock, Plus, Briefcase, Percent, History
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
@@ -31,6 +36,7 @@
     const [selectedIds, setSelectedIds] = useState([]);
     
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
+    const [logModal, setLogModal] = useState({ isOpen: false, recordId: null, tableName: '' });
     
     const [formData, setFormData] = useState({
       partyId: '',
@@ -389,6 +395,7 @@
               actions={[
                 { icon: Edit, tooltip: t('ویرایش مشخصات', 'Edit Details'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Percent, tooltip: t('قراردادها و کارمزدها', 'Contracts & Commissions'), onClick: (row) => { setSelectedBroker(row); setIsContractsModalOpen(true); }, className: 'text-slate-400 hover:text-emerald-600' },
+                { icon: History, tooltip: t('تاریخچه سیستم', 'System Log'), onClick: (row) => setLogModal({ isOpen: true, recordId: row.id, tableName: 'fm_brokers' }), className: 'text-slate-400 hover:text-blue-600' },
                 { icon: Trash2, tooltip: t('حذف بروکر', 'Delete Broker'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
               bulkActions={[
@@ -431,22 +438,20 @@
                 />
               </div>
 
-              <TextField 
+              <DatePicker 
                 size="sm" 
-                type="date"
                 label={t('تاریخ اعتبار از', 'Valid From')} 
                 value={formData.validFrom} 
-                onChange={e => setFormData({...formData, validFrom: e.target.value})} 
+                onChange={val => setFormData({...formData, validFrom: val?.target ? val.target.value : val})} 
                 isRtl={isRtl} 
                 dir="ltr" 
               />
               
-              <TextField 
+              <DatePicker 
                 size="sm" 
-                type="date"
                 label={t('تاریخ اعتبار تا', 'Valid To')} 
                 value={formData.validTo} 
-                onChange={e => setFormData({...formData, validTo: e.target.value})} 
+                onChange={val => setFormData({...formData, validTo: val?.target ? val.target.value : val})} 
                 isRtl={isRtl} 
                 dir="ltr" 
               />
@@ -552,6 +557,24 @@
                     {t('در حال بارگذاری فرم قراردادها...', 'Loading contracts form...')}
                 </div>
             )}
+        </Modal>
+
+        <Modal 
+          isOpen={logModal.isOpen} 
+          onClose={() => setLogModal({ isOpen: false, recordId: null, tableName: '' })} 
+          title={t('تاریخچه تغییرات', 'Change History')} 
+          width="max-w-4xl" 
+          language={language}
+        >
+          <div className="h-[500px] flex flex-col p-4 bg-slate-50 dark:bg-slate-800/50">
+             {window.SystemLog && logModal.recordId ? (
+                <window.SystemLog tableName={logModal.tableName} recordId={logModal.recordId} language={language} />
+             ) : (
+                <div className="flex-1 flex items-center justify-center text-slate-500 font-bold">
+                   {t('ماژول لاگ سیستم در دسترس نیست.', 'System Log module is not available.')}
+                </div>
+             )}
+          </div>
         </Modal>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
