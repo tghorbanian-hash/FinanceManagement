@@ -14,8 +14,8 @@
   const Button = DSCore.Button || DS.Button || Fallback;
   const PageHeader = DSCore.PageHeader || DS.PageHeader || Fallback;
   const Modal = DSFeedback.Modal || DS.Modal || Fallback;
-  const AdvancedFilter = DSGrid.AdvancedFilter || DS.AdvancedFilter || Fallback;
   const DataGrid = DSGrid.DataGrid || DS.DataGrid || Fallback;
+  const LOVField = DSGrid.LOVField || DS.LOVField || Fallback;
   const TextField = DSForms.TextField || DS.TextField || Fallback;
   const SelectField = DSForms.SelectField || DS.SelectField || Fallback;
   const ToggleField = DSForms.ToggleField || DS.ToggleField || Fallback;
@@ -107,7 +107,6 @@
     const [accounts, setAccounts] = useState([]);
 
     const [isLoading, setIsLoading] = useState(false);
-    const [filters, setFilters] = useState({});
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState(null);
@@ -155,13 +154,11 @@
 
     const viewConfig = {
       pageId: 'brokers_main',
-      currentState: () => ({ filters, gridState }),
+      currentState: () => ({ gridState }),
       onApplyState: (state) => {
         if (state) {
-          if (state.filters) setFilters(state.filters);
           if (state.gridState) setGridState(state.gridState);
         } else {
-          setFilters({});
           setGridState(null);
         }
       }
@@ -230,7 +227,8 @@
           setPartiesDropdown(pData.map(p => ({
             id: p.id,
             label: `${p.party_type === 'legal' ? (p.company_name || '') : ((p.first_name || '') + ' ' + (p.last_name || '')).trim()} (${p.code})`,
-            mobile: p.mobile,
+            code: p.code || '---',
+            mobile: p.mobile || '---',
             email: p.email
           })));
         }
@@ -380,7 +378,8 @@
         const newDropdownItem = {
           id: newPartyData.id,
           label: partyLabel,
-          mobile: newPartyData.mobile,
+          code: newPartyData.code || '---',
+          mobile: newPartyData.mobile || '---',
           email: newPartyData.email
         };
 
@@ -509,39 +508,10 @@
       }
     ];
 
-    const filteredData = useMemo(() => {
-      let result = [...data];
-      
-      if (filters.party && filters.party.id) {
-         result = result.filter(u => u.party_id === filters.party.id);
-      }
-      if (filters.isActive) {
-         const wantActive = filters.isActive === 'active';
-         result = result.filter(u => u.is_active === wantActive);
-      }
-      
-      return result;
-    }, [data, filters]);
-
-    const filterFields = [
-      { 
-        name: 'party', 
-        label: t('بروکر', 'Broker'), 
-        type: 'lov', 
-        lovData: partiesDropdown, 
-        lovColumns: [
-          { field: 'label', header_fa: 'نام و کد', header_en: 'Name & Code', width: '250px' }
-        ] 
-      },
-      { 
-        name: 'isActive', 
-        label: t('وضعیت', 'Status'), 
-        type: 'select', 
-        options: [
-          { value: 'active', label: t('فعال', 'Active') },
-          { value: 'inactive', label: t('غیرفعال', 'Inactive') }
-        ] 
-      }
+    const providerLovColumns = [
+      { field: 'code', header_fa: 'کد بروکر', header_en: 'Code', width: '120px' },
+      { field: 'label', header_fa: 'نام شخص/شرکت', header_en: 'Name', width: '250px' },
+      { field: 'mobile', header_fa: 'شماره موبایل', header_en: 'Mobile', width: '150px' }
     ];
 
     return (
@@ -556,17 +526,9 @@
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-2 animate-in fade-in duration-300">
-          <AdvancedFilter 
-            fields={filterFields}
-            initialValues={filters}
-            onFilter={setFilters}
-            onClear={() => setFilters({})}
-            language={language}
-          />
-
-          <div className="flex-1 min-h-0 mt-1">
+          <div className="flex-1 min-h-0">
             <DataGrid 
-              data={filteredData}
+              data={data}
               columns={columns} 
               language={language}
               selectable={true}
@@ -602,20 +564,17 @@
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <SelectField 
-                    size="sm" 
-                    label={t('انتخاب شخص / شرکت (بروکر)', 'Select Party (Broker)')} 
-                    value={formData.partyId} 
-                    onChange={e => setFormData({...formData, partyId: e.target.value})} 
-                    isRtl={isRtl}
-                    required
-                    options={[
-                      { value: '', label: `-- ${t('انتخاب کنید', 'Select')} --` },
-                      ...partiesDropdown.map(p => ({ value: p.id, label: p.label }))
-                    ]}
-                  />
-                </div>
+                <LOVField 
+                  wrapperClassName="flex-1"
+                  size="sm" 
+                  label={t('انتخاب شخص / شرکت (بروکر)', 'Select Party (Broker)')} 
+                  data={partiesDropdown}
+                  columns={providerLovColumns}
+                  displayValue={partiesDropdown.find(p => p.id === formData.partyId)?.label || ''}
+                  onChange={row => setFormData({...formData, partyId: row ? row.id : ''})}
+                  isRtl={isRtl} 
+                  required
+                />
                 <Button 
                   variant="outline" 
                   size="sm" 
