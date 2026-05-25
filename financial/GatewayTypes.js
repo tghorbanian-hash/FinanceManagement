@@ -4,10 +4,12 @@
   const { useState, useEffect, useMemo, useRef } = React;
   
   const { 
-    Button, PageHeader, Modal, DataGrid, AdvancedFilter,
+    Button, PageHeader, Modal, 
     TextField, ToggleField, SelectField, CurrencyField, DatePicker, CheckboxField
-  } = window.DesignSystem || window.DSCore || window.DSForms || window.DSGrid || {};
+  } = window.DesignSystem || window.DSCore || window.DSForms || {};
   
+  const { DataGrid, LOVField } = window.DSGrid || window.DesignSystem || {};
+
   const { 
     CreditCard, Plus, Edit, Trash2, Save, 
     AlertTriangle, Lock, Users
@@ -82,7 +84,6 @@
     const [providers, setProviders] = useState([]);
     const [currencies, setCurrencies] = useState([]);
     const [accounts, setAccounts] = useState([]);
-    const [filters, setFilters] = useState({});
     
     const [isLoading, setIsLoading] = useState(false);
     
@@ -131,13 +132,11 @@
 
     const viewConfig = {
       pageId: 'gateway_types_main',
-      currentState: () => ({ filters, gridState }),
+      currentState: () => ({ gridState }),
       onApplyState: (state) => {
         if (state) {
-          if (state.filters) setFilters(state.filters);
           if (state.gridState) setGridState(state.gridState);
         } else {
-          setFilters({});
           setGridState(null);
         }
       }
@@ -152,10 +151,15 @@
       try {
         const { data: partiesData } = await supabase
           .from('parties')
-          .select('id, first_name, last_name, company_name, party_type')
+          .select('id, first_name, last_name, company_name, party_type, code, mobile')
           .order('created_at', { ascending: false });
         if (partiesData) {
-          setProviders(partiesData.map(p => ({ value: p.id, label: formatPartyName(p) })));
+          setProviders(partiesData.map(p => ({ 
+            id: p.id, 
+            label: formatPartyName(p),
+            code: p.code || '---',
+            mobile: p.mobile || '---'
+          })));
         }
 
         const { data: currData } = await supabase
@@ -299,12 +303,17 @@
           is_active: true
         };
         
-        const { data, error } = await supabase.from('parties').insert([payload]).select();
+        const { data: newPartyData, error } = await supabase.from('parties').insert([payload]).select();
         if (error) throw error;
         
-        if (data && data.length > 0) {
-           const newParty = data[0];
-           setProviders(prev => [...prev, { value: newParty.id, label: formatPartyName(newParty) }].sort((a,b) => a.label.localeCompare(b.label)));
+        if (newPartyData && newPartyData.length > 0) {
+           const newParty = newPartyData[0];
+           setProviders(prev => [...prev, { 
+             id: newParty.id, 
+             label: formatPartyName(newParty),
+             code: newParty.code || '---',
+             mobile: newParty.mobile || '---' 
+           }].sort((a,b) => a.label.localeCompare(b.label)));
            setFormData(prev => ({ ...prev, providerId: newParty.id }));
            setIsPartyModalOpen(false);
         }
@@ -395,19 +404,11 @@
       }
     ];
 
-    const filterFields = [
-      { name: 'code', label: t('کد', 'Code'), type: 'text' },
-      { name: 'title', label: t('عنوان درگاه', 'Title'), type: 'text' },
-      { name: 'providerId', label: t('تامین‌کننده', 'Provider'), type: 'select', options: providers }
+    const providerLovColumns = [
+      { field: 'code', header_fa: 'کد تامین‌کننده', header_en: 'Code', width: '120px' },
+      { field: 'label', header_fa: 'نام شخص/شرکت', header_en: 'Name', width: '250px' },
+      { field: 'mobile', header_fa: 'شماره موبایل', header_en: 'Mobile', width: '150px' }
     ];
-
-    const filteredData = useMemo(() => {
-      let result = [...data];
-      if (filters.code) result = result.filter(c => c.code.toLowerCase().includes(filters.code.toLowerCase()));
-      if (filters.title) result = result.filter(c => c.title.toLowerCase().includes(filters.title.toLowerCase()));
-      if (filters.providerId) result = result.filter(c => c.providerId === filters.providerId);
-      return result;
-    }, [data, filters]);
 
     return (
       <div className="flex flex-col h-full p-4 bg-[#f8fafc] dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -421,18 +422,9 @@
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
-          
-          <AdvancedFilter 
-            fields={filterFields}
-            initialValues={filters}
-            onFilter={setFilters}
-            onClear={() => setFilters({})}
-            language={language}
-          />
-
-          <div className="flex-1 min-h-0 mt-1">
+          <div className="flex-1 min-h-0">
             <DataGrid 
-              data={filteredData}
+              data={data}
               columns={columns} 
               language={language}
               selectable={true}
@@ -458,7 +450,7 @@
         <Modal 
           isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} 
           title={currentRecord ? t('ویرایش درگاه پرداخت', 'Edit Gateway') : t('تعریف درگاه جدید', 'New Gateway')}
-          width="max-w-2xl"
+          width="max-w-3xl"
           language={language}
         >
           <div className="p-4 flex flex-col gap-4">
@@ -482,15 +474,16 @@
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
               <div className="flex items-end gap-2">
-                <SelectField 
+                <LOVField 
                   wrapperClassName="flex-1"
                   size="sm" 
                   label={t('تامین‌کننده (شخص/شرکت)', 'Provider')} 
-                  value={formData.providerId} 
-                  onChange={e => setFormData({...formData, providerId: e.target.value})} 
-                  options={providers}
+                  data={providers}
+                  columns={providerLovColumns}
+                  displayValue={providers.find(p => p.id === formData.providerId)?.label || ''}
+                  onChange={row => setFormData({...formData, providerId: row ? row.id : ''})}
                   isRtl={isRtl} 
                   required
                 />
@@ -503,20 +496,9 @@
                     setIsPartyModalOpen(true);
                   }}
                   title={t('تعریف شرکت جدید', 'New Party')}
+                  className="mb-[1px] h-8 w-8 px-0 shrink-0"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SelectField 
-                size="sm" 
-                label={t('نوع ارز', 'Currency')} 
-                value={formData.currencyId} 
-                onChange={e => setFormData({...formData, currencyId: e.target.value})} 
-                options={currencies}
-                isRtl={isRtl} 
-                required
-              />
               <SearchableAccountSelect 
                 accounts={accounts}
                 value={formData.accountId} 
@@ -560,17 +542,28 @@
               />
             </div>
 
-            <div className="flex items-center mt-2 border-t border-slate-100 dark:border-slate-700/50 pt-4">
-              <ToggleField 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
+              <SelectField 
                 size="sm" 
-                label={t('وضعیت فعال', 'Active Status')} 
-                checked={formData.isActive} 
-                onChange={v => setFormData({...formData, isActive: v})} 
+                label={t('نوع ارز', 'Currency')} 
+                value={formData.currencyId} 
+                onChange={e => setFormData({...formData, currencyId: e.target.value})} 
+                options={currencies}
                 isRtl={isRtl} 
+                required
               />
+              <div className="flex items-center pb-1">
+                <ToggleField 
+                  size="sm" 
+                  label={t('وضعیت فعال', 'Active Status')} 
+                  checked={formData.isActive} 
+                  onChange={v => setFormData({...formData, isActive: v})} 
+                  isRtl={isRtl} 
+                />
+              </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2 mt-2">
               <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSave} isLoading={isLoading}>{t('ذخیره اطلاعات', 'Save')}</Button>
             </div>
