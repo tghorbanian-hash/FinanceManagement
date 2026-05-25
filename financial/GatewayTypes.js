@@ -17,7 +17,6 @@
   
   const supabase = window.supabase;
 
-  // --- کامپوننت محلی برای انتخاب حساب مشابه فرم سند حسابداری ---
   const SearchableAccountSelect = ({ accounts, value, onChange, disabled, placeholder, isRtl }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -74,7 +73,6 @@
       </div>
     );
   };
-  // -------------------------------------------------------------
 
   const GatewayTypes = ({ isAdmin, language = 'fa' }) => {
     const isRtl = language === 'fa';
@@ -113,7 +111,7 @@
       companyName: '',
       nationalId: '',
       mobile: '',
-      roles: ['vendor'] // vendor stands for Provider in Parties.js
+      roles: ['vendor']
     });
 
     const AVAILABLE_ROLES = [
@@ -542,7 +540,7 @@
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end border-t border-slate-100 dark:border-slate-700/50 pt-4 mt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
               <SelectField 
                 size="sm" 
                 label={t('نوع ارز', 'Currency')} 
@@ -563,7 +561,7 @@
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-2">
+            <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
               <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSave} isLoading={isLoading}>{t('ذخیره اطلاعات', 'Save')}</Button>
             </div>
