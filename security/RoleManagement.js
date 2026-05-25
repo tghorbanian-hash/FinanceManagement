@@ -40,6 +40,9 @@
 
     const [roles, setRoles] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
+    const [menus, setMenus] = useState([]);
+    const [permissions, setPermissions] = useState([]);
+    const [userRoles, setUserRoles] = useState([]);
     
     const [isLoading, setIsLoading] = useState(false);
     const [filters, setFilters] = useState({});
@@ -92,8 +95,13 @@
         const { data: rolesData } = await supabase.from('sec_roles').select('*').order('created_at', { ascending: false });
         const { data: pData } = await supabase.from('parties').select('id, first_name, last_name, company_name, party_type');
         const { data: uData } = await supabase.from('sec_users').select('id, username, is_active, party_id').eq('is_active', true);
-        const { data: userRolesData } = await supabase.from('sec_user_roles').select('role_id');
-        const { data: permsData } = await supabase.from('sec_permissions').select('role_id');
+        const { data: userRolesData } = await supabase.from('sec_user_roles').select('role_id, user_id');
+        const { data: permsData } = await supabase.from('sec_permissions').select('role_id, menu_id');
+        const { data: menusData } = await supabase.from('menus').select('*');
+
+        if (userRolesData) setUserRoles(userRolesData);
+        if (permsData) setPermissions(permsData);
+        if (menusData) setMenus(menusData);
 
         if (rolesData) {
             const mappedRoles = rolesData.map(r => ({
@@ -310,18 +318,54 @@
 
     const filteredRoles = useMemo(() => {
       let res = [...roles];
-      if (filters.title) {
-        res = res.filter(r => r.title.toLowerCase().includes(filters.title.toLowerCase()));
+      
+      if (filters.user && filters.user.id) {
+         res = res.filter(r => userRoles.some(ur => ur.role_id === r.id && ur.user_id === filters.user.id));
       }
-      if (filters.code) {
-        res = res.filter(r => r.code.toLowerCase().includes(filters.code.toLowerCase()));
+      
+      if (filters.form && filters.form.id) {
+         res = res.filter(r => permissions.some(p => p.role_id === r.id && p.menu_id === filters.form.id));
       }
-      if (filters.isActive) {
-        const wantActive = filters.isActive === 'active';
-        res = res.filter(r => r.is_active === wantActive);
-      }
+
       return res;
-    }, [roles, filters]);
+    }, [roles, filters, userRoles, permissions]);
+
+    const filterFields = [
+      { 
+        name: 'form', 
+        label: t('دسترسی به فرم', 'Form Access'), 
+        type: 'lov', 
+        lovData: menus.map(m => {
+            const parts = [];
+            let curr = m;
+            while(curr) {
+                parts.unshift(isRtl ? (curr.label_fa || curr.title || curr.name) : (curr.label_en || curr.title || curr.name));
+                curr = menus.find(x => x.id === curr.parent_id);
+            }
+            return { 
+               id: m.id, 
+               label: isRtl ? (m.label_fa || m.title || m.name) : (m.label_en || m.title || m.name), 
+               path: parts.join(' / ') 
+            };
+        }), 
+        lovColumns: [
+          { field: 'label', header_fa: 'نام فرم', header_en: 'Form Name', width: '150px' },
+          { field: 'path', header_fa: 'مسیر کامل', header_en: 'Full Path', width: '350px' }
+        ],
+        dropdownWidth: 'min-w-[550px]'
+      },
+      { 
+        name: 'user', 
+        label: t('کاربران', 'Users'), 
+        type: 'lov', 
+        lovData: allUsers.map(u => ({ ...u, label: u.fullName || u.username })), 
+        lovColumns: [
+          { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '150px' },
+          { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: '250px' }
+        ],
+        dropdownWidth: 'min-w-[400px]'
+      }
+    ];
 
     return (
       <div className="flex flex-col h-full p-4 bg-[#f8fafc] dark:bg-slate-900 font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -336,14 +380,7 @@
 
         <div className="flex-1 flex flex-col min-h-0 mt-3 animate-in fade-in duration-300">
           <AdvancedFilter 
-            fields={[
-              { name: 'title', label: t('عنوان نقش', 'Role Title'), type: 'text' },
-              { name: 'code', label: t('کد نقش', 'Role Code'), type: 'text' },
-              { 
-                name: 'isActive', label: t('وضعیت', 'Status'), type: 'select', 
-                options: [{ value: 'active', label: t('فعال', 'Active') }, { value: 'inactive', label: t('غیرفعال', 'Inactive') }]
-              }
-            ]}
+            fields={filterFields}
             initialValues={filters}
             onFilter={setFilters}
             onClear={() => setFilters({})}
