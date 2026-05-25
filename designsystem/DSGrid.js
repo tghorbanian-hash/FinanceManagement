@@ -37,33 +37,118 @@
     }
   };
 
-  const LOVField = ({ label, displayValue, onChange, data, columns, disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '', formCode }) => {
+  const LOVField = ({ label, displayValue, onChange, data = [], columns = [], disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '', formCode }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const containerRef = useRef(null);
+    const inputRef = useRef(null);
     const t = (fa, en) => isRtl ? fa : en;
     const access = useSecureAccess(formCode);
     const isDisabled = (!access.canEdit && !access.canCreate) || disabled;
     
+    useEffect(() => {
+      const handleClickOutside = (e) => {
+        if (containerRef.current && !containerRef.current.contains(e.target)) {
+          setIsOpen(false);
+        }
+      };
+      if (isOpen) document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
+
+    useEffect(() => {
+      if (isOpen && inputRef.current) inputRef.current.focus();
+    }, [isOpen]);
+
+    const filteredData = useMemo(() => {
+      if (!searchTerm) return data;
+      const lowerSearch = searchTerm.toLowerCase();
+      return data.filter(row => {
+         return columns.some(col => {
+           const val = row[col.field];
+           return val && String(val).toLowerCase().includes(lowerSearch);
+         });
+      });
+    }, [data, columns, searchTerm]);
+
+    const heights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+
     return (
-      <div className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full ${wrapperClassName}`}>
+      <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
-        <div className="relative flex items-center" onClick={() => !isDisabled && setIsOpen(true)}>
-          <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}><Search size={size === 'sm' ? 14 : 16} /></div>
-          <div className={`w-full ${size === 'sm' ? 'h-8 text-[12px]' : 'h-10 text-[14px]'} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all outline-none flex items-center ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}>
-            <span className="truncate">{displayValue || placeholder || t('انتخاب کنید...', 'Select...')}</span>
+        
+        <div 
+          className={`relative flex items-center w-full ${heights[size] || heights.md} bg-white dark:bg-slate-700/40 border rounded-lg text-slate-800 dark:text-slate-100 transition-all ${isDisabled ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-500 cursor-not-allowed border-slate-200 dark:border-slate-700' : 'cursor-pointer hover:border-indigo-400 dark:hover:border-indigo-400 border-slate-300 dark:border-slate-500 focus-within:border-indigo-400 dark:focus-within:ring-2 dark:focus-within:ring-indigo-400/20'} ${isRtl ? 'pr-2.5 pl-8' : 'pl-2.5 pr-8'}`}
+          onClick={() => !isDisabled && !isOpen && setIsOpen(true)}
+        >
+          <div className={`absolute ${isRtl ? 'left-2.5' : 'right-2.5'} text-slate-400 dark:text-slate-500 pointer-events-none`}>
+             <Search size={size === 'sm' ? 14 : 16} />
           </div>
-        </div>
-        {Modal && (
-          <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`${t('انتخاب', 'Select')} ${label || ''}`} width="max-w-3xl" language={isRtl ? 'fa' : 'en'}>
-            <div className="h-[350px] p-2 bg-slate-50/50 dark:bg-slate-900/50">
-              <DataGrid 
-                data={data} columns={columns} language={isRtl ? 'fa' : 'en'} 
-                onRowDoubleClick={(row) => { onChange(row); setIsOpen(false); }}
-                actions={[
-                   { icon: Check, tooltip: t('انتخاب این مورد', 'Select this item'), onClick: (row) => { onChange(row); setIsOpen(false); }, className: 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30' }
-                ]}
-              />
+          
+          {isOpen ? (
+            <input 
+              ref={inputRef}
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full h-full bg-transparent border-none outline-none placeholder:text-slate-400"
+              placeholder={t('جستجو...', 'Search...')}
+              dir={isRtl ? 'rtl' : 'ltr'}
+            />
+          ) : (
+            <div className={`w-full truncate ${displayValue ? (isRtl ? 'pl-6' : 'pr-6') : ''}`}>
+               {displayValue || placeholder || t('انتخاب کنید...', 'Select...')}
             </div>
-          </Modal>
+          )}
+          
+          {displayValue && !isOpen && !isDisabled && (
+            <button 
+              onClick={(e) => { e.stopPropagation(); onChange(null); }}
+              className={`absolute ${isRtl ? 'left-8' : 'right-8'} text-slate-400 hover:text-red-500 transition-colors p-1`}
+              title={t('پاک کردن', 'Clear')}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {isOpen && (
+          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} w-full min-w-[300px] max-w-[500px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-[9999] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150`}>
+            <div className="max-h-64 overflow-y-auto custom-scrollbar">
+              {filteredData.length > 0 ? (
+                <table className="w-full text-start border-collapse">
+                  <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm z-10">
+                    <tr>
+                      {columns.map((col, idx) => (
+                        <th key={idx} className={`p-2.5 text-[11px] font-black text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 ${isRtl ? 'text-right' : 'text-left'}`} style={{ width: col.width || 'auto' }}>
+                          {t(col.header_fa, col.header_en)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredData.map((row, rIdx) => (
+                      <tr 
+                        key={rIdx} 
+                        onClick={() => { onChange(row); setIsOpen(false); setSearchTerm(''); }}
+                        className="cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b border-slate-100 dark:border-slate-700/50 last:border-0 transition-colors"
+                      >
+                        {columns.map((col, cIdx) => (
+                          <td key={cIdx} className="p-2.5 text-[12px] text-slate-700 dark:text-slate-300">
+                            {col.render ? col.render(row[col.field], row) : (row[col.field] || '-')}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-4 text-center text-[12px] text-slate-400 dark:text-slate-500">
+                  {t('موردی یافت نشد', 'No results found')}
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     );

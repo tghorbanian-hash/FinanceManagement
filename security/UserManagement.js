@@ -510,7 +510,10 @@
         type: 'lov', 
         lovData: roles.map(r => ({ ...r, label: r.title || r.name })), 
         lovColumns: [
-          { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '200px' }
+          { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '150px' },
+          { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '80px', render: (val) => val === false ? t('غیرفعال', 'Inactive') : t('فعال', 'Active') },
+          { field: 'valid_from', header_fa: 'از تاریخ', header_en: 'Valid From', width: '100px', render: (val) => val ? new Date(val).toLocaleDateString(isRtl ? 'fa-IR' : 'en-US') : '-' },
+          { field: 'valid_to', header_fa: 'تا تاریخ', header_en: 'Valid To', width: '100px', render: (val) => val ? new Date(val).toLocaleDateString(isRtl ? 'fa-IR' : 'en-US') : '-' }
         ] 
       },
       { 
