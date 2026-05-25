@@ -37,7 +37,7 @@
     }
   };
 
-  const LOVField = ({ label, displayValue, onChange, data = [], columns = [], disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '', formCode }) => {
+  const LOVField = ({ label, displayValue, onChange, data = [], columns = [], disabled = false, required = false, wrapperClassName = '', size = 'md', isRtl = true, placeholder = '', formCode, dropdownWidth = 'min-w-[300px] max-w-[500px]' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef(null);
@@ -113,7 +113,7 @@
         </div>
 
         {isOpen && (
-          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} w-full min-w-[300px] max-w-[500px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-[9999] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150`}>
+          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} w-full ${dropdownWidth} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-[9999] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150`}>
             <div className="max-h-64 overflow-y-auto custom-scrollbar">
               {filteredData.length > 0 ? (
                 <table className="w-full text-start border-collapse">
@@ -202,7 +202,7 @@
                 if (f.type === 'checkbox') return <CheckboxField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
                 if (f.type === 'lov') {
                   const displayStr = values[f.name] && typeof values[f.name] === 'object' ? (values[f.name].title || values[f.name].name || values[f.name].label || Object.values(values[f.name])[0]) : values[f.name];
-                  return <LOVField key={idx} size="sm" label={f.label} isRtl={isRtl} data={f.lovData} columns={f.lovColumns} displayValue={displayStr} onChange={(row) => handleChange(f.name, row)} />;
+                  return <LOVField key={idx} size="sm" label={f.label} isRtl={isRtl} data={f.lovData} columns={f.lovColumns} displayValue={displayStr} onChange={(row) => handleChange(f.name, row)} dropdownWidth={f.dropdownWidth} />;
                 }
                 if (f.type === 'date') return <DatePicker key={idx} size="sm" label={f.label} isRtl={isRtl} language={language} value={values[f.name] || ''} onChange={(val) => handleChange(f.name, val)} />;
                 return <TextField key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'} />;

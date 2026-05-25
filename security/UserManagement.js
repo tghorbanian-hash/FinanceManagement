@@ -493,7 +493,8 @@
         lovColumns: [
           { field: 'label', header_fa: 'نام و کد', header_en: 'Name & Code', width: '250px' },
           { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '130px' }
-        ] 
+        ],
+        dropdownWidth: 'min-w-[400px]'
       },
       { 
         name: 'accessType', 
@@ -514,7 +515,8 @@
           { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '80px', render: (val) => val === false ? t('غیرفعال', 'Inactive') : t('فعال', 'Active') },
           { field: 'valid_from', header_fa: 'از تاریخ', header_en: 'Valid From', width: '100px', render: (val) => val ? new Date(val).toLocaleDateString(isRtl ? 'fa-IR' : 'en-US') : '-' },
           { field: 'valid_to', header_fa: 'تا تاریخ', header_en: 'Valid To', width: '100px', render: (val) => val ? new Date(val).toLocaleDateString(isRtl ? 'fa-IR' : 'en-US') : '-' }
-        ] 
+        ],
+        dropdownWidth: 'min-w-[500px] max-w-[700px]'
       },
       { 
         name: 'form', 
@@ -536,7 +538,8 @@
         lovColumns: [
           { field: 'label', header_fa: 'نام فرم', header_en: 'Form Name', width: '150px' },
           { field: 'path', header_fa: 'مسیر کامل', header_en: 'Full Path', width: '350px' }
-        ] 
+        ],
+        dropdownWidth: 'min-w-[550px]'
       },
       { 
         name: 'isActive', 
