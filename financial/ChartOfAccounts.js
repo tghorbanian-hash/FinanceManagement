@@ -20,7 +20,7 @@
     const { TextField = FallbackComponent, ToggleField = FallbackComponent, DatePicker = FallbackComponent } = Forms;
 
     const Grid = window.DSGrid || window.DesignSystem || {};
-    const { DataGrid = FallbackComponent, AdvancedFilter = FallbackComponent } = Grid;
+    const { DataGrid = FallbackComponent } = Grid;
 
     const Feedback = window.DSFeedback || window.DesignSystem || {};
     const { Modal = FallbackComponent, Toast = FallbackComponent, Alert = FallbackComponent } = Feedback;
@@ -43,7 +43,6 @@
     const [isLoading, setIsLoading] = useState(false);
     
     const [charts, setCharts] = useState([]);
-    const [chartFilters, setChartFilters] = useState({});
     const [chartsGridState, setChartsGridState] = useState(null);
     
     const [isChartModalOpen, setIsChartModalOpen] = useState(false);
@@ -89,13 +88,6 @@
         fetchCharts();
       }
     }, [fetchCharts, access.canView, viewMode]);
-
-    const filteredCharts = useMemo(() => {
-      let res = [...charts];
-      if (chartFilters.code) res = res.filter(c => (c.code || '').toLowerCase().includes(chartFilters.code.toLowerCase()));
-      if (chartFilters.title) res = res.filter(c => (c.title || '').toLowerCase().includes(chartFilters.title.toLowerCase()));
-      return res;
-    }, [charts, chartFilters]);
 
     const handleOpenChartModal = (chart = null) => {
       if (chart) {
@@ -237,19 +229,17 @@
 
     const viewConfig = useMemo(() => ({
       pageId: 'coa_charts_main_list',
-      currentState: () => ({ viewMode, chartFilters, chartsGridState }),
+      currentState: () => ({ viewMode, chartsGridState }),
       onApplyState: (state) => {
         if (state) {
           if (state.viewMode) setViewMode(state.viewMode);
-          if (state.chartFilters) setChartFilters(state.chartFilters);
           if (state.chartsGridState) setChartsGridState(state.chartsGridState);
         } else {
           setViewMode('list');
-          setChartFilters({});
           setChartsGridState(null);
         }
       }
-    }), [viewMode, chartFilters, chartsGridState]);
+    }), [viewMode, chartsGridState]);
 
     if (viewMode === 'designer') {
       const DesignerComponent = window.ChartOfAccountsMain;
@@ -275,16 +265,9 @@
         />
 
         <div className="flex-1 min-h-0 flex flex-col gap-1 mt-2 animate-in fade-in duration-500">
-          <AdvancedFilter
-            fields={[
-              { name: 'code', label: t('کد ساختار', 'Structure Code'), type: 'text' },
-              { name: 'title', label: t('عنوان ساختار', 'Structure Title'), type: 'text' }
-            ]}
-            initialValues={chartFilters} onFilter={setChartFilters} onClear={() => setChartFilters({})} language={language}
-          />
           <div className="flex-1 min-h-0">
             <DataGrid
-              data={filteredCharts} columns={chartColumns} language={language} formCode={formCode}
+              data={charts} columns={chartColumns} language={language} formCode={formCode}
               gridState={chartsGridState} onGridStateChange={setChartsGridState}
               onAdd={access.canCreate ? () => handleOpenChartModal() : undefined}
               actions={[
