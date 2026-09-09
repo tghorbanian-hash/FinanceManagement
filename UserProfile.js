@@ -5,14 +5,15 @@
   
   const { 
     Button, PageHeader, 
-    TextField, SelectField, 
-    Toast, Alert
+    TextField, SelectField,
   } = window.DesignSystem || window.DSCore || window.DSForms || {};
+
+  const Toast = window.DSFeedback?.Toast;
   
   const { 
     User, Settings, Shield, CreditCard, Save, 
     Key, Building2, Fingerprint, Camera, Loader2,
-    Sun, Moon, Monitor
+    Sun, Moon, Monitor, Calendar, Globe, RefreshCw, Copy
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
@@ -20,67 +21,10 @@
   // ─── Read-Only display field ─────────────────────────────────────────────────
   const ReadOnlyField = ({ label, value, ltr = false }) => (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{label}</label>
-      <div className={`min-h-[36px] px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200 ${ltr ? 'dir-ltr justify-end' : ''}`}>
+      <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{label}</label>
+      <div className={`min-h-[36px] px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center text-[12px] font-bold text-slate-800 dark:text-slate-200 ${ltr ? 'dir-ltr justify-end' : ''}`}>
         {value}
       </div>
-    </div>
-  );
-
-  // ─── Language toggle switch ──────────────────────────────────────────────────
-  const LangToggle = ({ value, onChange }) => {
-    const isEn = value === 'en';
-    return (
-      <div className="flex items-center gap-3">
-        <span className={`text-[12px] font-bold transition-colors select-none ${!isEn ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-          فارسی
-        </span>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={isEn}
-          onClick={() => onChange(isEn ? 'fa' : 'en')}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
-            isEn ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'
-          }`}
-        >
-          <span
-            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${
-              isEn ? 'translate-x-6' : 'translate-x-1'
-            }`}
-          />
-        </button>
-        <span className={`text-[12px] font-bold transition-colors select-none ${isEn ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-          English
-        </span>
-      </div>
-    );
-  };
-
-  // ─── Theme segmented control ─────────────────────────────────────────────────
-  const THEME_OPTIONS = [
-    { value: 'light',  fa: 'روشن',   en: 'Light',  Icon: Sun     },
-    { value: 'dark',   fa: 'تاریک',  en: 'Dark',   Icon: Moon    },
-    { value: 'system', fa: 'خودکار', en: 'System', Icon: Monitor },
-  ];
-
-  const ThemeSegment = ({ value, onChange, isRtl }) => (
-    <div className="inline-flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-50 dark:bg-slate-900/50 shadow-sm">
-      {THEME_OPTIONS.map(({ value: v, fa, en, Icon }) => (
-        <button
-          key={v}
-          type="button"
-          onClick={() => onChange(v)}
-          className={`flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold transition-all border-0 ${
-            value === v
-              ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-inner'
-              : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-          }`}
-        >
-          <Icon size={13} strokeWidth={2} />
-          {isRtl ? fa : en}
-        </button>
-      ))}
     </div>
   );
 
@@ -95,6 +39,25 @@
     shareholder: { fa: 'سهامدار',     en: 'Shareholder'   },
     exchange:    { fa: 'صرافی',       en: 'Exchange'      },
   };
+
+  // ─── Common timezones list ──────────────────────────────────────────────────
+  const COMMON_TIMEZONES = [
+    { value: 'Asia/Tehran',          label: '(UTC+3:30) Tehran (تهران)', offset: '+03:30' },
+    { value: 'Asia/Dubai',           label: '(UTC+4:00) Dubai (دبی)', offset: '+04:00' },
+    { value: 'Europe/Istanbul',      label: '(UTC+3:00) Istanbul (استانبول)', offset: '+03:00' },
+    { value: 'Europe/London',        label: '(UTC+0:00) London (لندن)', offset: '+00:00' },
+    { value: 'Europe/Paris',         label: '(UTC+1:00) Paris (پاریس)', offset: '+01:00' },
+    { value: 'Europe/Berlin',        label: '(UTC+1:00) Berlin (برلین)', offset: '+01:00' },
+    { value: 'America/New_York',     label: '(UTC-5:00) New York (نیویورک)', offset: '-05:00' },
+    { value: 'America/Los_Angeles',  label: '(UTC-8:00) Los Angeles (لس‌آنجلس)', offset: '-08:00' },
+    { value: 'America/Chicago',      label: '(UTC-6:00) Chicago (شیکاگو)', offset: '-06:00' },
+    { value: 'America/Toronto',      label: '(UTC-5:00) Toronto (تورنتو)', offset: '-05:00' },
+    { value: 'Asia/Tokyo',           label: '(UTC+9:00) Tokyo (توکیو)', offset: '+09:00' },
+    { value: 'Asia/Shanghai',        label: '(UTC+8:00) Shanghai (شانگهای)', offset: '+08:00' },
+    { value: 'Asia/Singapore',       label: '(UTC+8:00) Singapore (سنگاپور)', offset: '+08:00' },
+    { value: 'Australia/Sydney',     label: '(UTC+10:00) Sydney (سیدنی)', offset: '+10:00' },
+    { value: 'Pacific/Auckland',     label: '(UTC+12:00) Auckland (اوکلند)', offset: '+12:00' },
+  ];
 
   // ─── Apply theme to DOM ──────────────────────────────────────────────────────
   const applyTheme = (theme) => {
@@ -115,28 +78,38 @@
     const isRtl = language === 'fa';
     const t = useCallback((fa, en) => isRtl ? fa : en, [isRtl]);
 
-    const [currentUserId, setCurrentUserId]   = useState(null);
+    const windowCurrentUserObj = window.NavigationSystem?.currentUser || {};
+    // Session واقعی از sessionStorage خوانده می‌شود (توسط app.js پس از لاگین ذخیره می‌شود)
+    const storedSession = (() => { try { return JSON.parse(sessionStorage.getItem('fm_user_session') || '{}'); } catch(_) { return {}; } })();
+    const windowCurrentUserId = storedSession.id || windowCurrentUserObj.id || null;
+    const windowCurrentUserUsername = storedSession.username || windowCurrentUserObj.username || '';
+    const windowCurrentUserName = windowCurrentUserObj.name || windowCurrentUserObj.full_name || windowCurrentUserUsername || '';
+
+    const [currentUserId, setCurrentUserId]   = useState(windowCurrentUserId);
     const [activeTab, setActiveTab]           = useState('personal');
     const [isLoading, setIsLoading]           = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [toast, setToast]                   = useState({ isVisible: false, message: '', type: 'success' });
 
     const [profileInfo, setProfileInfo] = useState({
-      fullName:   t('در حال بارگذاری...', 'Loading...'),
-      username:   t('در حال بارگذاری...', 'Loading...'),
-      partyRoles: [],
-      department: '---',
-      avatarUrl:  null,
+      fullName:    windowCurrentUserName || windowCurrentUserUsername || '...',
+      username:    windowCurrentUserUsername || '...',
+      partyRoles:  [],
+      accessRoles: [],
+      department:  '---',
+      avatarUrl:   null,
     });
 
     const [preferences, setPreferences] = useState({
       theme:             'system',
       language:          'fa',
       calendarType:      'jalali',
+      timezone:          'Asia/Tehran',
       defaultCostTypeId: '',
     });
 
     const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+    const [generatedPassword, setGeneratedPassword] = useState('');
     const [costTypes, setCostTypes] = useState([]);
     const fileInputRef = useRef(null);
 
@@ -150,46 +123,70 @@
     useEffect(() => {
       if (!supabase) return;
       const init = async () => {
+        // Step 1: try to fetch users list (non-fatal)
+        let allUsers = [];
         try {
-          const { data: authData, error: authErr } = await supabase.auth.getUser();
-          if (authErr || !authData?.user?.id) {
-            setProfileInfo(prev => ({ ...prev, fullName: t('کاربر یافت نشد', 'User not found'), username: '---' }));
-            return;
+          const { data, error } = await supabase
+            .from('sec_users')
+            .select('id, username, email, full_name, party_id');
+          if (!error) allUsers = data || [];
+        } catch (_) {}
+
+        // Step 2: resolve userId
+        let safeMyUserId = windowCurrentUserId;
+        if (!safeMyUserId || safeMyUserId === '00000000-0000-0000-0000-000000000000') {
+          if (windowCurrentUserUsername) {
+            const matchedUser = allUsers.find(u => u.username === windowCurrentUserUsername);
+            if (matchedUser) safeMyUserId = matchedUser.id;
           }
-          const userId = authData.user.id;
-          setCurrentUserId(userId);
-          await Promise.all([fetchUserData(userId), fetchPreferences(userId), fetchCostTypes()]);
-        } catch (err) {
-          console.error('Auth init error:', err);
-          setProfileInfo(prev => ({ ...prev, fullName: t('خطای دسترسی', 'Access error'), username: '---' }));
         }
+
+        if (!safeMyUserId) {
+          try {
+            const { data: authData } = await supabase.auth.getUser();
+            if (authData?.user?.id) safeMyUserId = authData.user.id;
+          } catch (_) {}
+        }
+
+        setCurrentUserId(safeMyUserId);
+
+        const tasks = [fetchCostTypes()];
+        if (safeMyUserId) {
+          tasks.push(fetchUserData(safeMyUserId, allUsers));
+          tasks.push(fetchPreferences(safeMyUserId));
+        }
+        await Promise.allSettled(tasks);
       };
       init();
-    }, []);
+    }, [windowCurrentUserId, windowCurrentUserUsername, windowCurrentUserName]);
 
     // ── Fetch user profile ──────────────────────────────────────────────────────
-    const fetchUserData = async (userId) => {
+    const fetchUserData = async (userId, preloadedUsers) => {
       if (!supabase || !userId) return;
       try {
-        // 1. Resolve sec_users by auth ID
-        const { data: userData, error: userErr } = await supabase
-          .from('sec_users')
-          .select('id, username, email, full_name, avatar_url, party_id')
-          .eq('id', userId)
-          .maybeSingle();
+        let userData = (preloadedUsers || []).find(u => u.id === userId);
+        
+        if (!userData) {
+          const { data, error } = await supabase
+            .from('sec_users')
+            .select('id, username, email, full_name, party_id')
+            .eq('id', userId)
+            .maybeSingle();
+          if (!error) userData = data;
+        }
 
-        if (userErr) throw userErr;
-        if (!userData) throw new Error('sec_users record not found');
+        if (!userData) return;
 
         const partyId  = userData.party_id;
-        const username = userData.username || userData.email || '---';
-        let   fullName = userData.full_name || username;
+        const username = userData.username || windowCurrentUserUsername || '---';
+        // full_name از DB اولویت دارد؛ اگر خالی بود از first_name + last_name در parties استفاده می‌شود
+        let   fullName = userData.full_name || '';
         let   partyRoles = [];
+        let   accessRoles = [];
         let   department = '---';
 
         if (partyId) {
-          // 2. Parallel: party details + active org assignment
-          const [partyRes, orgRes] = await Promise.all([
+        const [partyRes, personnelRes, userRolesRes] = await Promise.all([
             supabase
               .from('parties')
               .select('first_name, last_name, company_name, party_type, roles')
@@ -197,18 +194,23 @@
               .maybeSingle(),
             supabase
               .from('fm_org_chart_personnel')
-              .select('node_id, from_date, to_date')
-              .eq('person_id', partyId),
+              .select('node_id')
+              .eq('person_id', partyId)
+              .maybeSingle(),
+            supabase
+              .from('sec_user_roles')
+              .select('role_id, sec_roles(id, title)')
+              .eq('user_id', userId),
           ]);
 
-          // Resolve display name
           if (!partyRes.error && partyRes.data) {
             const p = partyRes.data;
-            if (p.party_type === 'legal') {
-              fullName = p.company_name || fullName;
-            } else {
-              const combined = `${p.first_name || ''} ${p.last_name || ''}`.trim();
-              fullName = combined || fullName;
+            if (!fullName) {
+              if (p.party_type === 'legal' || p.party_type === 'COMPANY') {
+                fullName = p.company_name || '';
+              } else {
+                fullName = `${p.first_name || ''} ${p.last_name || ''}`.trim();
+              }
             }
             if (Array.isArray(p.roles)) {
               partyRoles = p.roles;
@@ -217,41 +219,46 @@
             }
           }
 
-          // Resolve active department
-          const orgRows = (!orgRes.error && orgRes.data?.length > 0) ? orgRes.data : null;
-          if (orgRows) {
-            const today = new Date().toISOString().split('T')[0];
-            const active = orgRows.find(row => {
-              const from = row.from_date?.substring(0, 10).replace(/\//g, '-') ?? '1000-01-01';
-              const to   = row.to_date?.substring(0, 10).replace(/\//g, '-')   ?? '9999-12-31';
-              return today >= from && today <= to;
-            }) ?? orgRows[0];
-
-            if (active?.node_id) {
-              const { data: nodeData } = await supabase
-                .from('fm_org_chart_nodes')
-                .select('title, is_active')
-                .eq('id', active.node_id)
-                .maybeSingle();
-              if (nodeData?.is_active) department = nodeData.title;
+          if (!personnelRes.error && personnelRes.data?.node_id) {
+            const nodeRes = await supabase
+              .from('fm_org_chart_nodes')
+              .select('title')
+              .eq('id', personnelRes.data.node_id)
+              .maybeSingle();
+            if (!nodeRes.error && nodeRes.data?.title) {
+              department = nodeRes.data.title;
             }
+          }
+
+          if (!userRolesRes.error && userRolesRes.data) {
+            accessRoles = userRolesRes.data
+              .map(r => (Array.isArray(r.sec_roles) ? r.sec_roles[0] : r.sec_roles)?.title)
+              .filter(Boolean);
+          }
+        } else {
+          // اگر party_id نداشت، فقط نقش‌های دسترسی رو بگیر
+          const userRolesRes = await supabase
+            .from('sec_user_roles')
+            .select('role_id, sec_roles(id, title)')
+            .eq('user_id', userId);
+          if (!userRolesRes.error && userRolesRes.data) {
+            accessRoles = userRolesRes.data
+              .map(r => (Array.isArray(r.sec_roles) ? r.sec_roles[0] : r.sec_roles)?.title)
+              .filter(Boolean);
           }
         }
 
         setProfileInfo({
-          fullName:   fullName || username || t('بدون نام', 'No name'),
+          fullName:    fullName || username || t('بدون نام', 'No name'),
           username,
           partyRoles,
+          accessRoles,
           department,
-          avatarUrl: userData.avatar_url ?? null,
+          avatarUrl: null,
         });
       } catch (err) {
         console.error('fetchUserData error:', err);
-        setProfileInfo(prev => ({
-          ...prev,
-          fullName: t('خطا در دریافت اطلاعات', 'Error loading profile'),
-          username: '---',
-        }));
+        // Don't overwrite profileInfo — keep what's already shown (NavigationSystem data)
       }
     };
 
@@ -261,7 +268,7 @@
       try {
         const { data, error } = await supabase
           .from('fm_user_preferences')
-          .select('theme, language, calendar_type, default_cost_type_id')
+          .select('theme, language, calendar_type, timezone, default_cost_type_id, photo_url')
           .eq('user_id', userId)
           .maybeSingle();
         if (!error && data) {
@@ -269,8 +276,31 @@
             theme:             data.theme             ?? 'system',
             language:          data.language          ?? 'fa',
             calendarType:      data.calendar_type     ?? 'jalali',
+            timezone:          data.timezone          ?? 'Asia/Tehran',
             defaultCostTypeId: data.default_cost_type_id ?? '',
           });
+          if (data.photo_url) {
+            const rawPath = data.photo_url;
+            // handle both bare paths and legacy full URLs (extract path then get signed URL)
+            const legacyMatch = rawPath.startsWith('http')
+              ? rawPath.match(/\/object\/(?:public\/)?attachments\/(.+?)(?:\?|$)/)
+              : null;
+            const filePath = legacyMatch ? legacyMatch[1] : (!rawPath.startsWith('http') ? rawPath : null);
+            let displayUrl = null;
+            if (filePath) {
+              const { data: sd } = await supabase.storage.from('attachments').createSignedUrl(filePath, 3600);
+              displayUrl = sd?.signedUrl || null;
+            }
+            if (displayUrl) {
+              setProfileInfo(prev => ({ ...prev, avatarUrl: displayUrl }));
+              try {
+                const stored = JSON.parse(sessionStorage.getItem('fm_user_session') || '{}');
+                stored.photo_url = rawPath;
+                sessionStorage.setItem('fm_user_session', JSON.stringify(stored));
+                window.dispatchEvent(new CustomEvent('fm_avatar_change', { detail: displayUrl }));
+              } catch (_) {}
+            }
+          }
         }
       } catch (_) {}
     };
@@ -301,28 +331,40 @@
       setIsUploadingAvatar(true);
       try {
         const ext      = file.name.split('.').pop().toLowerCase();
-        const fileName = `${currentUserId}-${Date.now()}.${ext}`;
-        const filePath = `avatars/${fileName}`;
+        const fileName = `avatar_${currentUserId}.${ext}`;
+        const filePath = `user-avatars/${fileName}`;
+        const BUCKET   = 'attachments';
+
+        // حذف فایل قبلی اگر وجود داشت
+        await supabase.storage.from(BUCKET).remove([filePath]);
 
         const { error: uploadErr } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file, { upsert: false, contentType: file.type });
+          .from(BUCKET)
+          .upload(filePath, file, { upsert: true, contentType: file.type });
         if (uploadErr) throw uploadErr;
 
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        const publicUrl = urlData?.publicUrl;
-        if (!publicUrl) throw new Error(t('خطا در دریافت آدرس عکس.', 'Could not retrieve public URL.'));
-
         const { error: updateErr } = await supabase
-          .from('sec_users')
-          .update({ avatar_url: publicUrl })
-          .eq('id', currentUserId);
+          .from('fm_user_preferences')
+          .upsert(
+            { user_id: currentUserId, photo_url: filePath },
+            { onConflict: 'user_id' }
+          );
         if (updateErr) throw updateErr;
 
-        setProfileInfo(prev => ({ ...prev, avatarUrl: publicUrl }));
+        // bucket is private — create a signed URL for display
+        const { data: sd } = await supabase.storage.from(BUCKET).createSignedUrl(filePath, 3600);
+        const displayUrl = sd?.signedUrl || null;
+
+        try {
+          const stored = JSON.parse(sessionStorage.getItem('fm_user_session') || '{}');
+          stored.photo_url = filePath;
+          sessionStorage.setItem('fm_user_session', JSON.stringify(stored));
+          if (displayUrl) window.dispatchEvent(new CustomEvent('fm_avatar_change', { detail: displayUrl }));
+        } catch (_) {}
+
+        setProfileInfo(prev => ({ ...prev, avatarUrl: displayUrl }));
         showToast(t('تصویر پروفایل بروزرسانی شد.', 'Profile picture updated successfully.'));
       } catch (err) {
-        console.error('Avatar upload error:', err);
         showToast(err.message || t('خطا در بارگذاری تصویر.', 'Error uploading image.'), 'error');
       } finally {
         setIsUploadingAvatar(false);
@@ -343,6 +385,7 @@
               theme:                preferences.theme,
               language:             preferences.language,
               calendar_type:        preferences.calendarType,
+              timezone:             preferences.timezone,
               default_cost_type_id: preferences.defaultCostTypeId || null,
               updated_at:           new Date().toISOString(),
             },
@@ -381,10 +424,22 @@
       }
     };
 
+    const generatePassword = useCallback(() => {
+      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lower = 'abcdefghijklmnopqrstuvwxyz';
+      const digits = '0123456789';
+      const symbols = '@#$!%&*';
+      const all = upper + lower + digits + symbols;
+      const rand = (str) => str[Math.floor(Math.random() * str.length)];
+      let pwd = rand(upper) + rand(lower) + rand(digits) + rand(symbols);
+      for (let i = 4; i < 10; i++) pwd += rand(all);
+      return pwd.split('').sort(() => Math.random() - 0.5).join('');
+    }, []);
+
     const tabs = [
       { id: 'personal',    label: t('اطلاعات کاربری', 'User Info'),        icon: User       },
       { id: 'preferences', label: t('تنظیمات پایه',   'Basic Preferences'), icon: Settings   },
-      { id: 'financial',   label: t('تنظیمات مالی',   'Financial Prefs'),   icon: CreditCard },
+      { id: 'financial',   label: t('مقادیر پیشفرض', 'Default Values'),     icon: CreditCard },
       { id: 'security',    label: t('امنیت و رمز',    'Security'),          icon: Shield     },
     ];
 
@@ -436,10 +491,10 @@
                 </label>
               </div>
               <h2 className="text-[14px] font-black text-slate-800 dark:text-white mb-0.5">{profileInfo.fullName}</h2>
-              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-3 truncate w-full dir-ltr">{profileInfo.username}</p>
+              <p className="text-[12px] font-medium text-slate-500 dark:text-slate-400 mb-3 truncate w-full dir-ltr">{profileInfo.username}</p>
               <div className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-700">
                 <Building2 size={14} className="text-slate-400 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{profileInfo.department}</span>
+                <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300 truncate">{profileInfo.department}</span>
               </div>
             </div>
 
@@ -482,20 +537,36 @@
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <ReadOnlyField label={t('نام کامل', 'Full Name')} value={profileInfo.fullName} />
                     <ReadOnlyField label={t('نام کاربری', 'Username')} value={profileInfo.username} ltr />
+                    <ReadOnlyField label={t('دپارتمان / واحد سازمانی', 'Department')} value={profileInfo.department} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                      <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                         <Fingerprint size={12} /> {t('نقش‌های شخص', 'Party Roles')}
                       </label>
-                      <div className="min-h-[36px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded flex flex-wrap gap-1 items-center">
+                      <div className="min-h-[36px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-1 items-center">
                         {profileInfo.partyRoles.length > 0
                           ? profileInfo.partyRoles.map((role, idx) => (
                               <span key={idx} className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold rounded">
                                 {formatRole(role)}
                               </span>
                             ))
-                          : <span className="text-[11px] text-slate-400 px-1">{t('ندارد', 'None')}</span>
+                          : <span className="text-[12px] text-slate-400 px-1">{t('ندارد', 'None')}</span>
+                        }
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                        <Shield size={12} /> {t('نقش‌های دسترسی', 'Access Roles')}
+                      </label>
+                      <div className="min-h-[36px] p-1.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-wrap gap-1 items-center">
+                        {profileInfo.accessRoles.length > 0
+                          ? profileInfo.accessRoles.map((role, idx) => (
+                              <span key={idx} className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded">
+                                {role}
+                              </span>
+                            ))
+                          : <span className="text-[12px] text-slate-400 px-1">{t('ندارد', 'None')}</span>
                         }
                       </div>
                     </div>
@@ -505,66 +576,109 @@
 
               {/* Tab: Basic Preferences */}
               {activeTab === 'preferences' && (
-                <div className="flex flex-col gap-5">
-                  <Alert
-                    type="info"
-                    message={t('تنظیمات پایه‌ای مختص به حساب کاربری شما', 'Basic settings applied to your account.')}
-                    className="py-2 px-3 text-[11px]"
-                  />
+                <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
 
-                  {/* Theme — segmented control */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                      {t('تم رنگی سیستم', 'System Theme')}
-                    </label>
-                    <ThemeSegment
-                      value={preferences.theme}
-                      onChange={v => setPreferences(p => ({ ...p, theme: v }))}
-                      isRtl={isRtl}
-                    />
+                  {/* Theme */}
+                  <div className="flex items-center justify-between py-3 gap-4">
+                    <div className="shrink-0">
+                      <div className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('تم رنگی', 'Color Theme')}</div>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{t('ظاهر محیط کاربری', 'UI appearance')}</div>
+                    </div>
+                    <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-700/60 rounded-lg shrink-0">
+                      {[
+                        { value: 'light',  fa: 'روشن',   en: 'Light', Icon: Sun     },
+                        { value: 'dark',   fa: 'تاریک',  en: 'Dark',  Icon: Moon    },
+                        { value: 'system', fa: 'خودکار', en: 'Auto',  Icon: Monitor },
+                      ].map(({ value: v, fa, en, Icon }) => {
+                        const sel = preferences.theme === v;
+                        return (
+                          <button key={v} type="button" onClick={() => {
+                            setPreferences(p => ({ ...p, theme: v }));
+                            const r = v === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : v;
+                            window.DSCore?.setGlobalTheme?.(r);
+                          }} className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all outline-none ${
+                            sel ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                          }`}>
+                            <Icon size={12} strokeWidth={2} />{isRtl ? fa : en}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Language — toggle switch */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                      {t('زبان پیش‌فرض', 'Default Language')}
-                    </label>
-                    <LangToggle
-                      value={preferences.language}
-                      onChange={v => setPreferences(p => ({ ...p, language: v }))}
-                    />
+                  {/* Language */}
+                  <div className="flex items-center justify-between py-3 gap-4">
+                    <div className="shrink-0">
+                      <div className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('زبان سیستم', 'Language')}</div>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{t('زبان نمایش رابط کاربری', 'Interface language')}</div>
+                    </div>
+                    <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-700/60 rounded-lg shrink-0">
+                      {[
+                        { value: 'fa', label: 'فارسی', flag: '🇮🇷' },
+                        { value: 'en', label: 'EN',    flag: '🇬🇧' },
+                      ].map(({ value: v, label, flag }) => {
+                        const sel = preferences.language === v;
+                        return (
+                          <button key={v} type="button" onClick={() => { setPreferences(p => ({ ...p, language: v })); window.DSCore?.setGlobalLanguage?.(v); }}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold transition-all outline-none ${
+                              sel ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                            }`}>
+                            <span className="text-sm leading-none">{flag}</span>{label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Calendar — select */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <SelectField
-                      size="sm"
-                      label={t('تقویم پیش‌فرض', 'Default Calendar')}
-                      value={preferences.calendarType}
-                      onChange={e => setPreferences(p => ({ ...p, calendarType: e.target.value }))}
-                      options={[
-                        { value: 'jalali',    label: t('شمسی',   'Jalali')    },
-                        { value: 'gregorian', label: t('میلادی', 'Gregorian') },
-                      ]}
-                      isRtl={isRtl}
-                    />
+                  {/* Calendar */}
+                  <div className="flex items-center justify-between py-3 gap-4">
+                    <div className="shrink-0">
+                      <div className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('نوع تقویم', 'Calendar')}</div>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{t('تقویم پیش‌فرض سیستم', 'Default calendar system')}</div>
+                    </div>
+                    <div className="flex gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-700/60 rounded-lg shrink-0">
+                      {[
+                        { value: 'jalali',    fa: 'شمسی',   en: 'Jalali'    },
+                        { value: 'gregorian', fa: 'میلادی',  en: 'Gregorian' },
+                      ].map(({ value: v, fa, en }) => {
+                        const sel = preferences.calendarType === v;
+                        return (
+                          <button key={v} type="button" onClick={() => { setPreferences(p => ({ ...p, calendarType: v })); window.DSCore?.setGlobalCalendarMode?.(v); }}
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all outline-none ${
+                              sel ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                            }`}>
+                            {isRtl ? fa : en}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+
+                  {/* Timezone */}
+                  <div className="flex items-center justify-between py-3 gap-4">
+                    <div className="shrink-0">
+                      <div className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('منطقه زمانی', 'Timezone')}</div>
+                      <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{t('برای نمایش تاریخ و ساعت', 'For date and time display')}</div>
+                    </div>
+                    <div className="w-52 shrink-0">
+                      <SelectField size="sm" value={preferences.timezone} onChange={e => setPreferences(p => ({ ...p, timezone: e.target.value }))} options={COMMON_TIMEZONES.map(tz => ({ value: tz.value, label: tz.label }))} isRtl={isRtl} />
+                    </div>
+                  </div>
+
                 </div>
               )}
 
-              {/* Tab: Financial Preferences */}
+              {/* Tab: Default Values */}
               {activeTab === 'financial' && (
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <SelectField
-                      size="sm"
-                      label={t('نوع هزینه پیش‌فرض', 'Default Cost Type')}
-                      value={preferences.defaultCostTypeId}
-                      onChange={e => setPreferences(p => ({ ...p, defaultCostTypeId: e.target.value }))}
-                      options={[{ value: '', label: '---' }, ...costTypes]}
-                      isRtl={isRtl}
-                    />
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <SelectField
+                    size="sm"
+                    label={t('نوع هزینه پیش‌فرض', 'Default Cost Type')}
+                    value={preferences.defaultCostTypeId}
+                    onChange={e => setPreferences(p => ({ ...p, defaultCostTypeId: e.target.value }))}
+                    options={[{ value: '', label: '---' }, ...costTypes]}
+                    isRtl={isRtl}
+                  />
                 </div>
               )}
 
@@ -576,13 +690,36 @@
                   <input type="password" name="password_fake" autoComplete="new-password" style={{ display: 'none' }} readOnly />
 
                   <div className="bg-blue-50/80 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800/50 p-3 rounded-xl shadow-sm">
-                    <p className="text-[11px] font-medium text-blue-700 dark:text-blue-300 leading-relaxed text-justify">
+                    <p className="text-[12px] font-medium text-blue-700 dark:text-blue-300 leading-relaxed text-justify">
                       {t(
                         'راهنما: رمز عبور باید بین ۸ تا ۱۴ کاراکتر باشد و شامل حداقل یک حرف بزرگ، یک حرف کوچک، یک عدد و یک علامت باشد.',
                         'Hint: Password must be 8–14 characters, including at least one uppercase letter, one lowercase letter, one number, and one symbol.'
                       )}
                     </p>
                   </div>
+
+                  <div className="flex items-center justify-between gap-3 px-0.5">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('تولید رمز پیشنهادی و پر کردن فیلدهای جدید و تکرار', 'Auto-fill new and confirm fields with a strong password')}</span>
+                    <Button variant="secondary" size="sm" icon={RefreshCw}
+                      onClick={() => { const pwd = generatePassword(); setPasswords(p => ({ ...p, new: pwd, confirm: pwd })); setGeneratedPassword(pwd); }}>
+                      {t('تولید رمز', 'Suggest')}
+                    </Button>
+                  </div>
+
+                  {generatedPassword && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-0.5">{t('رمز تولید شده — یادداشت کنید:', 'Generated password — note it down:')}</div>
+                        <span className="text-[13px] font-mono text-slate-800 dark:text-slate-200 select-all tracking-wider dir-ltr">{generatedPassword}</span>
+                      </div>
+                      <button type="button"
+                        onClick={() => navigator.clipboard?.writeText(generatedPassword).then(() => showToast(t('رمز کپی شد.', 'Password copied.'), 'success'))}
+                        className="p-1.5 text-amber-500 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-md transition-all shrink-0"
+                        title={t('کپی', 'Copy')}>
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                  )}
 
                   <TextField
                     size="sm" type="password"
@@ -595,7 +732,7 @@
                     size="sm" type="password"
                     label={t('رمز عبور جدید', 'New Password')}
                     value={passwords.new}
-                    onChange={e => setPasswords(p => ({ ...p, new: e.target.value }))}
+                    onChange={e => { setPasswords(p => ({ ...p, new: e.target.value })); setGeneratedPassword(''); }}
                     isRtl={isRtl} dir="ltr" autoComplete="new-password"
                   />
                   <TextField
@@ -611,11 +748,6 @@
 
             {/* Panel footer */}
             <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end items-center shrink-0 rounded-b-xl gap-2 h-12">
-              {activeTab === 'personal' && (
-                <span className="text-[11px] text-slate-500 font-bold ml-auto">
-                  {t('اطلاعات شخصی فقط جهت نمایش است.', 'Personal info is read-only.')}
-                </span>
-              )}
               {(activeTab === 'preferences' || activeTab === 'financial') && (
                 <Button variant="primary" size="sm" icon={Save} onClick={handleSavePreferences} isLoading={isLoading}>
                   {t('ذخیره تغییرات', 'Save Changes')}

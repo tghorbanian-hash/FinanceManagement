@@ -10,13 +10,13 @@
     ListTree = FallbackIcon, FileText = FallbackIcon, Bell = FallbackIcon, Monitor = FallbackIcon, Clock = FallbackIcon,
     Settings = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, ChevronDown = FallbackIcon, Folder = FallbackIcon, FolderOpen = FallbackIcon, Globe = FallbackIcon, Loader2 = FallbackIcon, FileWarning = FallbackIcon,
     Maximize2 = FallbackIcon, Minimize2 = FallbackIcon, FileSpreadsheet = FallbackIcon, Calendar = FallbackIcon, Moon = FallbackIcon, Sun = FallbackIcon,
-    HelpCircle = FallbackIcon, LogOut = FallbackIcon
+    LogOut = FallbackIcon
   } = LucideIcons;
 
-  const FormLoader = ({ path, language }) => {
+  const FormLoader = ({ path, menuUniqueCode, language }) => {
     if (!path) return null;
 
-    const componentName = path.split('/').pop();
+    const componentName = path.split('/').pop().replace(/\.js$/i, '');
     const DynamicComponent = window[componentName];
 
     if (!DynamicComponent) {
@@ -27,13 +27,16 @@
           </div>
           <h3 className="text-[16px] font-black text-slate-800 dark:text-slate-100 mb-2">خطا در بارگذاری فرم</h3>
           <p className="text-[14px] text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 p-3 rounded-lg mt-2 font-sans">
-            کامپوننت <br/><strong className="text-red-600 dark:text-red-400 font-mono">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که فایل آن آپلود شده باشد).
+            کامپوننت <br/><strong className="text-red-600 dark:text-red-400 font-sans">{componentName}</strong><br/> در سیستم یافت نشد (لطفاً بررسی کنید که فایل آن آپلود شده باشد).
           </p>
         </div>
       );
     }
 
-    return <DynamicComponent language={language} formCode={DynamicComponent.formCode || componentName} />;
+    // اولویت: unique_code منو (همان کلیدی که سیستم دسترسی ناوبری استفاده می‌کند)
+    // در صورت نبود، از formCode کامپوننت و در نهایت نام کامپوننت استفاده می‌شود
+    const resolvedFormCode = menuUniqueCode || DynamicComponent.formCode || componentName;
+    return <DynamicComponent language={language} formCode={resolvedFormCode} />;
   };
 
   const NavigationSystem = ({ isAdmin = true, initialLanguage = 'fa' }) => {
@@ -42,7 +45,9 @@
     
     const { hasAccess, isFullAccess } = window.SecurityManager ? window.SecurityManager.useSecurity() : { hasAccess: () => true, isFullAccess: true };
 
-    const [currentLanguage, setCurrentLanguage] = useState(initialLanguage);
+    const [currentLanguage, setCurrentLanguage] = window.DSCore?.useLanguage
+      ? window.DSCore.useLanguage(initialLanguage)
+      : useState(initialLanguage);
     const isRtl = currentLanguage === 'fa';
     
     const t = (fa, en) => isRtl ? fa : en;
@@ -67,23 +72,29 @@
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
-    const [docModalInfo, setDocModalInfo] = useState({ isOpen: false, type: 'user' });
     const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
 
     const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     const theme = window.DSCore?.useTheme ? window.DSCore.useTheme() : 'light';
 
     const sessionString = sessionStorage.getItem('fm_user_session') || localStorage.getItem('fm_user_session') || '{}';
-    let sessionUser = { id: '00000000-0000-0000-0000-000000000000', username: 'US' };
+    let sessionUser = { id: '00000000-0000-0000-0000-000000000000', username: 'US', photo_url: null };
     try {
         const parsed = JSON.parse(sessionString);
         if (parsed && parsed.id) {
             sessionUser = parsed;
         }
-    } catch (e) {
-        console.error("Error parsing session data", e);
-    }
+    } catch (e) {}
     const CURRENT_USER_ID = sessionUser.id;
+
+    const [userTimezone, setUserTimezone] = useState('Asia/Tehran');
+
+    const [avatarUrl, setAvatarUrl] = useState(sessionUser.photo_url || null);
+    useEffect(() => {
+      const handler = (e) => setAvatarUrl(e.detail);
+      window.addEventListener('fm_avatar_change', handler);
+      return () => window.removeEventListener('fm_avatar_change', handler);
+    }, []);
     const RECENTS_STORAGE_KEY = `sys_recents_${CURRENT_USER_ID}`;
 
     useEffect(() => {
@@ -100,6 +111,25 @@
       setCollapsedModules({});
       setTreeSearchTerm('');
     }, [activeDomainId]);
+
+    useEffect(() => {
+      const fetchUserTimezone = async () => {
+        if (!supabase || !CURRENT_USER_ID || CURRENT_USER_ID === '00000000-0000-0000-0000-000000000000') return;
+        try {
+          const { data, error } = await supabase
+            .from('fm_user_preferences')
+            .select('timezone')
+            .eq('user_id', CURRENT_USER_ID)
+            .maybeSingle();
+          if (!error && data?.timezone) {
+            setUserTimezone(data.timezone);
+          }
+        } catch (err) {
+          console.error('Error fetching user timezone:', err);
+        }
+      };
+      fetchUserTimezone();
+    }, [CURRENT_USER_ID]);
 
     const fetchMenuData = async () => {
       setLoading(true);
@@ -152,6 +182,30 @@
       setRecents(newRecents);
       localStorage.setItem(RECENTS_STORAGE_KEY, JSON.stringify(newRecents));
     };
+
+    // expose a global helper so NotificationSidebar can navigate without timing issues
+    useEffect(() => {
+      window.__navigateToForm = (formComponent) => {
+        if (!menuData.length) return false;
+        const item = menuData.find(m => m.component_path &&
+          (m.component_path === formComponent || m.component_path.endsWith('/' + formComponent)));
+        if (item) { handleFormClick(item); return true; }
+        return false;
+      };
+      return () => { delete window.__navigateToForm; };
+    }, [menuData]);
+
+    useEffect(() => {
+      const handler = (e) => {
+        const { formComponent } = e.detail || {};
+        if (!formComponent || !menuData.length) return;
+        const item = menuData.find(m => m.component_path &&
+          (m.component_path === formComponent || m.component_path.endsWith('/' + formComponent)));
+        if (item) handleFormClick(item);
+      };
+      window.addEventListener('navigateToForm', handler);
+      return () => window.removeEventListener('navigateToForm', handler);
+    }, [menuData]);
 
     const toggleCalendar = () => {
       const newMode = calendarMode === 'jalali' ? 'gregorian' : 'jalali';
@@ -533,8 +587,6 @@
     );
 
     const NotificationSidebarComponent = window.NotificationSidebar;
-    const NavigationDocsComponent = window.NavigationDocs;
-
     return (
       <div className="h-screen w-full flex bg-[#f8fafc] dark:bg-slate-900 overflow-hidden font-sans" dir={isRtl ? 'rtl' : 'ltr'}>
         <nav className={`w-[60px] bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 flex flex-col items-center py-6 gap-4 shrink-0 z-40 shadow-sm relative ${isRtl ? 'border-l' : 'border-r'}`}>
@@ -550,8 +602,11 @@
           ))}
           <div className="mt-auto flex flex-col items-center gap-5">
             <button onClick={handleLogoutClick} title={t('خروج از سیستم', 'Logout')} className="text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 transition-colors"><LogOut size={18} /></button>
-            <div onClick={handleProfileClick} title={t('پروفایل کاربری', 'User Profile')} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors uppercase">
-              {sessionUser.username ? sessionUser.username.substring(0, 2) : 'US'}
+            <div onClick={handleProfileClick} title={t('پروفایل کاربری', 'User Profile')} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-600 dark:text-slate-300 font-black text-[12px] cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors uppercase overflow-hidden">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                : (sessionUser.username ? sessionUser.username.substring(0, 2) : 'US')
+              }
             </div>
           </div>
         </nav>
@@ -628,21 +683,13 @@
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
-                {activeForm && (
-                  <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md p-1 mr-2 ml-2">
-                    <button onClick={() => setDocModalInfo({ isOpen: true, type: 'user' })} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-indigo-500 dark:text-indigo-400" title={t('راهنمای کاربری', 'User Guide')}>
-                      <HelpCircle size={14} />
-                    </button>
-                    <button onClick={() => setDocModalInfo({ isOpen: true, type: 'dev' })} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-amber-500 dark:text-amber-400" title={t('مستندات توسعه', 'Developer Docs')}>
-                      <FileText size={14} />
-                    </button>
-                  </div>
-                )}
-                {activeForm && <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>}
-                
                 <button onClick={toggleTheme} className="flex items-center justify-center p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800" title={t('تغییر تم', 'Change Theme')}>
                   {theme === 'dark' ? <Sun size={14} className="text-amber-500" /> : <Moon size={14} className="text-indigo-500" />}
                 </button>
+                <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[12px] border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans" title={t(`منطقه زمانی: ${userTimezone}`, `Timezone: ${userTimezone}`)}>
+                  <Clock size={14} className="text-emerald-500 dark:text-emerald-400" />
+                  <span className="mt-[1px] tracking-wide">{userTimezone.split('/').pop()}</span>
+                </div>
                 <button onClick={toggleCalendar} className="flex items-center gap-1 px-2.5 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-slate-600 dark:text-slate-300 font-bold text-[12px] transition-colors border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 font-sans tracking-wider" title={t('تغییر تقویم', 'Change Calendar')}>
                   <Calendar size={14} className="text-indigo-500 dark:text-indigo-400" /><span className="mt-[1px]">{calendarMode === 'jalali' ? 'Gre' : 'Ja'}</span>
                 </button>
@@ -662,7 +709,7 @@
 
           <div className="flex-1 overflow-y-auto custom-scrollbar font-sans">
             {activeForm && activeForm.component_path ? (
-              <FormLoader path={activeForm.component_path} language={currentLanguage} />
+              <FormLoader path={activeForm.component_path} menuUniqueCode={activeForm.unique_code} language={currentLanguage} />
             ) : activeDomainId === 'HOME_FAV' ? renderHomeView() : viewMode === 'tile' ? renderFioriTiles() : (
               <div className="h-full flex flex-col items-center justify-center text-center p-12 font-sans">
                 <Monitor size={40} className="text-slate-300 dark:text-slate-700 mb-4" strokeWidth={1.5} />
@@ -679,18 +726,6 @@
             onClose={() => setIsNotifOpen(false)} 
             language={currentLanguage} 
             onUpdateUnread={setUnreadNotifCount}
-          />
-        )}
-        
-        {NavigationDocsComponent && (
-          <NavigationDocsComponent
-            isOpen={docModalInfo.isOpen}
-            onClose={() => setDocModalInfo({ ...docModalInfo, isOpen: false })}
-            pageKey={activeForm?.unique_code || activeForm?.id}
-            pageName={activeForm ? getLabel(activeForm) : ''}
-            docType={docModalInfo.type}
-            isAdmin={isAdmin}
-            language={currentLanguage}
           />
         )}
 

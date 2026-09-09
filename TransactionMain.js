@@ -1,0 +1,894 @@
+/* Filename: financial/TransactionMain.js */
+(() => {
+  const React = window.React;
+  const { useState, useEffect, useMemo, useCallback } = React;
+
+  const FallbackComponent = () => null;
+  const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
+
+  const safeComp = (moduleObj, compName) => {
+      const comp = moduleObj && moduleObj[compName];
+      if (typeof comp === 'function' || (comp && typeof comp === 'object' && comp.$$typeof)) return comp;
+      if (comp && comp.default && (typeof comp.default === 'function' || comp.default.$$typeof)) return comp.default;
+      return FallbackComponent;
+  };
+
+  const safeIcon = (moduleObj, iconName) => {
+      const icon = moduleObj && moduleObj[iconName];
+      if (typeof icon === 'function' || (icon && typeof icon === 'object' && icon.$$typeof)) return icon;
+      if (icon && icon.default && (typeof icon.default === 'function' || icon.default.$$typeof)) return icon.default;
+      return FallbackIcon;
+  };
+
+  const DS = window.DesignSystem || {};
+  const Core = window.DSCore || DS || {};
+        const Forms = window.DSForms || DS || {};
+    const DSGrid = window.DSGrid || DS || {};
+    const Feedback = window.DSFeedback || window.DSOverlays || DS || {};
+    const LucideIcons = window.LucideIcons || {};
+  const Button = safeComp(Core, 'Button');
+  const PageHeader = safeComp(Core, 'PageHeader');
+    const AdvancedFilter = safeComp(DSGrid, 'AdvancedFilter');
+    const DataGrid = safeComp(DSGrid, 'DataGrid');
+    const EmptyState = safeComp(Core, 'EmptyState');
+    const Badge = safeComp(Core, 'Badge');
+    const Modal = safeComp(Feedback, 'Modal');
+    const Toast = safeComp(Feedback, 'Toast');
+    const AttachmentManager = safeComp(Forms, 'AttachmentManager') !== FallbackComponent
+        ? safeComp(Forms, 'AttachmentManager')
+        : safeComp(window, 'AttachmentManager');
+    const FileText = safeIcon(LucideIcons, 'FileText');
+    const AlertTriangle = safeIcon(LucideIcons, 'AlertTriangle');
+    const MessageSquare = safeIcon(LucideIcons, 'MessageSquare');
+    const Printer = safeIcon(LucideIcons, 'Printer');
+    const DollarSign = safeIcon(LucideIcons, 'DollarSign');
+    const Paperclip = safeIcon(LucideIcons, 'Paperclip');
+    const Copy = safeIcon(LucideIcons, 'Copy');
+    const Edit = safeIcon(LucideIcons, 'Edit');
+    const Trash2 = safeIcon(LucideIcons, 'Trash2');
+
+    const formatNumber = (num) => {
+            if (!num && num !== 0) return '0';
+            const parts = parseFloat(num).toFixed(2).toString().split('.');
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            return parts[1] === '00' ? parts[0] : parts.join('.');
+    };
+
+    const TransactionMain = ({ language = 'fa', formCode = 'FIN_TRANSACTION_MAIN' }) => {
+        const isRtl = language === 'fa';
+        const t = useCallback((fa, en) => (isRtl ? fa : en), [isRtl]);
+        const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : (isRtl ? 'jalali' : 'gregorian');
+        const dateLocale = calendarMode === 'jalali' ? 'fa-IR-u-nu-latn' : 'en-US';
+        const supabase = window.supabase;
+
+        const sessionUserId = (() => {
+            try {
+                const stored = sessionStorage.getItem('fm_user_session') || localStorage.getItem('fm_user_session') || '{}';
+                return JSON.parse(stored).id || null;
+            } catch (error) {
+                return null;
+            }
+        })();
+
+        const currentUserObj = window.NavigationSystem?.currentUser || {};
+        const currentUserId = sessionUserId || currentUserObj.id || null;
+        const currentUserName = currentUserObj.name || currentUserObj.username || 'مدیر سیستم';
+
+        const securityCtx = window.SecurityManager?.useSecurity ? window.SecurityManager.useSecurity() : null;
+        const access = useMemo(() => {
+            const rawActions = securityCtx ? securityCtx.getActions(formCode) : null;
+            return rawActions || { canView: true, canCreate: true, canEdit: true, canDelete: true, canPrint: true };
+        }, [securityCtx, formCode]);
+
+        const TRANSACTION_TYPES = [
+            { value: 'OPENING', label: t('تراکنش افتتاحیه', 'Opening') },
+            { value: 'CLOSING', label: t('تراکنش اختتامیه', 'Closing') },
+            { value: 'GENERAL', label: t('عمومی', 'General') },
+            { value: 'TRANSFER', label: t('تراکنش انتقال', 'Transfer') }
+        ];
+
+        const TRANSACTION_ACTIONS = [
+            { value: 'DEPOSIT', label: t('واریز', 'Deposit') },
+            { value: 'WITHDRAWAL', label: t('برداشت', 'Withdrawal') }
+        ];
+
+        const TRANSACTION_GROUPS = [
+            { value: 'COST', label: t('هزینه', 'Cost') },
+            { value: 'INCOME', label: t('درآمد', 'Income') },
+            { value: 'BALANCE', label: t('بالانس', 'Balance') },
+            { value: 'OTHER', label: t('سایر', 'Other') }
+        ];
+
+        const STATUS_OPTIONS = [
+            { value: 'DRAFT', label: t('یادداشت', 'Draft') },
+            { value: 'TEMPORARY', label: t('موقت', 'Temporary') },
+            { value: 'FINAL', label: t('بررسی شده', 'Final') },
+            { value: 'APPROVED', label: t('تایید شده', 'Approved') }
+        ];
+
+        const isLocked = (tx) => tx.status === 'FINAL' || tx.status === 'APPROVED';
+
+        const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+        const [isLoading, setIsLoading] = useState(false);
+        const [transactions, setTransactions] = useState([]);
+        const [attachmentCounts, setAttachmentCounts] = useState({});
+        const [gridState, setGridState] = useState(null);
+        const [filters, setFilters] = useState({});
+        const [usersMap, setUsersMap] = useState({});
+        const [deptsMap, setDeptsMap] = useState({});
+        const [lookups, setLookups] = useState({ accounts: [], costTypes: [], incomeTypes: [], costTypesAll: [], incomeTypesAll: [], costBenefitCenters: [], currencies: [] });
+        const [resolvedUserId, setResolvedUserId] = useState(currentUserId);
+        const [userDepartmentId, setUserDepartmentId] = useState(null);
+        const [currentView, setCurrentView] = useState('list');
+        const [formMode, setFormMode] = useState('CREATE');
+        const [currentRecord, setCurrentRecord] = useState(null);
+        const [commentModalState, setCommentModalState] = useState({ isOpen: false, record: null });
+        const [commentedIds, setCommentedIds] = useState(new Set());
+        const [filteredRecordId, setFilteredRecordId] = useState(null);
+        const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
+        const [attachModal, setAttachModal] = useState({ isOpen: false, record: null, files: [] });
+        const [summaryModal, setSummaryModal] = useState({ isOpen: false, record: null });
+        const [printModal, setPrintModal] = useState({ isOpen: false, transactionId: null });
+        const [isUploading, setIsUploading] = useState(false);
+
+        const showToast = useCallback((message, type = 'success') => {
+            setToast({ isVisible: true, message, type });
+            setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+        }, []);
+
+        const logAction = useCallback(async (action, recordId, details = '') => {
+            try {
+                if (!supabase) return;
+                await supabase.from('fm_record_logs').insert([{
+                    entity_type: 'تراکنش‌ها',
+                    record_id: String(recordId || 'SYSTEM'),
+                    action,
+                    user_name: currentUserName,
+                    details,
+                }]);
+            } catch (error) {}
+        }, [supabase, currentUserName]);
+
+        const fetchUsersAndResolveDepartment = useCallback(async () => {
+            try {
+                const { data: userData } = await supabase.from('sec_users').select('id, full_name, username, party_id');
+                const uMap = {};
+                (userData || []).forEach(u => { uMap[u.id] = `${u.full_name || u.username || ''}`.trim(); });
+                setUsersMap(uMap);
+
+                const activeUserRecord = currentUserId ? (userData || []).find(u => u.id === currentUserId) : null;
+                if (activeUserRecord && activeUserRecord.party_id) {
+                    const { data: personnelData } = await supabase.from('fm_org_chart_personnel').select('node_id').eq('person_id', activeUserRecord.party_id).maybeSingle();
+                    if (personnelData && personnelData.node_id) setUserDepartmentId(personnelData.node_id);
+                }
+            } catch (error) {
+                console.error('Error in fetching user department relation:', error);
+            }
+        }, [supabase, currentUserId]);
+
+        const fetchLookups = useCallback(async () => {
+            try {
+                const [accRes, chartRes, costRes, incRes, costAllRes, incAllRes, deptNodesRes, cbcRes, currRes, permsRes, userRolesRes] = await Promise.all([
+                    supabase.from('fm_coa_accounts').select('id, title_fa, title_en, code, currency_id, parent_id, chart_id').eq('is_active', true),
+                    supabase.from('fm_coa_charts').select('id, title').eq('is_active', true),
+                    supabase.from('fm_cost_types').select('id, title_fa, title_en, code, parent_id').eq('is_active', true),
+                    supabase.from('fm_income_types').select('id, title_fa, title_en, code, parent_id').eq('is_active', true),
+                    supabase.from('fm_cost_types').select('id, title_fa, title_en, code, parent_id'),
+                    supabase.from('fm_income_types').select('id, title_fa, title_en, code, parent_id'),
+                    supabase.from('fm_org_chart_nodes').select('id, title'),
+                    supabase.from('fm_cost_benefit_centers').select('id, title_fa, title_en, center_kind, is_cost_center, is_benefit_center, is_active, manager:parties(id, first_name, last_name), office:fm_org_offices(id, title)'),
+                    supabase.from('fm_currencies').select('id, code, decimal_places'),
+                    supabase.from('fm_coa_permissions').select('account_id, grantee_type, grantee_id, access_level'),
+                    supabase.from('sec_user_roles').select('role_id').eq('user_id', currentUserId || '00000000-0000-0000-0000-000000000000')
+                ]);
+
+                const costBenefitCenters = (cbcRes.data || []).map(r => ({
+                    id: r.id,
+                    titleFa: r.title_fa || '',
+                    titleEn: r.title_en || '',
+                    displayLabel: r.title_fa || r.title_en || '',
+                    centerKind: r.center_kind || '',
+                    isCostCenter: r.is_cost_center ?? false,
+                    isBenefitCenter: r.is_benefit_center ?? false,
+                    isActive: r.is_active ?? true,
+                    managerName: r.manager ? `${r.manager.first_name || ''} ${r.manager.last_name || ''}`.trim() : '',
+                    officeName: r.office?.title || ''
+                }));
+
+                const dMap = {};
+                (deptNodesRes.data || []).forEach(d => { dMap[d.id] = d.title; });
+                setDeptsMap(dMap);
+
+                const activeCharts = chartRes.data || [];
+                const activeChartId = activeCharts[0]?.id || null;
+                const activeChartIds = new Set(activeCharts.map(c => c.id));
+                const buildPathsAndFilterLeafs = (items, charts = null) => {
+                    const parentIds = new Set(items.map(i => i.parent_id).filter(Boolean));
+                    return items.filter(i => {
+                        if (parentIds.has(i.id)) return false;
+                        if (charts && !activeChartIds.has(i.chart_id)) return false;
+                        return true;
+                    }).map(i => {
+                        const titleFa = i.title_fa || i.title;
+                        const titleEn = i.title_en || i.title_fa || i.title;
+                        let pathArr = [isRtl ? titleFa : titleEn];
+                        let curr = i;
+                        while (curr && curr.parent_id) {
+                            const parent = items.find(p => p.id === curr.parent_id);
+                            if (parent) {
+                                const pTitleFa = parent.title_fa || parent.title;
+                                const pTitleEn = parent.title_en || parent.title_fa || parent.title;
+                                pathArr.unshift(isRtl ? pTitleFa : pTitleEn);
+                                curr = parent;
+                            } else break;
+                        }
+                        return { ...i, displayLabel: isRtl ? titleFa : titleEn, pathTitle: pathArr.join(' / '), chart_name: charts ? (charts.find(c => c.id === i.chart_id)?.title || '') : '' };
+                    });
+                };
+
+                const rawAccounts = accRes.data || [];
+                const accMapCascade = new Map(rawAccounts.map(a => [a.id, a]));
+                const cascadeActiveAccounts = rawAccounts.filter(acc => {
+                    let cur = acc;
+                    const visited = new Set();
+                    while (cur && cur.parent_id) {
+                        if (visited.has(cur.id)) return false;
+                        visited.add(cur.id);
+                        cur = accMapCascade.get(cur.parent_id);
+                        if (!cur) return false;
+                    }
+                    return true;
+                });
+
+                const sessionDataParsed = (() => { try { return JSON.parse(sessionStorage.getItem('fm_user_session') || localStorage.getItem('fm_user_session') || '{}'); } catch { return {}; } })();
+                const usernameVal = (sessionDataParsed.username || '').toLowerCase();
+                const userTypeVal = (sessionDataParsed.type || '').toLowerCase();
+                const isAdmin = usernameVal === 'admin' || usernameVal === 'superadmin' || userTypeVal === 'admin' || userTypeVal === 'superadmin';
+                const currenciesData = currRes.data || [];
+                let accountsList = buildPathsAndFilterLeafs(cascadeActiveAccounts, activeCharts).map(acc => ({ ...acc, currency_code: currenciesData.find(c => c.id === acc.currency_id)?.code || '' }));
+                if (!isAdmin && currentUserId) {
+                    const perms = permsRes.data || [];
+                    const userRoleIds = new Set((userRolesRes.data || []).map(r => String(r.role_id)));
+                    const directAllowedIds = new Set();
+                    perms.forEach(p => {
+                        if (p.access_level !== 'full' && p.access_level !== 'view') return;
+                        if (p.grantee_type?.toLowerCase() === 'user' && String(p.grantee_id) === String(currentUserId)) directAllowedIds.add(p.account_id);
+                        if (p.grantee_type?.toLowerCase() === 'role' && userRoleIds.has(String(p.grantee_id))) directAllowedIds.add(p.account_id);
+                    });
+                    const isAccessible = (acc) => {
+                        if (directAllowedIds.has(acc.id)) return true;
+                        if (!acc.parent_id) return false;
+                        const parent = accMapCascade.get(acc.parent_id);
+                        return parent ? isAccessible(parent) : false;
+                    };
+                    accountsList = accountsList.filter(a => isAccessible(a));
+                }
+
+                setLookups({
+                    accounts: accountsList,
+                    costTypes: buildPathsAndFilterLeafs(costRes.data || []),
+                    incomeTypes: buildPathsAndFilterLeafs(incRes.data || []),
+                    costTypesAll: costAllRes.data || [],
+                    incomeTypesAll: incAllRes.data || [],
+                    costBenefitCenters,
+                    currencies: currRes.data || [],
+                    activeChartId,
+                });
+            } catch (error) {
+                console.error('fetchLookups error:', error);
+            }
+        }, [supabase, isRtl, currentUserId]);
+
+        const fetchData = useCallback(async () => {
+            setIsLoading(true);
+            try {
+                const [{ data: txData, error: txError }, { data: attData }] = await Promise.all([
+                    supabase.from('fm_transactions').select('*').order('created_at', { ascending: false }),
+                    supabase.from('fm_attachments').select('entity_id').eq('entity_type', 'TRANSACTION')
+                ]);
+
+                if (txError) throw txError;
+
+                const transactionsWithItems = (txData || []).map(tx => ({ ...tx, fm_transaction_items: [] }));
+                const txIds = transactionsWithItems.map(tx => String(tx.id));
+
+                if (txIds.length > 0) {
+                    const chunkArray = (values, size) => {
+                        const chunks = [];
+                        for (let index = 0; index < values.length; index += size) {
+                            chunks.push(values.slice(index, index + size));
+                        }
+                        return chunks;
+                    };
+
+                    const loadInBatches = async (table, selectColumns, filterColumn, values, extraBuilder = null) => {
+                        const batches = chunkArray(values, 100);
+                        const rows = [];
+                        for (const batch of batches) {
+                            let query = supabase.from(table).select(selectColumns).in(filterColumn, batch);
+                            if (extraBuilder) query = extraBuilder(query);
+                            const { data, error } = await query;
+                            if (error) return { data: rows, error };
+                            if (data && data.length) rows.push(...data);
+                        }
+                        return { data: rows, error: null };
+                    };
+
+                    let itemRows = [];
+                    let itemError = null;
+
+                    ({ data: itemRows, error: itemError } = await loadInBatches(
+                        'fm_transaction_items',
+                        '*',
+                        'transaction_id',
+                        txIds,
+                        (query) => query.order('transaction_id', { ascending: true }).order('row_number', { ascending: true })
+                    ));
+                    if (itemError && /center_id|schema cache/i.test(itemError.message || '')) {
+                        const fallbackColumns = 'id, transaction_id, row_number, account_id, transaction_action, transaction_group, cost_type_id, income_type_id, currency, deposit_amount, withdrawal_amount, exchange_rate_to_usd, exchange_rate_usd_to_irr, amount_usd, amount_irr, description, created_at';
+                        ({ data: itemRows, error: itemError } = await loadInBatches(
+                            'fm_transaction_items',
+                            fallbackColumns,
+                            'transaction_id',
+                            txIds,
+                            (query) => query.order('transaction_id', { ascending: true }).order('row_number', { ascending: true })
+                        ));
+                    }
+
+                    if (!itemError && itemRows) {
+                        const itemsByTransaction = new Map();
+                        itemRows.forEach(item => {
+                            const key = String(item.transaction_id);
+                            if (!itemsByTransaction.has(key)) itemsByTransaction.set(key, []);
+                            itemsByTransaction.get(key).push(item);
+                        });
+                        transactionsWithItems.forEach(tx => {
+                            tx.fm_transaction_items = itemsByTransaction.get(String(tx.id)) || [];
+                        });
+                    } else if (itemError) {
+                        console.warn('Unable to load fm_transaction_items separately:', itemError.message);
+                    }
+                }
+
+                setTransactions(transactionsWithItems);
+
+                const counts = {};
+                (attData || []).forEach(att => { counts[att.entity_id] = (counts[att.entity_id] || 0) + 1; });
+                setAttachmentCounts(counts);
+
+                if (txIds.length > 0) {
+                    const commentRows = [];
+                    const commentBatches = chunkArray(txIds, 100);
+                    for (const batch of commentBatches) {
+                        const { data } = await supabase
+                            .from('sys_comments')
+                            .select('entity_id')
+                            .eq('entity_type', 'fm_transactions')
+                            .in('entity_id', batch);
+                        if (data && data.length) commentRows.push(...data);
+                    }
+                    if (commentRows) setCommentedIds(new Set(commentRows.map(r => r.entity_id)));
+                }
+            } catch (error) {
+                showToast(t('خطا در دریافت لیست تراکنش‌ها', 'Error fetching transactions'), 'error');
+            } finally {
+                setIsLoading(false);
+            }
+        }, [supabase, showToast, t]);
+
+        useEffect(() => {
+                if (access.canView) {
+                        fetchUsersAndResolveDepartment();
+                        fetchLookups();
+                        fetchData();
+                }
+        }, [fetchUsersAndResolveDepartment, fetchLookups, fetchData, access.canView]);
+
+    useEffect(() => {
+        if (access.canView) {
+            fetchUsersAndResolveDepartment();
+            fetchLookups();
+            fetchData();
+        }
+    }, [fetchUsersAndResolveDepartment, fetchLookups, fetchData, access.canView]);
+
+    useEffect(() => {
+        const handleFilterToRecord = (e) => {
+            if (e.detail && e.detail.form_component === 'TransactionMain') {
+                setFilteredRecordId(String(e.detail.entity_id));
+            }
+        };
+        window.addEventListener('filterToRecord', handleFilterToRecord);
+        return () => window.removeEventListener('filterToRecord', handleFilterToRecord);
+    }, []);
+
+    const handleOpenForm = (mode, record = null) => {
+        setFormMode(mode);
+        if (mode === 'CREATE') {
+            setCurrentRecord({
+                department_id: userDepartmentId,
+                registrar_id: resolvedUserId,
+                document_date: new Date().toISOString().split('T')[0],
+                status: 'DRAFT',
+                transaction_type: 'GENERAL',
+                fm_transaction_items: []
+            });
+        } else {
+            setCurrentRecord(record);
+        }
+        setCurrentView('form');
+    };
+
+    const handleModalSuccess = () => {
+        setCurrentView('list');
+        fetchData();
+    };
+
+    const loadAttachments = async (recordId) => {
+        try {
+            const { data } = await supabase.from('fm_attachments').select('*').eq('entity_type', 'TRANSACTION').eq('entity_id', recordId);
+            setAttachModal(prev => ({ ...prev, files: data || [] }));
+        } catch (err) {}
+    };
+
+    const openAttachments = (record) => {
+        setAttachModal({ isOpen: true, record, files: [] });
+        loadAttachments(record.id);
+    };
+
+    const openSummary = (record) => {
+        setSummaryModal({ isOpen: true, record: record });
+    };
+
+    const handleFileUpload = async (files) => {
+        if (!files || files.length === 0 || !attachModal.record) return;
+        const file = files[0];
+
+        setIsUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${attachModal.record.id}_${Date.now()}.${fileExt}`;
+            const filePath = `transactions/${fileName}`;
+
+            let fileUrl = '';
+            
+            if (supabase.storage) {
+                const { error: uploadError } = await supabase.storage.from('attachments').upload(filePath, file);
+                if (uploadError) throw uploadError;
+                const { data: urlData } = supabase.storage.from('attachments').getPublicUrl(filePath);
+                fileUrl = urlData.publicUrl;
+            } else {
+                fileUrl = URL.createObjectURL(file); 
+            }
+
+            const payload = {
+                entity_type: 'TRANSACTION',
+                entity_id: attachModal.record.id,
+                file_name: file.name,
+                file_size: file.size,
+                file_type: file.type || 'application/octet-stream',
+                file_url: fileUrl,
+                created_by: resolvedUserId
+            };
+
+            const { error } = await supabase.from('fm_attachments').insert([payload]);
+            if (error) throw error;
+
+            showToast(t('فایل با موفقیت پیوست شد.', 'File attached successfully.'));
+            loadAttachments(attachModal.record.id);
+            fetchData();
+        } catch (error) {
+            showToast(t('خطا در آپلود فایل.', 'Error uploading file.'), 'error');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleDeleteAttachment = async (fileId) => {
+        try {
+            const { error } = await supabase.from('fm_attachments').delete().eq('id', fileId);
+            if (error) throw error;
+            showToast(t('پیوست حذف شد.', 'Attachment deleted.'));
+            loadAttachments(attachModal.record.id);
+            fetchData();
+        } catch (error) {
+            showToast(t('خطا در حذف پیوست.', 'Error deleting attachment.'), 'error');
+        }
+    };
+
+    const filteredTransactions = useMemo(() => {
+        const normDate = (d) => d ? String(d).replace(/\//g, '-').substring(0, 10) : null;
+        return transactions.filter(tx => {
+            // date range filter
+            if (filters.date_from || filters.date_to) {
+                const dateField = filters.date_type || 'document_date';
+                const txDate = normDate(tx[dateField]);
+                if (!txDate) return false;
+                if (filters.date_from && txDate < normDate(filters.date_from)) return false;
+                if (filters.date_to && txDate > normDate(filters.date_to)) return false;
+            }
+            if (filters.account_id || filters.transaction_action || filters.transaction_group || filters.cost_type_id || filters.income_type_id || filters.center_id) {
+                const hasMatchingItem = (tx.fm_transaction_items || []).some(item => {
+                    if (filters.account_id && item.account_id !== filters.account_id.id) return false;
+                    if (filters.transaction_action && item.transaction_action !== filters.transaction_action) return false;
+                    if (filters.transaction_group && item.transaction_group !== filters.transaction_group) return false;
+                    if (filters.cost_type_id && item.cost_type_id !== filters.cost_type_id.id) return false;
+                    if (filters.income_type_id && item.income_type_id !== filters.income_type_id.id) return false;
+                    if (filters.center_id && String(item.center_id) !== String(filters.center_id.id)) return false;
+                    return true;
+                });
+                if (!hasMatchingItem) return false;
+            }
+            if (filters.without_attachments) {
+                const attachmentCount = attachmentCounts[tx.id] || 0;
+                if (attachmentCount > 0) return false;
+            }
+            return true;
+        });
+    }, [transactions, filters, attachmentCounts, resolvedUserId]);
+
+    const transactionExcel = window.TransactionMainExcel?.useTransactionMainExcel
+        ? window.TransactionMainExcel.useTransactionMainExcel({
+            isRtl,
+            t,
+            supabase,
+            showToast,
+            deptsMap,
+            lookups,
+            filteredTransactions,
+            usersMap,
+            currentUserId,
+            currentUserName,
+            dateLocale,
+            fetchData,
+            logAction,
+        })
+        : { handleDownloadSample: null, handleImportTransactions: null, onExport: null, importErrorsModal: null };
+
+    /* ── عملیات گروهی و اکسپورت ─ از TransactionActions.js ── */
+    const _txActions = window.makeTransactionActions ? window.makeTransactionActions({
+        transactions, filteredTransactions, filteredRecordId,
+        usersMap, deptsMap, lookups,
+        deleteConfirm, supabase,
+        currentUserId, currentUserName,
+        isRtl, dateLocale,
+        setIsLoading, fetchData, showToast, logAction,
+        setDeleteConfirm,
+    }) : {};
+    const executeDelete      = _txActions.executeDelete      || (() => {});
+    const bulkActions        = _txActions.bulkActions        || [];
+    const handleDownloadSample = transactionExcel.handleDownloadSample || (() => {});
+    const handleImportTransactions = transactionExcel.handleImportTransactions || (() => {});
+    const handleCustomExport = transactionExcel.onExport || _txActions.handleCustomExport || (() => {});
+
+    const columns = useMemo(() => [
+        { field: 'reference_code', header_fa: 'عطف', header_en: 'Ref', width: '70px', render: (val) => React.createElement('span', { className: "font-bold text-slate-700 dark:text-slate-300" }, val || '-') },
+        { field: 'document_code', header_fa: 'کد تراکنش', header_en: 'Doc Code', width: '120px', render: (val) => React.createElement('span', { className: "text-indigo-600 dark:text-indigo-400 font-bold" }, val) },
+        { field: 'daily_number', header_fa: 'روزانه', header_en: 'Daily', width: '70px' },
+        { field: 'document_date', header_fa: 'تاریخ تراکنش', header_en: 'Date', width: '90px', type: 'date' },
+        { field: 'created_at', header_fa: 'زمان ثبت', header_en: 'Registered At', width: '100px', render: (val) => {
+            if (!val) return React.createElement('span', { className: 'text-slate-400 text-[12px]' }, '-');
+            try {
+                const d = new Date(val);
+                const datePart = new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+                const timePart = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
+                return React.createElement('div', { className: 'flex flex-col leading-tight', dir: 'ltr' },
+                    React.createElement('span', { className: 'text-[12px] font-sans text-slate-700 dark:text-slate-300' }, datePart),
+                    React.createElement('span', { className: 'text-[10px] font-sans text-slate-400 dark:text-slate-500' }, timePart)
+                );
+            } catch(e) { return React.createElement('span', { className: 'text-[12px]' }, val); }
+        }},
+        { field: 'transaction_type', header_fa: 'نوع تراکنش', header_en: 'Type', width: '100px', render: (val) => TRANSACTION_TYPES.find(x => x.value === val)?.label || val },
+        { field: 'status', header_fa: 'وضعیت', header_en: 'Status', width: '95px', render: (val) => {
+            const s = STATUS_OPTIONS.find(x => x.value === val);
+            const colors = { DRAFT: 'slate', TEMPORARY: 'orange', FINAL: 'blue', APPROVED: 'emerald' };
+            return React.createElement(Badge, { variant: colors[val] || 'gray', size: "sm" }, s ? s.label : val);
+        }},
+        { field: 'registrar_id', header_fa: 'ثبت کننده', header_en: 'Registrar', width: '110px', render: (val) => {
+            if (!val || val === '00000000-0000-0000-0000-000000000000') return React.createElement('span', { className: "text-[12px] text-slate-500" }, t('سیستمی', 'System'));
+            return React.createElement('span', { className: "text-[12px] truncate font-medium text-slate-700 dark:text-slate-300 block" }, usersMap[val] || val);
+        }},
+        { field: 'department_id', header_fa: 'دپارتمان', header_en: 'Department', width: '120px', render: (val) => {
+            return React.createElement('span', { className: "text-[12px] truncate font-medium text-slate-600 dark:text-slate-400 block" }, deptsMap[val] || val || '-');
+        }},
+        { field: 'description', header_fa: 'شرح سربرگ', header_en: 'Description', width: '160px', render: (val) => React.createElement('span', { className: "text-[12px] truncate block max-w-xs", title: val }, val || '-') },
+        { field: 'reviewed_by_name', header_fa: 'بررسی‌کننده', header_en: 'Reviewed By', width: '110px', render: (val) => React.createElement('span', { className: 'text-[12px] truncate block font-medium text-slate-700 dark:text-slate-300' }, val || '-') },
+        { field: 'reviewed_at', header_fa: 'تاریخ بررسی', header_en: 'Reviewed At', width: '115px', render: (val) => {
+            if (!val) return React.createElement('span', { className: 'text-slate-400 text-[12px]' }, '-');
+            try { return React.createElement('span', { className: 'text-[12px] font-sans block', dir: 'ltr' }, new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(val))); }
+            catch(e) { return React.createElement('span', { className: 'text-[12px]' }, val); }
+        }},
+        { field: 'approved_by_name', header_fa: 'تاییدکننده', header_en: 'Approved By', width: '110px', render: (val) => React.createElement('span', { className: 'text-[12px] truncate block font-medium text-slate-700 dark:text-slate-300' }, val || '-') },
+        { field: 'approved_at', header_fa: 'تاریخ تایید', header_en: 'Approved At', width: '115px', render: (val) => {
+            if (!val) return React.createElement('span', { className: 'text-slate-400 text-[12px]' }, '-');
+            try { return React.createElement('span', { className: 'text-[12px] font-sans block', dir: 'ltr' }, new Intl.DateTimeFormat(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(val))); }
+            catch(e) { return React.createElement('span', { className: 'text-[12px]' }, val); }
+        }},
+        { field: '_total_usd', header_fa: 'جمع (USD)', header_en: 'Total (USD)', width: '110px', render: (_, row) => {
+            const items = row.fm_transaction_items || [];
+            let depUsd = 0, widUsd = 0;
+            items.forEach(item => {
+                const dep = parseFloat(item.deposit_amount || 0);
+                const wid = parseFloat(item.withdrawal_amount || 0);
+                const val = dep > 0 ? dep : wid;
+                const toUsd = parseFloat(item.exchange_rate_to_usd || 0);
+                const usd = toUsd > 0 ? val * toUsd : parseFloat(item.amount_usd || 0);
+                if (item.transaction_action === 'DEPOSIT') depUsd += usd;
+                else widUsd += usd;
+            });
+            if (depUsd === 0 && widUsd === 0) return React.createElement('span', { className: 'text-slate-300 dark:text-slate-600 text-[12px]' }, '—');
+            return React.createElement('div', { className: 'flex flex-col gap-0.5', dir: 'ltr' },
+                depUsd > 0 ? React.createElement('span', { className: 'text-[12px] font-medium text-emerald-600 dark:text-emerald-500' }, formatNumber(depUsd)) : null,
+                widUsd > 0 ? React.createElement('span', { className: 'text-[12px] font-medium text-rose-500 dark:text-rose-400' }, formatNumber(widUsd)) : null
+            );
+        }},
+        { field: '_total_irr', header_fa: 'جمع (IRR)', header_en: 'Total (IRR)', width: '130px', render: (_, row) => {
+            const items = row.fm_transaction_items || [];
+            let depIrr = 0, widIrr = 0;
+            items.forEach(item => {
+                const dep = parseFloat(item.deposit_amount || 0);
+                const wid = parseFloat(item.withdrawal_amount || 0);
+                const val = dep > 0 ? dep : wid;
+                const toUsd = parseFloat(item.exchange_rate_to_usd || 0);
+                const usdToIrr = parseFloat(item.exchange_rate_usd_to_irr || 0);
+                const irr = toUsd > 0 && usdToIrr > 0 ? val * toUsd * usdToIrr : parseFloat(item.amount_irr || 0);
+                if (item.transaction_action === 'DEPOSIT') depIrr += irr;
+                else widIrr += irr;
+            });
+            if (depIrr === 0 && widIrr === 0) return React.createElement('span', { className: 'text-slate-300 dark:text-slate-600 text-[12px]' }, '—');
+            return React.createElement('div', { className: 'flex flex-col gap-0.5', dir: 'ltr' },
+                depIrr > 0 ? React.createElement('span', { className: 'text-[12px] font-medium text-emerald-600 dark:text-emerald-500' }, formatNumber(depIrr)) : null,
+                widIrr > 0 ? React.createElement('span', { className: 'text-[12px] font-medium text-rose-500 dark:text-rose-400' }, formatNumber(widIrr)) : null
+            );
+        }}
+    ], [usersMap, deptsMap, t, dateLocale]);
+
+    const accountLovColumns = [
+        { field: 'chart_name', header_fa: 'ساختار حساب', header_en: 'Chart', width: '80px' },
+        { field: 'code', header_fa: 'کد حساب', header_en: 'Account Code', width: '80px' },
+        { field: 'displayLabel', header_fa: 'عنوان حساب', header_en: 'Account Title', width: '240px', render: (val, row) => React.createElement('div', { className: "flex flex-col" },
+            React.createElement('span', { className: "font-bold text-slate-800 dark:text-slate-200" }, val),
+            row.pathTitle && React.createElement('span', { className: "text-[10px] text-slate-500 truncate", title: row.pathTitle }, row.pathTitle)
+        )},
+        { field: 'currency_code', header_fa: 'ارز', header_en: 'Currency', width: '60px' }
+    ];
+
+    const costLovColumns = [
+        { field: 'code', header_fa: 'کد هزینه', header_en: 'Cost Code', width: '100px' },
+        { field: 'displayLabel', header_fa: 'عنوان هزینه', header_en: 'Cost Title', width: 'auto', render: (val, row) => React.createElement('div', { className: "flex flex-col" },
+            React.createElement('span', { className: "font-bold text-slate-800 dark:text-slate-200" }, val),
+            row.pathTitle && React.createElement('span', { className: "text-[10px] text-slate-500 truncate", title: row.pathTitle }, row.pathTitle)
+        )}
+    ];
+
+    const incomeLovColumns = [
+        { field: 'code', header_fa: 'کد درآمد', header_en: 'Income Code', width: '100px' },
+        { field: 'displayLabel', header_fa: 'عنوان درآمد', header_en: 'Income Title', width: 'auto', render: (val, row) => React.createElement('div', { className: "flex flex-col" },
+            React.createElement('span', { className: "font-bold text-slate-800 dark:text-slate-200" }, val),
+            row.pathTitle && React.createElement('span', { className: "text-[10px] text-slate-500 truncate", title: row.pathTitle }, row.pathTitle)
+        )}
+    ];
+
+    const CENTER_KIND_LABELS = {
+        DEPARTMENT: { fa: 'دپارتمان', en: 'Department' },
+        TEAM: { fa: 'تیم', en: 'Team' },
+        PROJECT: { fa: 'پروژه', en: 'Project' },
+        OTHER: { fa: 'سایر', en: 'Other' }
+    };
+
+    const centerLovColumns = [
+        { field: isRtl ? 'titleFa' : 'titleEn', header_fa: 'عنوان مرکز', header_en: 'Center Title', width: '200px', render: (val, row) => React.createElement('div', { className: 'flex items-center gap-2' },
+            React.createElement('span', { className: 'font-bold text-slate-800 dark:text-slate-200' }, val || row.titleFa),
+            !row.isActive && React.createElement('span', { className: 'text-[10px] px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-medium shrink-0' }, t('غیرفعال', 'Inactive'))
+        )},
+        { field: 'managerName', header_fa: 'مسئول', header_en: 'Manager', width: '150px' },
+        { field: 'centerKind', header_fa: 'گروه مرکز', header_en: 'Center Group', width: '110px', render: (val) => {
+            const lbl = CENTER_KIND_LABELS[val];
+            return React.createElement('span', null, lbl ? (isRtl ? lbl.fa : lbl.en) : val);
+        }},
+        { field: 'officeName', header_fa: 'محل مرکز', header_en: 'Location', width: '150px' }
+    ];
+
+    const filterFields = [
+        { name: 'account_id', label: t('حساب مرتبط', 'Account'), type: 'lov', lovData: lookups.accounts, lovColumns: accountLovColumns, dropdownWidth: 'min-w-[540px] max-w-[540px]' },
+        { name: 'transaction_action', label: t('نوع (واریز/برداشت)', 'Action'), type: 'select', options: TRANSACTION_ACTIONS },
+        { name: 'transaction_group', label: t('گروه', 'Group'), type: 'select', options: TRANSACTION_GROUPS },
+        { name: 'cost_type_id', label: t('نوع هزینه', 'Cost Type'), type: 'lov', lovData: lookups.costTypes, lovColumns: costLovColumns, dropdownWidth: 'min-w-[500px]' },
+        { name: 'income_type_id', label: t('نوع درآمد', 'Income Type'), type: 'lov', lovData: lookups.incomeTypes, lovColumns: incomeLovColumns, dropdownWidth: 'min-w-[500px]' },
+        { name: 'center_id', label: t('مرکز هزینه/درآمد', 'Cost/Income Center'), type: 'lov', lovData: lookups.costBenefitCenters, lovColumns: centerLovColumns, dropdownWidth: 'min-w-[620px]' },
+        { name: 'date_type', label: t('نوع تاریخ', 'Date Field'), type: 'select', options: [
+            { value: 'document_date', label: t('تاریخ تراکنش', 'Transaction Date') },
+            { value: 'created_at', label: t('تاریخ ثبت', 'Registration Date') }
+        ]},
+        { name: 'date_from', label: t('از تاریخ', 'From Date'), type: 'date' },
+        { name: 'date_to', label: t('تا تاریخ', 'To Date'), type: 'date' },
+        { name: 'without_attachments', label: t('اسناد بدون پیوست', 'Documents Without Attachment'), type: 'toggle' }
+    ];
+
+    const gridActions = [
+        { 
+            id: 'comment',
+            icon: MessageSquare,
+            tooltip: t('کامنت‌ها', 'Comments'),
+            onClick: (row) => setCommentModalState({ isOpen: true, record: row }),
+            className: (row) => commentedIds.has(String(row.id)) ? 'text-blue-500 hover:text-blue-600' : 'text-slate-400 hover:text-blue-600'
+        },
+        { 
+            id: 'print', 
+            icon: Printer, 
+            tooltip: t('چاپ تراکنش', 'Print Document'), 
+            onClick: (row) => setPrintModal({ isOpen: true, transactionId: row.id }), 
+            requiredAccess: 'view', 
+            className: 'text-blue-500 hover:text-blue-600' 
+        },
+        { id: 'summary', icon: DollarSign, tooltip: t('خلاصه ارزی', 'Currency Summary'), onClick: (row) => openSummary(row), className: 'text-indigo-500 hover:text-indigo-600' },
+        { id: 'attach', icon: Paperclip, tooltip: t('پیوست‌ها', 'Attachments'), onClick: (row) => openAttachments(row), className: (row) => (attachmentCounts[row.id] > 0 ? '!text-indigo-600 hover:!text-indigo-700' : '!text-slate-400 hover:!text-slate-600') },
+        { id: 'copy', icon: Copy, tooltip: t('کپی تراکنش', 'Duplicate Document'), onClick: (row) => handleOpenForm('COPY', row), requiredAccess: 'create', className: 'text-emerald-600 hover:text-emerald-700' },
+        { id: 'update', icon: Edit, tooltip: (row) => isLocked(row) ? t('مشاهده تراکنش', 'View Document') : t('مشاهده/ویرایش', 'View/Edit'), onClick: (row) => handleOpenForm('EDIT', row), requiredAccess: 'view' },
+        { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete Document'), onClick: (row) => { if (isLocked(row)) { showToast(t('تراکنش‌های بررسی شده یا تایید شده قابل حذف نیستند.', 'Locked documents cannot be deleted.'), 'warning'); return; } setDeleteConfirm({ isOpen: true, type: 'single', data: row }); }, requiredAccess: 'delete', className: (row) => isLocked(row) ? '!text-slate-300 dark:!text-slate-600 cursor-not-allowed' : 'text-red-500 hover:text-red-600' }
+    ];
+
+    const viewConfig = useMemo(() => ({
+      pageId: 'transactions_main_list',
+      currentState: () => ({ filters, gridState }),
+      onApplyState: (state) => {
+        if (state) {
+          if (state.filters) setFilters(state.filters);
+          if (state.gridState) setGridState(state.gridState);
+        } else {
+          setFilters({});
+          setGridState(null);
+        }
+      }
+    }), [filters, gridState]);
+
+    const DetailsModal = safeComp(window, 'TransactionMainDetails');
+    const TransactionSummaryModal = safeComp(window, 'TransactionSummary');
+    const { CommentModal } = window.DSComments || {};
+    
+    const isAttachReadOnly = attachModal.record && (attachModal.record.status === 'FINAL' || attachModal.record.status === 'APPROVED');
+
+    return React.createElement('div', { className: "h-full flex flex-col font-sans", dir: isRtl ? 'rtl' : 'ltr' },
+
+        currentView === 'list' && React.createElement('div', { className: "p-4 h-full flex flex-col bg-slate-50/50 dark:bg-slate-900 overflow-hidden" },
+            React.createElement(PageHeader, {
+                title: t('مدیریت تراکنش‌ها', 'Transactions Management'),
+                icon: FileText,
+                language: language,
+                description: t('ثبت و پیگیری اسناد مالی چندسطری ارزی', 'Manage multi-currency financial documents'),
+                breadcrumbs: [{ label: t('مدیریت مالی', 'Financial Setup') }, { label: t('تراکنش‌ها', 'Transactions') }],
+                viewConfig: viewConfig,
+                notifFilter: filteredRecordId ? { isActive: true, onClear: () => setFilteredRecordId(null) } : null
+            }),
+            React.createElement('div', { className: "flex-1 min-h-0 flex flex-col gap-2 mt-4 overflow-hidden" },
+                React.createElement(AdvancedFilter, {
+                    fields: filterFields,
+                    initialValues: filters,
+                    onFilter: setFilters,
+                    onClear: () => setFilters({}),
+                    language: language,
+                    columns: 6
+                }),
+                React.createElement('div', { className: "flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden" },
+                    React.createElement(DataGrid, {
+                        data: filteredRecordId ? filteredTransactions.filter(r => String(r.id) === filteredRecordId) : filteredTransactions,
+                        columns: columns,
+                        language: language,
+                        formCode: formCode,
+                        gridState: gridState,
+                        onGridStateChange: setGridState,
+                        onAdd: access.canCreate ? () => handleOpenForm('CREATE') : undefined,
+                        onRowDoubleClick: (row) => handleOpenForm('EDIT', row),
+                        selectable: true,
+                        actions: gridActions,
+                        bulkActions: bulkActions,
+                        isLoading: isLoading,
+                        onDownloadSample: access.canCreate ? handleDownloadSample : undefined,
+                        onImport: access.canCreate ? handleImportTransactions : undefined,
+                        onExport: handleCustomExport,
+                        defaultHiddenCols: ['reference_code', 'daily_number', 'department_id', 'reviewed_by_name', 'reviewed_at', 'approved_by_name', 'approved_at'],
+                        actionWidth: '220px'
+                    })
+                )
+            )
+        ),
+
+        currentView === 'form' && currentRecord && React.createElement(DetailsModal, {
+            key: `${formMode}-${currentRecord?.id || 'new'}`,
+            isOpen: true,
+            onClose: () => setCurrentView('list'),
+            onSuccess: handleModalSuccess,
+            formMode: formMode,
+            initialRecord: currentRecord,
+            language: language,
+            formCode: formCode
+        }),
+
+        React.createElement(Modal, {
+            isOpen: deleteConfirm.isOpen,
+            onClose: () => setDeleteConfirm({ isOpen: false, type: null, data: null }),
+            title: t('تایید عملیات حذف', 'Confirm Deletion'),
+            language: language,
+            width: "max-w-sm"
+        },
+            React.createElement(EmptyState, {
+                icon: AlertTriangle,
+                title: t('هشدار', 'Warning'),
+                description: deleteConfirm.type === 'bulk' ? t(`آیا از حذف ${deleteConfirm.data?.length} تراکنش اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} documents?`) : t(`آیا از حذف این تراکنش اطمینان دارید؟`, `Delete this document?`),
+                action: React.createElement('div', { className: "flex gap-2 w-full mt-4 px-4" },
+                    React.createElement(Button, { variant: "outline", size: "sm", className: "flex-1", onClick: () => setDeleteConfirm({ isOpen: false, type: null, data: null }) }, t('انصراف', 'Cancel')),
+                    React.createElement(Button, { variant: "danger", size: "sm", onClick: executeDelete, isLoading: isLoading, className: "flex-1" }, t('تایید حذف', 'Confirm'))
+                )
+            })
+        ),
+
+        transactionExcel.importErrorsModal,
+
+        React.createElement(Modal, {
+            isOpen: attachModal.isOpen,
+            onClose: () => setAttachModal({ isOpen: false, record: null, files: [] }),
+            title: t('پیوست‌های سند', 'Attachments'),
+            language: language,
+            width: "max-w-xl"
+        },
+            React.createElement('div', { className: "p-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50 rounded-b-lg" },
+                React.createElement('div', { className: "bg-indigo-50 dark:bg-indigo-900/30 p-3 rounded-lg flex items-center justify-between border border-indigo-100 dark:border-indigo-800/50 shrink-0" },
+                    React.createElement('span', { className: "text-[12px] font-bold text-indigo-800 dark:text-indigo-300" }, attachModal.record?.document_code),
+                    isAttachReadOnly && React.createElement(Badge, { variant: "slate", size: "sm" }, t('فقط خواندنی', 'Read Only'))
+                ),
+                React.createElement('div', { className: "flex-1 overflow-hidden min-h-[300px] rounded-lg" },
+                    React.createElement(AttachmentManager, {
+                        files: attachModal.files,
+                        onUpload: handleFileUpload,
+                        onDelete: (f) => handleDeleteAttachment(f.id),
+                        onDownload: (f) => window.open(f.file_url, '_blank'),
+                        readOnly: isAttachReadOnly,
+                        isUploading: isUploading,
+                        language: language,
+                        formCode: formCode
+                    })
+                )
+            ),
+            React.createElement('div', { className: "p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex justify-end rounded-b-lg" },
+                React.createElement(Button, { variant: "primary", size: "sm", onClick: () => setAttachModal({ isOpen: false, record: null, files: [] }) }, t('بستن', 'Close'))
+            )
+        ),
+
+        React.createElement(TransactionSummaryModal, {
+            isOpen: summaryModal.isOpen,
+            onClose: () => setSummaryModal({ isOpen: false, record: null }),
+            record: summaryModal.record,
+            lookups: lookups,
+            language: language,
+            formCode: formCode
+        }),
+
+        printModal.isOpen && window.TransactionPrint ? React.createElement(window.TransactionPrint, {
+            transactionId: printModal.transactionId,
+            onClose: () => setPrintModal({ isOpen: false, transactionId: null }),
+            language: language
+        }) : null,
+
+        CommentModal && commentModalState.isOpen ? React.createElement(CommentModal, {
+            isOpen: commentModalState.isOpen,
+            onClose: () => { setCommentModalState({ isOpen: false, record: null }); fetchData(); },
+            entityType: 'fm_transactions',
+            entityId: commentModalState.record ? String(commentModalState.record.id) : '',
+            entityTitle: commentModalState.record ? `${t('کد:', 'Code:')} ${commentModalState.record.document_code || '-'}  |  ${t('شرح:', 'Desc:')} ${commentModalState.record.description || '-'}` : '',
+            formTitle: t('ثبت تراکنش', 'Transaction'),
+            formComponent: 'TransactionMain',
+            language: language
+        }) : null,
+
+        React.createElement(Toast, {
+            isVisible: toast.isVisible,
+            message: toast.message,
+            type: toast.type,
+            onClose: () => setToast(prev => ({ ...prev, isVisible: false }))
+        })
+    );
+  };
+
+  TransactionMain.formCode = 'FIN_TRANSACTION_MAIN';
+  window.TransactionMain = TransactionMain;
+})();
