@@ -8,9 +8,8 @@
   const { 
     Shield = FallbackIcon, Users = FallbackIcon, Edit = FallbackIcon, 
     Trash2 = FallbackIcon, Save = FallbackIcon, Plus = FallbackIcon, 
-    Search = FallbackIcon, AlertTriangle = FallbackIcon, UserPlus = FallbackIcon,
-    UserMinus = FallbackIcon, Calendar = FallbackIcon, ChevronDown = FallbackIcon,
-    Check = FallbackIcon
+    Search = FallbackIcon, AlertTriangle = FallbackIcon, Calendar = FallbackIcon, 
+    ChevronDown = FallbackIcon, Check = FallbackIcon, X = FallbackIcon
   } = LucideIcons;
 
   const Core = window.DSCore || window.DesignSystem || {};
@@ -26,11 +25,22 @@
     DataGrid = () => null, 
     TextField = () => null, 
     ToggleField = () => null, 
-    DatePicker = () => null
+    DatePicker = () => null,
+    LOVField = () => null,
+    Badge = () => null,
+    EmptyState = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
   const RoleAccess = window.RoleAccess;
+
+  // Returns true when today is outside [start_date, end_date] window
+  const isInvalidByDate = (startDate, endDate) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (startDate && startDate > today) return true;
+    if (endDate   && endDate   < today) return true;
+    return false;
+  };
 
   const RoleManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
@@ -49,15 +59,11 @@
     const [gridState, setGridState] = useState(null);
     
     const [roleModal, setRoleModal] = useState({ isOpen: false, data: null });
-    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, data: null });
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
     
     const [userModal, setUserModal] = useState({ isOpen: false, role: null });
     const [assignedUsers, setAssignedUsers] = useState([]);
-    
-    const [selectedUserForAssign, setSelectedUserForAssign] = useState(null);
-    const [assignDates, setAssignDates] = useState({ start_date: '', end_date: '' });
-    const [userSearchTerm, setUserSearchTerm] = useState('');
-    const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+    const [inlineUserEdit, setInlineUserEdit] = useState(null);
 
     const [accessModal, setAccessModal] = useState({ isOpen: false, role: null });
 
@@ -70,20 +76,6 @@
       start_date: '',
       end_date: ''
     });
-
-    const viewConfig = {
-      pageId: 'roles_main',
-      currentState: () => ({ filters, gridState }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.filters) setFilters(state.filters);
-          if (state.gridState) setGridState(state.gridState);
-        } else {
-          setFilters({});
-          setGridState(null);
-        }
-      }
-    };
 
     useEffect(() => {
       fetchInitialData();
@@ -192,16 +184,34 @@
       }
     };
 
-    const handleDeleteRole = async () => {
+    const executeDelete = async () => {
       if (!deleteConfirm.data) return;
       setIsLoading(true);
       try {
-        const { error } = await supabase.from('sec_roles').delete().eq('id', deleteConfirm.data.id);
-        if (error) throw error;
-        setDeleteConfirm({ isOpen: false, data: null });
-        fetchInitialData();
+        if (deleteConfirm.type === 'role') {
+            const { error } = await supabase.from('sec_roles').delete().eq('id', deleteConfirm.data.id);
+            if (error) throw error;
+            fetchInitialData();
+        } else if (deleteConfirm.type === 'user_role') {
+            const { error } = await supabase.from('sec_user_roles').delete().match({ user_id: deleteConfirm.data.id, role_id: userModal.role.id });
+            if (error) throw error;
+            setAssignedUsers(prev => prev.filter(u => u.id !== deleteConfirm.data.id));
+            fetchInitialData();
+        } else if (deleteConfirm.type === 'bulk_user_role') {
+            const validIds = deleteConfirm.data.filter(id => id !== 'new');
+            if (validIds.length > 0) {
+                const { error } = await supabase.from('sec_user_roles').delete().eq('role_id', userModal.role.id).in('user_id', validIds);
+                if (error) throw error;
+            }
+            setAssignedUsers(prev => prev.filter(u => !deleteConfirm.data.includes(u.id)));
+            if (deleteConfirm.data.includes('new')) {
+                setInlineUserEdit(null);
+            }
+            fetchInitialData();
+        }
+        setDeleteConfirm({ isOpen: false, type: null, data: null });
       } catch (err) {
-        console.error('Delete Role Error:', err);
+        console.error('Delete Error:', err);
       } finally {
         setIsLoading(false);
       }
@@ -210,10 +220,7 @@
     const openUserModal = async (role) => {
         setIsLoading(true);
         setUserModal({ isOpen: true, role });
-        setSelectedUserForAssign(null);
-        setAssignDates({ start_date: '', end_date: '' });
-        setUserSearchTerm('');
-        setIsUserDropdownOpen(false);
+        setInlineUserEdit(null);
 
         try {
             const { data: userRoles } = await supabase.from('sec_user_roles').select('user_id, start_date, end_date').eq('role_id', role.id);
@@ -233,52 +240,53 @@
         }
     };
 
-    const assignUser = async () => {
-        if (!selectedUserForAssign) return;
+    const handleAddUserClick = () => {
+        if (inlineUserEdit) return;
+        setInlineUserEdit({
+            id: 'new',
+            data: { user_id: '', user_obj: null, start_date: '', end_date: '' }
+        });
+    };
+
+    const handleSaveUserInline = async () => {
+        const form = inlineUserEdit.data;
+        if (!form.user_id) return;
+        
+        if (inlineUserEdit.id === 'new' && assignedUsers.some(u => String(u.id) === String(form.user_id))) {
+            alert(t('این کاربر قبلاً به نقش تخصیص داده شده است.', 'This user is already assigned to the role.'));
+            return;
+        }
+
         setIsLoading(true);
         try {
             const payload = {
-                user_id: selectedUserForAssign.id,
+                user_id: form.user_id,
                 role_id: userModal.role.id,
-                start_date: assignDates.start_date || null,
-                end_date: assignDates.end_date || null
+                start_date: form.start_date || null,
+                end_date: form.end_date || null
             };
             
-            const { error } = await supabase.from('sec_user_roles').insert([payload]);
-            if (error) throw error;
-            
-            setAssignedUsers(prev => [...prev, {
-                ...selectedUserForAssign,
-                start_date: payload.start_date,
-                end_date: payload.end_date
-            }]);
-            
-            setRoles(prev => prev.map(r => r.id === userModal.role.id ? { ...r, hasUsers: true } : r));
-            
-            setSelectedUserForAssign(null);
-            setUserSearchTerm('');
-            setAssignDates({ start_date: '', end_date: '' });
-            setIsUserDropdownOpen(false);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const removeUser = async (row) => {
-        setIsLoading(true);
-        try {
-            const { error } = await supabase.from('sec_user_roles').delete().match({ user_id: row.id, role_id: userModal.role.id });
-            if (error) throw error;
-            
-            setAssignedUsers(prev => {
-                const updated = prev.filter(u => u.id !== row.id);
-                if (updated.length === 0) {
-                    setRoles(rolesPrev => rolesPrev.map(r => r.id === userModal.role.id ? { ...r, hasUsers: false } : r));
+            if (inlineUserEdit.id === 'new') {
+                const { error } = await supabase.from('sec_user_roles').insert([payload]);
+                if (error) throw error;
+            } else {
+                const oldUserId = inlineUserEdit.original_user_id;
+                if (String(oldUserId) !== String(form.user_id)) {
+                    await supabase.from('sec_user_roles').delete().match({ user_id: oldUserId, role_id: userModal.role.id });
+                    const { error } = await supabase.from('sec_user_roles').insert([payload]);
+                    if (error) throw error;
+                } else {
+                    const { error } = await supabase.from('sec_user_roles').update({
+                        start_date: payload.start_date,
+                        end_date: payload.end_date
+                    }).match({ user_id: form.user_id, role_id: userModal.role.id });
+                    if (error) throw error;
                 }
-                return updated;
-            });
+            }
+            
+            setInlineUserEdit(null);
+            openUserModal(userModal.role);
+            fetchInitialData();
         } catch (err) {
             console.error(err);
         } finally {
@@ -286,34 +294,135 @@
         }
     };
 
-    const unassignedUsers = useMemo(() => {
-        const assignedIds = assignedUsers.map(u => u.id);
-        return allUsers.filter(u => !assignedIds.includes(u.id));
-    }, [allUsers, assignedUsers]);
+    const usersGridData = useMemo(() => {
+        const data = [...assignedUsers];
+        if (inlineUserEdit && inlineUserEdit.id === 'new') {
+            data.unshift({ id: 'new', _isNew: true, ...inlineUserEdit.data });
+        }
+        return data;
+    }, [assignedUsers, inlineUserEdit]);
 
-    const searchResults = useMemo(() => {
-        if (!userSearchTerm) return unassignedUsers;
-        const term = userSearchTerm.toLowerCase();
-        return unassignedUsers.filter(u => 
-            (u.username && u.username.toLowerCase().includes(term)) || 
-            (u.fullName && u.fullName.toLowerCase().includes(term))
-        );
-    }, [userSearchTerm, unassignedUsers]);
+    const availableUsersForAssign = useMemo(() => {
+        const assignedIds = assignedUsers.map(u => String(u.id));
+        return allUsers.filter(u => {
+            if (inlineUserEdit && inlineUserEdit.id !== 'new' && String(u.id) === String(inlineUserEdit.data.user_id)) return true;
+            return !assignedIds.includes(String(u.id));
+        });
+    }, [allUsers, assignedUsers, inlineUserEdit]);
 
     const columns = [
-      { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
-      { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '200px', render: (val) => <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span> },
-      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '120px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
-      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '120px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
+      { field: 'code', header_fa: 'کد نقش', header_en: 'Role Code', width: '120px', render: (val) => <span className="text-[12px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
+      { field: 'title', header_fa: 'عنوان نقش', header_en: 'Role Title', width: '200px', render: (val, row) => (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-slate-800 dark:text-slate-200 text-[12px]">{val}</span>
+            {isInvalidByDate(row.start_date, row.end_date) && (
+              <Badge variant="red" size="sm">{t('نامعتبر', 'Invalid')}</Badge>
+            )}
+          </div>
+        )
+      },
+      { field: 'start_date', header_fa: 'تاریخ شروع', header_en: 'Start Date', width: '120px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[12px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
+      { field: 'end_date', header_fa: 'تاریخ پایان', header_en: 'End Date', width: '120px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[12px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', width: '120px', type: 'toggle', onToggle: (row, val) => handleToggleActive(row, val) },
-      { field: 'description', header_fa: 'توضیحات', header_en: 'Description', width: 'auto', minWidth: '200px', render: (val) => <span className="text-[11px] text-slate-600 dark:text-slate-400 truncate block w-full" title={val}>{val || '-'}</span> }
+      { field: 'description', header_fa: 'توضیحات', header_en: 'Description', width: 'auto', minWidth: '200px', render: (val) => <span className="text-[12px] text-slate-600 dark:text-slate-400 truncate block w-full" title={val}>{val || '-'}</span> }
     ];
 
     const assignedUsersColumns = [
-        { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '120px', render: (val) => <span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{val}</span> },
-        { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: 'auto', render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200 text-[11px]">{val}</span> },
-        { field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' },
-        { field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '110px', render: (val) => val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[11px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-' }
+        { 
+            field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: 'auto', 
+            render: (val, row) => {
+                if (inlineUserEdit?.id === row.id) {
+                    return (
+                        <div onClick={(e)=>e.stopPropagation()}>
+                            <LOVField 
+                                size="sm" 
+                                data={availableUsersForAssign} 
+                                columns={[
+                                    { field: 'username', header_fa: 'نام کاربری', width: '150px' },
+                                    { field: 'fullName', header_fa: 'نام و نام خانوادگی', width: '250px' }
+                                ]} 
+                                dropdownWidth="min-w-[400px]"
+                                displayValue={inlineUserEdit.data.user_obj ? inlineUserEdit.data.user_obj.fullName : ''}
+                                onChange={(r) => setInlineUserEdit(prev => ({...prev, data: {...prev.data, user_id: r?.id, user_obj: r}}))}
+                            />
+                        </div>
+                    );
+                }
+                return (
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-700 dark:text-slate-200 text-[12px]">{val}</span>
+                        {isInvalidByDate(row.start_date, row.end_date) && (
+                            <Badge variant="red" size="sm">{t('نامعتبر', 'Invalid')}</Badge>
+                        )}
+                    </div>
+                );
+            }
+        },
+        {
+            field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '150px',
+            render: (val, row) => {
+                if (inlineUserEdit?.id === row.id) {
+                    return <span className="text-[12px] text-slate-500 dir-ltr inline-block">{inlineUserEdit.data.user_obj?.username || '-'}</span>;
+                }
+                return <span className="text-[12px] text-slate-500 dir-ltr inline-block">{val}</span>;
+            }
+        },
+        { 
+            field: 'start_date', header_fa: 'تاریخ شروع موثر', header_en: 'Start Date', width: '150px', 
+            render: (val, row) => {
+                if (inlineUserEdit?.id === row.id) {
+                    return <div onClick={(e)=>e.stopPropagation()}><DatePicker size="sm" value={inlineUserEdit.data.start_date} onChange={(v) => setInlineUserEdit(prev => ({...prev, data: {...prev.data, start_date: v}}))} isRtl={isRtl} language={language} /></div>
+                }
+                return val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[12px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-';
+            }
+        },
+        { 
+            field: 'end_date', header_fa: 'تاریخ پایان موثر', header_en: 'End Date', width: '150px', 
+            render: (val, row) => {
+                if (inlineUserEdit?.id === row.id) {
+                    return <div onClick={(e)=>e.stopPropagation()}><DatePicker size="sm" value={inlineUserEdit.data.end_date} onChange={(v) => setInlineUserEdit(prev => ({...prev, data: {...prev.data, end_date: v}}))} isRtl={isRtl} language={language} /></div>
+                }
+                return val ? <div className="flex items-center gap-1.5"><Calendar size={12} className="text-slate-400" /><span className="text-[12px] text-slate-700 dark:text-slate-300 dir-ltr inline-block">{formatGlobalDate(val, globalCalendarMode)}</span></div> : '-';
+            }
+        }
+    ];
+
+    const assignedUsersActions = [
+        { 
+            icon: Save, tooltip: t('ذخیره', 'Save'), 
+            hidden: (row) => inlineUserEdit?.id !== row.id, 
+            onClick: () => handleSaveUserInline(), 
+            className: '!text-emerald-600 hover:!text-emerald-800' 
+        },
+        { 
+            icon: X, tooltip: t('انصراف', 'Cancel'), 
+            hidden: (row) => inlineUserEdit?.id !== row.id, 
+            onClick: () => setInlineUserEdit(null), 
+            className: '!text-slate-500 hover:!text-slate-700' 
+        },
+        { 
+            icon: Edit, tooltip: t('ویرایش', 'Edit'), 
+            hidden: (row) => inlineUserEdit?.id === row.id || row._isNew, 
+            onClick: (row) => {
+                setInlineUserEdit({
+                    id: row.id,
+                    original_user_id: row.id,
+                    data: {
+                        user_id: row.id,
+                        user_obj: row,
+                        start_date: row.start_date || '',
+                        end_date: row.end_date || ''
+                    }
+                });
+            },
+            className: 'text-slate-400 hover:text-indigo-500' 
+        },
+        { 
+            icon: Trash2, tooltip: t('حذف از نقش', 'Remove from role'), 
+            hidden: (row) => inlineUserEdit?.id === row.id || row._isNew, 
+            onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'user_role', data: row }), 
+            className: 'text-slate-400 hover:text-rose-500' 
+        }
     ];
 
     const filteredRoles = useMemo(() => {
@@ -375,7 +484,6 @@
           description={t('تعریف نقش‌ها و تخصیص دسترسی‌های ۳ سطحی به فرم‌ها، عملیات و داده‌ها', 'Define roles and assign 3-level permissions to forms, actions, and data scopes')}
           language={language}
           breadcrumbs={[{ label: t('امنیت', 'Security') }, { label: t('نقش‌ها', 'Roles') }]}
-          viewConfig={viewConfig}
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-3 animate-in fade-in duration-300">
@@ -403,7 +511,7 @@
                 { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, role: row }), className: (row) => row.hasPerms ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-400 hover:text-emerald-500' },
                 { icon: Users, tooltip: t('کاربران نقش', 'Role Users'), onClick: (row) => openUserModal(row), className: (row) => row.hasUsers ? 'text-blue-500 hover:text-blue-600' : 'text-slate-400 hover:text-blue-500' },
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenRoleModal(row), className: 'text-slate-400 hover:text-indigo-500' },
-                { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-rose-500' }
+                { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'role', data: row }), className: 'text-slate-400 hover:text-rose-500' }
               ]}
             />
           </div>
@@ -435,141 +543,51 @@
           </div>
         </Modal>
 
-        <Modal isOpen={userModal.isOpen} onClose={() => setUserModal({ isOpen: false, role: null })} title={`${t('تخصیص کاربران به نقش:', 'Assign Users to Role:')} ${userModal.role?.title || ''}`} width="max-w-3xl" language={language}>
-            <div className="flex flex-col h-[550px]">
-                
-                <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-800 rounded-xl p-4 mx-4 mt-4 mb-3 relative z-[60]">
-                    <label className="text-[12px] font-black text-indigo-800 dark:text-indigo-300 mb-3 block flex items-center gap-2">
-                        <UserPlus size={16}/> {t('تخصیص کاربر جدید به نقش', 'Assign new user to role')}
-                    </label>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end relative">
-                        <div className="md:col-span-5 relative">
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">{t('انتخاب کاربر *', 'Select User *')}</label>
-                            <div 
-                                className={`w-full min-h-[36px] bg-white dark:bg-slate-900 border ${selectedUserForAssign ? 'border-emerald-400' : 'border-indigo-200 dark:border-indigo-700'} rounded-lg text-[11px] flex items-center justify-between cursor-pointer px-3`}
-                                onClick={() => setIsUserDropdownOpen(true)}
-                            >
-                                {selectedUserForAssign ? (
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-slate-700 dark:text-slate-200 truncate">{selectedUserForAssign.fullName}</span>
-                                    </div>
-                                ) : (
-                                    <span className="text-slate-400">{t('انتخاب یا جستجوی کاربر...', 'Select or search user...')}</span>
-                                )}
-                                <ChevronDown size={14} className="text-slate-400 shrink-0" />
-                            </div>
-
-                            {isUserDropdownOpen && (
-                                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-[100] flex flex-col">
-                                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 sticky top-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm z-10">
-                                        <div className="relative">
-                                            <input 
-                                                autoFocus
-                                                value={userSearchTerm} 
-                                                onChange={(e) => setUserSearchTerm(e.target.value)} 
-                                                placeholder={t('جستجوی نام یا نام کاربری...', 'Search name or username...')} 
-                                                className={`w-full h-8 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-[11px] outline-none focus:border-indigo-400 px-2 ${isRtl ? 'pr-7' : 'pl-7'}`} 
-                                            />
-                                            <Search size={14} className={`absolute top-2 text-slate-400 ${isRtl ? 'right-2' : 'left-2'}`}/>
-                                        </div>
-                                    </div>
-                                    <div className="p-1">
-                                        {searchResults.length > 0 ? searchResults.map(u => (
-                                            <div 
-                                                key={u.id} 
-                                                onClick={() => {
-                                                    setSelectedUserForAssign(u);
-                                                    setIsUserDropdownOpen(false);
-                                                    setUserSearchTerm('');
-                                                }} 
-                                                className="px-3 py-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 cursor-pointer rounded-lg flex items-center justify-between group transition-colors"
-                                            >
-                                                <div className="flex flex-col w-full">
-                                                    <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{u.fullName}</span>
-                                                    <span className="text-[10px] text-slate-400 dir-ltr text-left inline-block">{u.username}</span>
-                                                </div>
-                                                <Check size={14} className="text-indigo-500 opacity-0 group-hover:opacity-100 shrink-0" />
-                                            </div>
-                                        )) : <div className="p-3 text-center text-[11px] text-slate-400">{t('کاربری یافت نشد.', 'No user found.')}</div>}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="md:col-span-3">
-                            <DatePicker 
-                                size="sm" 
-                                label={t('از تاریخ (اختیاری)', 'From Date (Optional)')} 
-                                value={assignDates.start_date} 
-                                onChange={val => setAssignDates({...assignDates, start_date: val})} 
-                                isRtl={isRtl} 
-                                language={language} 
-                            />
-                        </div>
-                        
-                        <div className="md:col-span-3">
-                            <DatePicker 
-                                size="sm" 
-                                label={t('تا تاریخ (اختیاری)', 'To Date (Optional)')} 
-                                value={assignDates.end_date} 
-                                onChange={val => setAssignDates({...assignDates, end_date: val})} 
-                                isRtl={isRtl} 
-                                language={language} 
-                            />
-                        </div>
-
-                        <div className="md:col-span-1 flex justify-end">
-                            <Button 
-                                variant="primary" 
-                                icon={Plus} 
-                                className="w-full h-[36px] flex justify-center items-center px-0" 
-                                disabled={!selectedUserForAssign}
-                                onClick={assignUser}
-                                isLoading={isLoading}
-                                title={t('افزودن', 'Add')}
-                            />
-                        </div>
-                    </div>
-                    {isUserDropdownOpen && <div className="fixed inset-0 z-[90]" onClick={() => setIsUserDropdownOpen(false)}></div>}
-                </div>
-
-                <div className="flex-1 overflow-hidden px-4 pb-4 bg-white dark:bg-slate-900 relative z-0 flex flex-col">
-                    <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden flex flex-col">
-                        <DataGrid 
-                            key={`users_grid_${language}_${globalCalendarMode}`}
-                            columns={assignedUsersColumns} 
-                            data={assignedUsers} 
-                            language={language}
-                            isLoading={isLoading}
-                            hideImport={true}
-                            hideAdvancedSearch={true}
-                            actions={[
-                                { icon: UserMinus, tooltip: t('حذف از نقش', 'Remove from role'), onClick: (row) => removeUser(row), className: 'text-slate-400 hover:text-red-500' }
-                            ]}
-                        />
-                    </div>
-                </div>
-                
-                <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex justify-end shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => setUserModal({ isOpen: false, role: null })}>{t('بستن', 'Close')}</Button>
+        <Modal isOpen={userModal.isOpen} onClose={() => setUserModal({ isOpen: false, role: null })} title={`${t('تخصیص کاربران به نقش:', 'Assign Users to Role:')} ${userModal.role?.title || ''}`} width="max-w-4xl" language={language}>
+            <div className="flex flex-col h-[70vh] min-h-[500px] bg-slate-50 dark:bg-slate-900 p-4 gap-3">
+                <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
+                    <DataGrid 
+                        key={`users_grid_${language}_${globalCalendarMode}`}
+                        columns={assignedUsersColumns} 
+                        data={usersGridData} 
+                        actions={assignedUsersActions}
+                        language={language}
+                        isLoading={isLoading}
+                        hideImport={true}
+                        hideExport={true}
+                        onAdd={handleAddUserClick}
+                        selectable={true}
+                        bulkActions={[
+                            {
+                                id: 'delete',
+                                icon: Trash2,
+                                label: t('حذف انتخاب‌شده‌ها', 'Delete Selected'),
+                                className: '!text-rose-600 !border-rose-200 hover:!bg-rose-50 dark:!border-rose-800/50 dark:hover:!bg-rose-900/30',
+                                onClick: (selectedIds) => setDeleteConfirm({ isOpen: true, type: 'bulk_user_role', data: selectedIds })
+                            }
+                        ]}
+                    />
                 </div>
             </div>
         </Modal>
 
-        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-500 dark:text-rose-400 mb-1">
-               <AlertTriangle size={22} />
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed">
-              {t(`آیا از حذف نقش "${deleteConfirm.data?.title}" اطمینان دارید؟ تمامی دسترسی‌های این نقش حذف خواهد شد.`, `Are you sure you want to delete role "${deleteConfirm.data?.title}"? All permissions will be lost.`)}
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={handleDeleteRole} isLoading={isLoading} className="flex-1 bg-rose-600 dark:bg-rose-500 hover:bg-rose-700 dark:hover:bg-rose-600 border-rose-600 dark:border-rose-500">{t('تایید حذف', 'Delete')}</Button>
-            </div>
-          </div>
+        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={deleteConfirm.type === 'role'
+                ? t(`آیا از حذف نقش "${deleteConfirm.data?.title}" اطمینان دارید؟ تمامی دسترسی‌های این نقش حذف خواهد شد.`, `Are you sure you want to delete role "${deleteConfirm.data?.title}"? All permissions will be lost.`)
+                : deleteConfirm.type === 'bulk_user_role'
+                ? t(`آیا از حذف ${deleteConfirm.data?.length} کاربر انتخاب‌شده از این نقش اطمینان دارید؟`, `Are you sure you want to remove ${deleteConfirm.data?.length} selected users from this role?`)
+                : t(`آیا از حذف این کاربر از نقش فعلی اطمینان دارید؟`, `Are you sure you want to remove this user from the role?`)
+              }
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1">{t('تایید حذف', 'Delete')}</Button>
+              </div>
+            }
+          />
         </Modal>
 
       </div>

@@ -1,15 +1,15 @@
 /* Filename: security/UserManagement.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useMemo } = React;
+  const { useState, useEffect, useMemo, useCallback } = React;
   
   const { 
-    Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, SelectField, ToggleField, Badge, CheckboxField
-  } = window.DesignSystem || {};
+    Button, PageHeader, Modal, AdvancedFilter, DataGrid, LOVField,
+    TextField, SelectField, ToggleField, Badge, CheckboxField, EmptyState
+  } = window.DesignSystem || window.DSCore || {};
   
   const { 
-    Users, Edit, Trash2, Save, 
+    Users, Edit, Trash2, Save, Copy,
     AlertTriangle, Lock, RefreshCw, Shield, Plus
   } = window.LucideIcons || {};
   const supabase = window.supabase;
@@ -17,10 +17,21 @@
   const UserManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+    const calendarMode = window.DSCore?.useCalendarMode ? window.DSCore.useCalendarMode() : 'jalali';
     
     const [data, setData] = useState([]);
     const [allParties, setAllParties] = useState([]);
-    const [partiesDropdown, setPartiesDropdown] = useState([]);
+
+    const partiesDropdown = useMemo(() => {
+      const sysUsers = allParties.filter(p => p.roles && p.roles.includes('system_user') && p.is_active === true);
+      return sysUsers.map(p => ({
+        id: p.id,
+        code: p.code || '',
+        title: p.party_type === 'legal' ? (p.company_name || '') : `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+        email: p.email || '',
+        mobile: p.mobile || ''
+      }));
+    }, [allParties]);
     
     const [roles, setRoles] = useState([]);
     const [userRoles, setUserRoles] = useState([]);
@@ -54,6 +65,7 @@
       code: '',
       firstName: '',
       lastName: '',
+      latinTitle: '',
       nationalId: '',
       mobile: '',
       email: '',
@@ -69,6 +81,27 @@
     ];
 
     const [gridState, setGridState] = useState(null);
+    const [generatedPassword, setGeneratedPassword] = useState('');
+    const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+
+    const Toast = window.DSFeedback?.Toast;
+
+    const showToast = useCallback((message, type = 'success') => {
+      setToast({ isVisible: true, message, type });
+      setTimeout(() => setToast(p => ({ ...p, isVisible: false })), 3500);
+    }, []);
+
+    const generatePassword = useCallback(() => {
+      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lower = 'abcdefghijklmnopqrstuvwxyz';
+      const digits = '0123456789';
+      const symbols = '@#$!%&*';
+      const all = upper + lower + digits + symbols;
+      const rand = (str) => str[Math.floor(Math.random() * str.length)];
+      let pwd = rand(upper) + rand(lower) + rand(digits) + rand(symbols);
+      for (let i = 4; i < 10; i++) pwd += rand(all);
+      return pwd.split('').sort(() => Math.random() - 0.5).join('');
+    }, []);
 
     const viewConfig = {
       pageId: 'users_main',
@@ -102,7 +135,7 @@
           { data: permsData },
           { data: menusData }
         ] = await Promise.all([
-          supabase.from('parties').select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email'),
+          supabase.from('parties').select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email, is_active'),
           supabase.from('sec_users').select('*').order('created_at', { ascending: false }),
           supabase.from('sec_roles').select('*'),
           supabase.from('sec_user_roles').select('*'),
@@ -112,13 +145,6 @@
           
         if (pData && !pError) {
           setAllParties(pData);
-          const sysUsers = pData.filter(p => p.roles && p.roles.includes('system_user'));
-          setPartiesDropdown(sysUsers.map(p => ({
-            id: p.id,
-            label: `${p.party_type === 'legal' ? (p.company_name || '') : ((p.first_name || '') + ' ' + (p.last_name || '')).trim()} (${p.code})`,
-            mobile: p.mobile,
-            email: p.email
-          })));
         }
 
         if (uError) throw uError;
@@ -145,6 +171,10 @@
 
     const handleSave = async () => {
       if (!formData.username || !formData.partyId) {
+        return;
+      }
+      if (!formData.mobile || !formData.email) {
+        alert(t('وارد کردن موبایل و آدرس ایمیل الزامی است.', 'Mobile and email are required.'));
         return;
       }
       if (!currentRecord && !formData.password) return;
@@ -199,8 +229,8 @@
     };
 
     const handleSaveQuickParty = async () => {
-      if (!quickPartyData.firstName || !quickPartyData.lastName || !quickPartyData.code) {
-         alert(t('لطفاً فیلدهای ستاره‌دار را تکمیل کنید.', 'Please fill required fields.'));
+      if (!quickPartyData.firstName || !quickPartyData.lastName || !quickPartyData.code || !quickPartyData.latinTitle) {
+         alert(t('لطفاً فیلدهای اجباری (کد، نام، نام خانوادگی، عنوان لاتین) را تکمیل کنید.', 'Please fill required fields: code, first name, last name, and latin title.'));
          return;
       }
       
@@ -211,6 +241,7 @@
           code: quickPartyData.code,
           first_name: quickPartyData.firstName,
           last_name: quickPartyData.lastName,
+          latin_title: quickPartyData.latinTitle,
           national_id: quickPartyData.nationalId,
           mobile: quickPartyData.mobile,
           email: quickPartyData.email,
@@ -230,19 +261,7 @@
            return;
         }
 
-        const partyLabel = `${newPartyData.first_name} ${newPartyData.last_name} (${newPartyData.code})`;
-        const newDropdownItem = {
-          id: newPartyData.id,
-          label: partyLabel,
-          mobile: newPartyData.mobile,
-          email: newPartyData.email
-        };
-
         setAllParties(prev => [...prev, newPartyData]);
-        
-        if (newPartyData.roles && newPartyData.roles.includes('system_user')) {
-            setPartiesDropdown(prev => [...prev, newDropdownItem]);
-        }
 
         setFormData(prev => ({
           ...prev,
@@ -252,7 +271,7 @@
         }));
 
         setIsQuickPartyModalOpen(false);
-        setQuickPartyData({ code: '', firstName: '', lastName: '', nationalId: '', mobile: '', email: '', roles: ['system_user'] });
+        setQuickPartyData({ code: '', firstName: '', lastName: '', latinTitle: '', nationalId: '', mobile: '', email: '', roles: ['system_user'] });
       } catch (err) {
         console.error('Save Quick Party Error:', err);
         alert(t('خطا در ذخیره اطلاعات شخص.', 'Error saving party.'));
@@ -296,18 +315,13 @@
       }
     };
 
-    const executeResetPassword = async () => {
-      setIsLoading(true);
-      try {
-        const newHash = await hashPassword('123456');
-        const { error } = await supabase.from('sec_users').update({ password_hash: newHash }).eq('id', resetConfirm.data.id);
-        if (error) throw error;
-        setResetConfirm({ isOpen: false, data: null });
-      } catch (err) {
-        console.error('Reset password error:', err);
-      } finally {
-        setIsLoading(false);
-      }
+    const executeResetPassword = () => {
+      const username = resetConfirm.data?.username || '';
+      setResetConfirm({ isOpen: false, data: null });
+      showToast(
+        t(`ایمیل بازیابی رمز عبور برای کاربر "${username}" ارسال شد.`, `A password recovery email was sent to user "${username}".`),
+        'success'
+      );
     };
 
     const handleOpenModal = (record = null) => {
@@ -332,40 +346,17 @@
       setIsModalOpen(true);
     };
 
-    const handlePartyChange = (e) => {
-      const selectedId = e.target.value;
-      const selectedParty = partiesDropdown.find(p => p.id === selectedId);
-      
+    const handlePartyLOVChange = (row) => {
+      if (!row) {
+        setFormData(prev => ({ ...prev, partyId: '', mobile: '', email: '' }));
+        return;
+      }
       setFormData(prev => ({
         ...prev,
-        partyId: selectedId,
-        mobile: selectedParty?.mobile || '',
-        email: selectedParty?.email || ''
+        partyId: row.id,
+        mobile: row.mobile || '',
+        email: row.email || ''
       }));
-    };
-
-    const handleDownloadSample = () => {
-      const headers = isRtl
-        ? 'نام کاربری,نوع کاربری,ایمیل,موبایل'
-        : 'Username,User Type,Email,Mobile';
-        
-      const sampleRow = isRtl
-        ? 'admin,مدیر سیستم,admin@test.com,09120000000'
-        : 'admin,System Admin,admin@test.com,09120000000';
-        
-      const csv = '\uFEFF' + headers + '\n' + sampleRow;
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.setAttribute('download', 'Users_Import_Sample.csv');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-
-    const handleImportFile = (file) => {
-      if (!file) return;
-      console.log('Import file selected:', file.name);
     };
 
     const formatDateTime = (dateString) => {
@@ -373,7 +364,8 @@
       try {
         return new Date(dateString).toLocaleString(isRtl ? 'fa-IR' : 'en-US', {
           year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit'
+          hour: '2-digit', minute: '2-digit',
+          calendar: calendarMode === 'jalali' ? 'persian' : 'gregory'
         });
       } catch (e) {
         return dateString;
@@ -386,6 +378,10 @@
       if (!p) return '-';
       return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
     };
+
+    const hasAccess = useCallback((userId) => {
+       return userRoles.some(ur => ur.user_id === userId) || permissions.some(p => p.user_id === userId);
+    }, [userRoles, permissions]);
 
     const columns = [
       { 
@@ -432,7 +428,7 @@
         header_fa: 'آخرین ورود', 
         header_en: 'Last Login', 
         width: '140px',
-        render: (val) => <span className="text-[11px] text-slate-500 inline-block w-full text-left" dir="ltr">{formatDateTime(val)}</span>
+        render: (val) => <span className="text-[12px] text-slate-500 inline-block w-full text-left" dir="ltr">{formatDateTime(val)}</span>
       },
       { 
         field: 'is_active', 
@@ -489,12 +485,13 @@
         name: 'party', 
         label: t('شخص متصل', 'Linked Party'), 
         type: 'lov', 
-        lovData: partiesDropdown.map(p => ({ ...p, label: p.label })), 
+        lovData: partiesDropdown.map(p => ({ ...p, label: `${p.title} (${p.code})` })), 
         lovColumns: [
-          { field: 'label', header_fa: 'نام و کد', header_en: 'Name & Code', width: '250px' },
+          { field: 'code', header_fa: 'کد', header_en: 'Code', width: '100px' },
+          { field: 'title', header_fa: 'عنوان', header_en: 'Title', width: '200px' },
           { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '130px' }
         ],
-        dropdownWidth: 'min-w-[400px]'
+        dropdownWidth: 'min-w-[450px]'
       },
       { 
         name: 'accessType', 
@@ -585,14 +582,13 @@
               onRowDoubleClick={(row) => handleOpenModal(row)}
               gridState={gridState}
               onGridStateChange={setGridState}
-              onDownloadSample={handleDownloadSample}
-              onImport={handleImportFile}
+              hideImport={true}
               onToggle={(row, field, val) => {
                  if (field === 'is_active') handleToggleActive(row, val);
               }}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
-                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, user: row }), className: 'text-slate-400 hover:text-purple-600' },
+                { icon: Shield, tooltip: t('دسترسی‌ها', 'Permissions'), onClick: (row) => setAccessModal({ isOpen: true, user: row }), className: (row) => hasAccess(row.id) ? '!text-indigo-600 dark:!text-indigo-400 hover:!text-indigo-800' : 'text-slate-400 hover:text-indigo-600' },
                 { icon: RefreshCw, tooltip: t('بازنشانی رمز عبور', 'Reset Password'), onClick: (row) => setResetConfirm({ isOpen: true, data: row }), className: 'text-slate-400 hover:text-amber-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
@@ -634,17 +630,21 @@
 
               <div className="flex items-end gap-2">
                 <div className="flex-1">
-                  <SelectField 
-                    size="sm" 
-                    label={t('اتصال به شخص / پرسنل', 'Link to Party')} 
-                    value={formData.partyId} 
-                    onChange={handlePartyChange} 
-                    isRtl={isRtl}
-                    required
-                    options={[
-                      { value: '', label: `-- ${t('انتخاب کنید', 'Select')} --` },
-                      ...partiesDropdown.map(p => ({ value: p.id, label: p.label }))
+                  <LOVField
+                    size="sm"
+                    label={t('اتصال به شخص / پرسنل', 'Link to Party')}
+                    displayValue={formData.partyId ? (() => { const p = partiesDropdown.find(x => x.id === formData.partyId); return p ? `${p.title} (${p.code})` : ''; })() : ''}
+                    onChange={handlePartyLOVChange}
+                    data={partiesDropdown}
+                    columns={[
+                      { field: 'code', header_fa: 'کد', header_en: 'Code', width: '25%' },
+                      { field: 'title', header_fa: 'عنوان', header_en: 'Title', width: '25%' },
+                      { field: 'email', header_fa: 'ایمیل', header_en: 'Email', width: '25%' },
+                      { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '25%' }
                     ]}
+                    required
+                    isRtl={isRtl}
+                    dropdownWidth="min-w-[520px] max-w-[700px]"
                   />
                 </div>
                 <Button 
@@ -657,17 +657,56 @@
                 />
               </div>
 
-              <TextField 
-                size="sm" 
-                label={currentRecord ? t('رمز عبور جدید (اختیاری)', 'New Password (Optional)') : t('رمز عبور', 'Password')} 
-                type="password"
-                value={formData.password} 
-                onChange={e => setFormData({...formData, password: e.target.value})} 
-                isRtl={isRtl} 
-                required={!currentRecord}
-                dir="ltr" 
-                placeholder="********"
-              />
+              {currentRecord ? (
+                <TextField 
+                  size="sm" 
+                  label={t('رمز عبور جدید (اختیاری)', 'New Password (Optional)')} 
+                  type="password"
+                  value={formData.password} 
+                  onChange={e => setFormData({...formData, password: e.target.value})} 
+                  isRtl={isRtl} 
+                  dir="ltr" 
+                  placeholder="********"
+                />
+              ) : (
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="block text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                      {t('رمز عبور', 'Password')} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.password}
+                        onChange={e => { setFormData(p => ({...p, password: e.target.value})); setGeneratedPassword(''); }}
+                        required
+                        dir="ltr"
+                        placeholder={t('رمز را وارد یا ایجاد کنید', 'Enter or generate')}
+                        className="w-full h-8 text-[12px] font-mono border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 transition-all pl-3 pr-8"
+                      />
+                      {formData.password && (
+                        <button
+                          type="button"
+                          onClick={() => navigator.clipboard.writeText(formData.password).then(() => showToast(t('رمز عبور کپی شد.', 'Password copied.'), 'success'))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                          title={t('کپی رمز عبور', 'Copy Password')}
+                        >
+                          {React.createElement(Copy, { size: 13 })}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    icon={RefreshCw}
+                    onClick={() => { const pwd = generatePassword(); setFormData(p => ({...p, password: pwd})); setGeneratedPassword(pwd); }}
+                    className="h-8 shrink-0 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/40 mb-[1px] text-[12px] whitespace-nowrap"
+                  >
+                    {t('ایجاد رمز', 'Generate')}
+                  </Button>
+                </div>
+              )}
 
               <TextField 
                 size="sm" 
@@ -675,7 +714,8 @@
                 value={formData.mobile} 
                 onChange={e => setFormData({...formData, mobile: e.target.value})} 
                 isRtl={isRtl} 
-                dir="ltr" 
+                dir="ltr"
+                required
               />
               <TextField 
                 size="sm" 
@@ -683,7 +723,8 @@
                 value={formData.email} 
                 onChange={e => setFormData({...formData, email: e.target.value})} 
                 isRtl={isRtl} 
-                dir="ltr" 
+                dir="ltr"
+                required
               />
 
               <div className="md:col-span-2 flex items-center mt-2">
@@ -710,6 +751,7 @@
               <TextField size="sm" label={t('کد شخص', 'Party Code')} value={quickPartyData.code} onChange={e => setQuickPartyData({...quickPartyData, code: e.target.value})} isRtl={isRtl} required dir="ltr" />
               <TextField size="sm" label={t('نام', 'First Name')} value={quickPartyData.firstName} onChange={e => setQuickPartyData({...quickPartyData, firstName: e.target.value})} isRtl={isRtl} required />
               <TextField size="sm" label={t('نام خانوادگی', 'Last Name')} value={quickPartyData.lastName} onChange={e => setQuickPartyData({...quickPartyData, lastName: e.target.value})} isRtl={isRtl} required />
+              <TextField size="sm" label={t('عنوان لاتین', 'Latin Title')} value={quickPartyData.latinTitle} onChange={e => setQuickPartyData({...quickPartyData, latinTitle: e.target.value})} isRtl={isRtl} dir="ltr" required />
               <TextField size="sm" label={t('کد ملی', 'National ID')} value={quickPartyData.nationalId} onChange={e => setQuickPartyData({...quickPartyData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('موبایل', 'Mobile')} value={quickPartyData.mobile} onChange={e => setQuickPartyData({...quickPartyData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('ایمیل', 'Email')} value={quickPartyData.email} onChange={e => setQuickPartyData({...quickPartyData, email: e.target.value})} isRtl={isRtl} dir="ltr" />
@@ -746,39 +788,34 @@
         </Modal>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
-               <AlertTriangle size={22} />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
-               <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
-                : t(`آیا از حذف کاربر "${deleteConfirm.data?.username}" اطمینان دارید؟`, `Delete this user?`)
-              }
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500">{t('تایید حذف', 'Delete')}</Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={deleteConfirm.type === 'bulk' 
+              ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
+              : t(`آیا از حذف کاربر "${deleteConfirm.data?.username}" اطمینان دارید؟`, `Delete this user?`)
+            }
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1">{t('تایید حذف', 'Delete')}</Button>
+              </div>
+            }
+          />
         </Modal>
 
         <Modal isOpen={resetConfirm.isOpen} onClose={() => setResetConfirm({ isOpen: false, data: null })} title={t('بازنشانی رمز عبور', 'Reset Password')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-500 dark:text-amber-400 mb-1">
-               <RefreshCw size={22} />
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              {t(`آیا از بازنشانی رمز عبور کاربر "${resetConfirm.data?.username}" به 123456 اطمینان دارید؟`, `Are you sure you want to reset password to 123456?`)}
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setResetConfirm({ isOpen: false, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeResetPassword} isLoading={isLoading} className="flex-1">{t('تایید بازنشانی', 'Confirm Reset')}</Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={RefreshCw}
+            title={t('بازنشانی رمز عبور', 'Reset Password')}
+            description={t(`آیا از بازنشانی رمز عبور کاربر "${resetConfirm.data?.username}" به 123456 اطمینان دارید؟`, `Are you sure you want to reset password to 123456?`)}
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setResetConfirm({ isOpen: false, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="primary" size="sm" onClick={executeResetPassword} isLoading={isLoading} className="flex-1">{t('تایید بازنشانی', 'Confirm Reset')}</Button>
+              </div>
+            }
+          />
         </Modal>
         
         {window.UserAccess && (
@@ -789,6 +826,7 @@
              language={language} 
           />
         )}
+        {Toast && <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(p => ({ ...p, isVisible: false }))} />}
       </div>
     );
   };

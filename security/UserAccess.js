@@ -1,24 +1,26 @@
 /* Filename: security/UserAccess.js */
 (() => {
   const React = window.React;
-  const ReactDOM = window.ReactDOM;
-  const { useState, useEffect, useCallback, useMemo, useRef } = React;
+  const { useState, useEffect, useCallback, useMemo } = React;
   
   const FallbackIcon = ({ size = 16, className = '' }) => React.createElement('span', { className: `inline-block ${className}`, style: { width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const { 
-    Shield = FallbackIcon, Lock = FallbackIcon, Save = FallbackIcon, 
-    Check = FallbackIcon, AlertCircle = FallbackIcon, User = FallbackIcon,
-    Zap = FallbackIcon, X = FallbackIcon, Plus = FallbackIcon, ChevronLeft = FallbackIcon,
-    FileText = FallbackIcon, Info = FallbackIcon, Search = FallbackIcon, Trash2 = FallbackIcon,
-    Eye = FallbackIcon
+    Shield = FallbackIcon, Save = FallbackIcon, User = FallbackIcon,
+    Zap = FallbackIcon, X = FallbackIcon, Info = FallbackIcon, Trash2 = FallbackIcon, Eye = FallbackIcon,
+    Check = FallbackIcon
   } = LucideIcons;
 
   const DesignSystem = window.DesignSystem || window.DSCore || {};
   const { 
       Modal = () => null, 
       Button = () => null,
-      DataGrid = () => null
+      DataGrid = () => null,
+      SelectField = () => null,
+      CheckboxField = () => null,
+      ToggleField = () => null,
+      Tabs = () => null,
+      Badge = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -28,80 +30,39 @@
     'branches': { fa: 'شعب مجاز', en: 'Allowed Branches' }
   };
 
-  const InlineSearch = ({ term, setTerm, results, onSelect, onCancel, t, isRtl }) => {
-      const [rect, setRect] = useState(null);
-      const inputRef = useRef(null);
+  const LOCAL_ACTION_LABELS = {
+    'read':                  { fa: 'مشاهده',                en: 'Read' },
+    'create':                { fa: 'ایجاد',                  en: 'Create' },
+    'edit':                  { fa: 'ویرایش',                 en: 'Edit' },
+    'delete':                { fa: 'حذف',                    en: 'Delete' },
+    'print':                 { fa: 'چاپ',                    en: 'Print' },
+    'copy':                  { fa: 'کپی سند',                en: 'Copy Document' },
+    'attach':                { fa: 'مدیریت پیوست',           en: 'Attachments' },
+    'summary':               { fa: 'خلاصه ارزی',             en: 'Currency Summary' },
+    'comment':               { fa: 'کامنت‌ها',                en: 'Comments' },
+    'bulk_delete':           { fa: 'حذف گروهی',              en: 'Bulk Delete' },
+    'set_temporary':         { fa: 'تغییر به موقت',          en: 'Set Temporary' },
+    'set_draft':             { fa: 'تغییر به یادداشت',       en: 'Set Draft' },
+    'set_final':             { fa: 'تبدیل به بررسی شده',     en: 'Set Final' },
+    'set_approved':          { fa: 'تبدیل به تایید شده',     en: 'Set Approved' },
+    'revert_temporary':      { fa: 'برگشت به موقت',          en: 'Revert to Temporary' },
+    'update_rates':          { fa: 'بروزرسانی نرخ ارز',      en: 'Update Exchange Rates' },
+    'manage_accounts':       { fa: 'مدیریت حساب‌ها',         en: 'Manage Accounts' },
+    'manage_access':         { fa: 'مدیریت دسترسی‌ها',       en: 'Manage Access' },
+    'excel_export':          { fa: 'خروجی Excel',            en: 'Excel Export' },
+    'import':                { fa: 'ورود اطلاعات',           en: 'Import' },
+    'download_sample':       { fa: 'دانلود نمونه',           en: 'Download Sample' },
+    'manage_balance_groups': { fa: 'گروه‌های بالانس',         en: 'Balance Groups' },
+  };
 
-      const updateRect = useCallback(() => {
-          if (inputRef.current) {
-              setRect(inputRef.current.getBoundingClientRect());
-          }
-      }, []);
-
-      useEffect(() => {
-          updateRect();
-          window.addEventListener('resize', updateRect);
-          window.addEventListener('scroll', updateRect, true);
-          return () => {
-              window.removeEventListener('resize', updateRect);
-              window.removeEventListener('scroll', updateRect, true);
-          };
-      }, [updateRect]);
-
-      const dropdownContent = (
-          <div 
-              style={{ 
-                  position: 'fixed', 
-                  top: rect ? rect.bottom + 4 : 0, 
-                  left: rect ? rect.left : 0, 
-                  width: rect ? rect.width : 'auto', 
-                  zIndex: 999999 
-              }}
-              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-lg max-h-56 overflow-y-auto custom-scrollbar"
-          >
-              {results.length > 0 ? results.map(f => (
-                  <div 
-                      key={f.id} 
-                      onClick={() => onSelect(f)} 
-                      className="p-3 hover:bg-blue-50 dark:hover:bg-slate-700 cursor-pointer text-[12px] border-b border-slate-50 dark:border-slate-700 last:border-0 transition-colors"
-                  >
-                      <div className="font-bold text-slate-800 dark:text-slate-200">{f.label}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{f.fullPath}</div>
-                  </div>
-              )) : (
-                  <div className="p-4 text-[11px] text-slate-400 text-center">{t('موردی یافت نشد.', 'No items found.')}</div>
-              )}
-          </div>
-      );
-
-      return (
-          <div className="relative w-full flex items-center gap-2" onClick={e => e.stopPropagation()}>
-              <div className="relative flex-1">
-                  <div className={`absolute inset-y-0 flex items-center pointer-events-none text-slate-400 ${isRtl ? 'right-2' : 'left-2'}`}>
-                      <Search size={14}/>
-                  </div>
-                  <input
-                      ref={inputRef}
-                      autoFocus
-                      value={term}
-                      onChange={(e) => {
-                          setTerm(e.target.value);
-                          updateRect();
-                      }}
-                      placeholder={t('جستجوی نام فرم جهت افزودن...', 'Search form name...')}
-                      className={`w-full h-8 text-[11px] font-bold text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-800 border-2 border-blue-400 dark:border-blue-500 rounded outline-none focus:ring-2 focus:ring-blue-500 shadow-inner ${isRtl ? 'pr-8 pl-2' : 'pl-8 pr-2'}`}
-                  />
-                  {term && rect && (ReactDOM ? ReactDOM.createPortal(dropdownContent, document.body) : <div className="absolute top-full left-0 right-0 z-50">{dropdownContent}</div>)}
-              </div>
-              <button 
-                  className="text-slate-400 hover:text-red-500 p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                  onClick={onCancel}
-                  title={t('انصراف', 'Cancel')}
-              >
-                  <X size={16}/>
-              </button>
-          </div>
-      );
+  const PERSIAN_TO_CODE = {
+    'مشاهده': 'read', 'نمایش': 'read', 'خواندن': 'read',
+    'ایجاد': 'create', 'افزودن': 'create',
+    'ویرایش': 'edit', 'بروزرسانی': 'edit', 'update': 'edit',
+    'حذف': 'delete',
+    'چاپ': 'print',
+    'کپی': 'copy',
+    'حذف گروهی': 'bulk_delete',
   };
 
   const UserAccess = ({ isOpen, onClose, user, language = 'fa' }) => {
@@ -127,9 +88,7 @@
     const [selectedMenuId, setSelectedMenuId] = useState(null);
     const [activeSourceId, setActiveSourceId] = useState(null);
     const [gridSelectedIds, setGridSelectedIds] = useState([]);
-
-    const [isInlineAdding, setIsInlineAdding] = useState(false);
-    const [inlineSearchTerm, setInlineSearchTerm] = useState('');
+    const [isDetailPanelVisible, setIsDetailPanelVisible] = useState(false);
 
     useEffect(() => {
       if (isOpen && user) {
@@ -141,8 +100,7 @@
         setDirectPerms({});
         setDeletedPermIds([]);
         setGridSelectedIds([]);
-        setIsInlineAdding(false);
-        setInlineSearchTerm('');
+        setIsDetailPanelVisible(false);
         setHasChanges(false);
       }
     }, [isOpen, user]);
@@ -195,12 +153,13 @@
                 const scopes = typeof p.data_scopes === 'string' ? JSON.parse(p.data_scopes || '{}') : (p.data_scopes || {});
                 
                 if (p.role_id) {
-                    if (!rPerms[p.role_id]) rPerms[p.role_id] = [];
-                    rPerms[p.role_id].push({ menu_id: p.menu_id, actions, scopes });
+                    const rId = String(p.role_id);
+                    if (!rPerms[rId]) rPerms[rId] = [];
+                    rPerms[rId].push({ menu_id: p.menu_id, actions, scopes });
                 }
                 
                 if (p.user_id && p.user_id === user.id) {
-                    dPerms[p.menu_id] = { id: p.id, actions, scopes };
+                    dPerms[String(p.menu_id)] = { id: p.id, actions, scopes };
                 }
             });
         }
@@ -224,10 +183,10 @@
 
     const getMenuFullPath = useCallback((menuId) => {
         const pathParts = [];
-        let current = menusData.find(m => m.id === menuId);
+        let current = menusData.find(m => String(m.id) === String(menuId));
         while (current) {
             pathParts.unshift(getMenuLabel(current));
-            current = menusData.find(m => m.id === current.parent_id);
+            current = menusData.find(m => String(m.id) === String(current.parent_id));
         }
         return pathParts.join(' / ');
     }, [menusData, getMenuLabel]);
@@ -239,7 +198,7 @@
                 label: getMenuLabel(m),
                 fullPath: getMenuFullPath(m.id),
                 available_actions: typeof m.available_actions === 'string' ? JSON.parse(m.available_actions || '[]') : (m.available_actions || []),
-                available_scopes: typeof m.available_scopes === 'string' ? JSON.parse(m.available_scopes || '[]') : (m.available_scopes || [])
+                available_scopes: typeof m.available_scopes === 'string' ? JSON.parse(m.available_scopes || 'null') : (m.available_scopes || null)
             }));
     }, [menusData, getMenuLabel, getMenuFullPath]);
 
@@ -247,16 +206,17 @@
         const map = new Map();
 
         assignedRoles.forEach(roleId => {
-            const rolePerms = globalRolePerms[roleId] || [];
-            const roleInfo = allRoles.find(r => r.id === roleId);
+            const rolePerms = globalRolePerms[String(roleId)] || [];
+            const roleInfo = allRoles.find(r => String(r.id) === String(roleId));
             
             rolePerms.forEach(p => {
-                const formInfo = allSystemForms.find(f => f.id === p.menu_id);
+                const formInfo = allSystemForms.find(f => String(f.id) === String(p.menu_id));
                 if (!formInfo) return; 
-                if (!map.has(p.menu_id)) {
-                    map.set(p.menu_id, { id: p.menu_id, path: formInfo.fullPath, name: formInfo.label, breakdown: [] });
+                const stringId = String(p.menu_id);
+                if (!map.has(stringId)) {
+                    map.set(stringId, { id: formInfo.id, path: formInfo.fullPath, name: formInfo.label, breakdown: [] });
                 }
-                map.get(p.menu_id).breakdown.push({ 
+                map.get(stringId).breakdown.push({ 
                     sourceId: `role_${roleId}`, 
                     type: 'role', 
                     label: `${t('نقش:', 'Role:')} ${roleInfo?.title || roleId}`, 
@@ -267,17 +227,35 @@
         });
 
         Object.entries(directPerms).forEach(([menuId, p]) => {
-            const formInfo = allSystemForms.find(f => f.id === menuId);
-            if (!formInfo) return;
-            if (!map.has(menuId)) {
-                map.set(menuId, { id: menuId, path: formInfo.fullPath, name: formInfo.label, breakdown: [] });
+            if (menuId.startsWith('temp_')) {
+                map.set(menuId, {
+                    id: menuId,
+                    name: t('(فرم جدید)', '(New Form)'),
+                    path: t('لطفاً فرم را انتخاب کنید...', 'Please select a form...'),
+                    breakdown: [{
+                        sourceId: 'direct',
+                        type: 'direct',
+                        label: t('مستقیم (جدید)', 'Direct (New)'),
+                        actions: p.actions || [],
+                        scopes: p.scopes || {}
+                    }]
+                });
+                return;
             }
-            const existing = map.get(menuId).breakdown.find(b => b.type === 'direct');
+
+            const formInfo = allSystemForms.find(f => String(f.id) === String(menuId));
+            if (!formInfo) return;
+            
+            const stringId = String(formInfo.id);
+            if (!map.has(stringId)) {
+                map.set(stringId, { id: formInfo.id, path: formInfo.fullPath, name: formInfo.label, breakdown: [] });
+            }
+            const existing = map.get(stringId).breakdown.find(b => b.type === 'direct');
             if (existing) {
                 existing.actions = p.actions || []; 
                 existing.scopes = p.scopes || {};
             } else {
-                map.get(menuId).breakdown.push({ 
+                map.get(stringId).breakdown.push({ 
                     sourceId: 'direct', 
                     type: 'direct', 
                     label: t('مستقیم', 'Direct'), 
@@ -287,33 +265,20 @@
             }
         });
 
-        const list = Array.from(map.values());
-
-        if (isInlineAdding) {
-            list.unshift({
-                id: 'INLINE_NEW',
-                path: '',
-                name: '',
-                isNewRow: true,
-                breakdown: []
-            });
-        }
-
-        return list;
-    }, [assignedRoles, directPerms, allSystemForms, globalRolePerms, allRoles, t, isInlineAdding]);
+        const result = Array.from(map.values());
+        return result.sort((a, b) => {
+            const aTemp = String(a.id).startsWith('temp_');
+            const bTemp = String(b.id).startsWith('temp_');
+            if (aTemp && !bTemp) return -1;
+            if (!aTemp && bTemp) return 1;
+            return 0;
+        });
+    }, [assignedRoles, directPerms, allSystemForms, globalRolePerms, allRoles, t]);
 
     const currentDetailRow = useMemo(() => {
         if (!selectedMenuId) return null;
-        if (selectedMenuId === 'INLINE_NEW') return { id: 'INLINE_NEW', isNewRow: true, breakdown: [] };
-        return effectivePermissions.find(r => r.id === selectedMenuId) || null;
+        return effectivePermissions.find(r => String(r.id) === String(selectedMenuId)) || null;
     }, [selectedMenuId, effectivePermissions]);
-
-    const inlineFilteredForms = useMemo(() => {
-        if (!inlineSearchTerm) return [];
-        return allSystemForms
-            .filter(f => !directPerms[f.id] && f.fullPath.toLowerCase().includes(inlineSearchTerm.toLowerCase()))
-            .slice(0, 15);
-    }, [allSystemForms, directPerms, inlineSearchTerm]);
 
     const handleSavePermissions = async () => {
       if (!hasChanges) return;
@@ -331,13 +296,18 @@
           const deletes = [...deletedPermIds];
 
           Object.entries(directPerms).forEach(([menuId, data]) => {
+              if (menuId.startsWith('temp_')) return;
+
               const hasActions = data.actions && data.actions.length > 0;
-              const hasScopes = data.scopes && Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0);
+              const hasScopes = data.scopes && (data.scopes.own_data_only === true || Object.keys(data.scopes).some(k => k !== 'own_data_only' && data.scopes[k]?.length > 0));
+
+              const systemForm = allSystemForms.find(f => String(f.id) === String(menuId));
+              const dbMenuId = systemForm ? systemForm.id : menuId;
 
               if (hasActions || hasScopes) {
                   const payload = { 
                       user_id: user.id, 
-                      menu_id: menuId, 
+                      menu_id: dbMenuId, 
                       actions: data.actions || [], 
                       data_scopes: data.scopes || {} 
                   };
@@ -384,48 +354,68 @@
         setHasChanges(true);
     };
 
-    const handleAddDirectForm = (form) => {
-        if (directPerms[form.id]) {
+    const handleInlineAddRow = () => {
+        const tempId = `temp_${Date.now()}`;
+        setDirectPerms(prev => ({
+            ...prev,
+            [tempId]: { id: null, actions: [], scopes: {} }
+        }));
+        setSelectedMenuId(tempId);
+        setActiveSourceId('direct');
+        setIsDetailPanelVisible(false);
+        setHasChanges(true);
+    };
+
+    const handleInlineSelectForm = (tempId, targetMenuId) => {
+        if (!targetMenuId) return;
+        const stringTargetId = String(targetMenuId);
+        if (directPerms[stringTargetId]) {
             alert(t('این فرم قبلاً در لیست دسترسی‌های مستقیم وجود دارد.', 'This form is already in direct permissions list.'));
             return;
         }
 
-        setDirectPerms(prev => ({
-            ...prev,
-            [form.id]: { id: null, actions: [], scopes: {} }
-        }));
-        
-        setIsInlineAdding(false);
-        setInlineSearchTerm('');
-        setSelectedMenuId(form.id);
-        setGridSelectedIds([form.id]);
+        setDirectPerms(prev => {
+            const next = { ...prev };
+            const oldData = next[tempId] || { id: null, actions: [], scopes: {} };
+            delete next[tempId];
+            next[stringTargetId] = oldData;
+            return next;
+        });
+
+        const systemForm = allSystemForms.find(f => String(f.id) === stringTargetId);
+        const finalId = systemForm ? systemForm.id : targetMenuId;
+
+        setSelectedMenuId(finalId);
         setActiveSourceId('direct');
+        setIsDetailPanelVisible(false);
         setHasChanges(true);
     };
 
     const handleDeleteDirect = (menuId) => {
-        const perm = directPerms[menuId];
+        const stringMenuId = String(menuId);
+        const perm = directPerms[stringMenuId];
         if (perm && perm.id) {
             setDeletedPermIds(prev => [...prev, perm.id]);
         }
         
         setDirectPerms(prev => {
             const next = { ...prev };
-            delete next[menuId];
+            delete next[stringMenuId];
             return next;
         });
 
-        setGridSelectedIds(prev => prev.filter(id => id !== menuId));
+        setGridSelectedIds(prev => prev.filter(id => String(id) !== stringMenuId));
 
-        if (selectedMenuId === menuId) {
+        if (String(selectedMenuId) === stringMenuId) {
             if (activeSourceId === 'direct') {
-                const current = effectivePermissions.find(r => r.id === menuId);
+                const current = effectivePermissions.find(r => String(r.id) === stringMenuId);
                 const roleSources = current?.breakdown.filter(b => b.type === 'role') || [];
                 if (roleSources.length > 0) {
                     setActiveSourceId(roleSources[0].sourceId);
                 } else {
                     setSelectedMenuId(null);
                     setActiveSourceId(null);
+                    setIsDetailPanelVisible(false);
                 }
             }
         }
@@ -434,7 +424,9 @@
 
     const handleBulkDeleteDirect = (menuIds) => {
         const idsToDelete = [];
-        menuIds.forEach(id => {
+        const stringMenuIds = menuIds.map(id => String(id));
+
+        stringMenuIds.forEach(id => {
             if (directPerms[id] && directPerms[id].id) {
                 idsToDelete.push(directPerms[id].id);
             }
@@ -446,31 +438,42 @@
 
         setDirectPerms(prev => {
             const next = { ...prev };
-            menuIds.forEach(id => delete next[id]);
+            stringMenuIds.forEach(id => delete next[id]);
             return next;
         });
 
-        setGridSelectedIds(prev => prev.filter(id => !menuIds.includes(id)));
+        setGridSelectedIds(prev => prev.filter(id => !stringMenuIds.includes(String(id))));
 
-        if (menuIds.includes(selectedMenuId) && activeSourceId === 'direct') {
+        if (stringMenuIds.includes(String(selectedMenuId)) && activeSourceId === 'direct') {
             setSelectedMenuId(null);
             setActiveSourceId(null);
+            setIsDetailPanelVisible(false);
         }
         setHasChanges(true);
     };
 
     const handleUpdateDirectPermission = (formId, type, key, value) => {
+        const stringFormId = String(formId);
+        if (stringFormId.startsWith('temp_')) {
+            alert(t('لطفاً ابتدا فرم مورد نظر را انتخاب کنید.', 'Please select a form first.'));
+            return;
+        }
+
         setDirectPerms(prev => {
-            const current = prev[formId] || { id: null, actions: [], scopes: {} };
+            const current = prev[stringFormId] || { id: null, actions: [], scopes: {} };
             let updatedActions = [...current.actions];
             let updatedScopes = { ...current.scopes };
 
             if (type === 'action') {
-                if (updatedActions.includes(key)) {
-                    updatedActions = updatedActions.filter(a => a !== key);
+                const normalizeA = (a) => PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim();
+                const normalizedKey = normalizeA(key);
+                if (updatedActions.some(a => normalizeA(a) === normalizedKey)) {
+                    updatedActions = updatedActions.filter(a => normalizeA(a) !== normalizedKey);
                 } else {
-                    updatedActions.push(key);
+                    updatedActions = [...updatedActions.filter(a => normalizeA(a) !== normalizedKey), normalizedKey];
                 }
+            } else if (type === 'own_data_only') {
+                updatedScopes['own_data_only'] = !current.scopes?.own_data_only;
             } else if (type === 'scope') {
                 let currentScopeArr = updatedScopes[key] || [];
                 if (currentScopeArr.includes(value)) {
@@ -483,7 +486,7 @@
 
             return {
                 ...prev,
-                [formId]: {
+                [stringFormId]: {
                     ...current,
                     actions: updatedActions,
                     scopes: updatedScopes
@@ -500,17 +503,18 @@
         header_en: 'Form Path & Name', 
         width: '350px',
         render: (val, row) => {
-            if (row.isNewRow) {
+            if (row.id.toString().startsWith('temp_')) {
                 return (
-                    <InlineSearch 
-                        term={inlineSearchTerm} 
-                        setTerm={setInlineSearchTerm} 
-                        results={inlineFilteredForms} 
-                        onSelect={handleAddDirectForm} 
-                        onCancel={() => { setIsInlineAdding(false); setInlineSearchTerm(''); }} 
-                        t={t} 
-                        isRtl={isRtl} 
-                    />
+                    <div className="w-full py-1">
+                        <SelectField
+                            size="sm"
+                            placeholder={t('انتخاب فرم...', 'Select Form...')}
+                            options={allSystemForms.filter(f => !directPerms[String(f.id)]).map(f => ({ value: f.id, label: f.fullPath }))}
+                            value=""
+                            onChange={(e) => handleInlineSelectForm(row.id, e.target.value)}
+                            isRtl={isRtl}
+                        />
+                    </div>
                 );
             }
             return (
@@ -518,7 +522,7 @@
                     <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200">{row.name}</span>
                     <span className="text-[10px] text-slate-400 font-sans truncate">{row.path}</span>
                 </div>
-            )
+            );
         }
       },
       { 
@@ -527,36 +531,48 @@
         header_en: 'Access Type', 
         width: '250px',
         render: (val, row) => {
-           if (row.isNewRow) return <span className="text-slate-400 text-[10px] italic">{t('نام فرم را جستجو و انتخاب کنید...', 'Search and select form...')}</span>;
-           return (
-              <div className="flex items-center w-full min-h-[24px]">
-                 <div className="flex flex-wrap gap-1 flex-1 items-center">
-                     {row.breakdown.map((s, idx) => {
-                        const isDirect = s.type === 'direct';
-                        return (
-                            <span 
-                               key={idx} 
-                               className={`px-1.5 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1
-                                   ${isDirect 
-                                      ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' 
-                                      : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}`}
-                            >
-                               {isDirect ? <Zap size={10}/> : <Shield size={10}/>} {s.label}
-                            </span>
-                        )
-                     })}
-                 </div>
-              </div>
-           )
+          if (row.id.toString().startsWith('temp_')) {
+              return (
+                  <div className="flex items-center min-h-[24px]">
+                      <Badge variant="blue" className="flex items-center gap-1">
+                          <Zap size={10}/> {t('مستقیم (جدید)', 'Direct (New)')}
+                      </Badge>
+                  </div>
+              );
+          }
+          return (
+            <div className="flex items-center w-full min-h-[24px]">
+               <div className="flex flex-wrap gap-1 flex-1 items-center">
+                   {row.breakdown.map((s, idx) => {
+                      const isDirect = s.type === 'direct';
+                      return (
+                          <Badge key={idx} variant={isDirect ? 'blue' : 'gray'} className="flex items-center gap-1">
+                             {isDirect ? <Zap size={10}/> : <Shield size={10}/>} {s.label}
+                          </Badge>
+                      )
+                   })}
+               </div>
+            </div>
+          )
         }
       }
     ];
 
     if (!isOpen) return null;
 
-    const activeMenuInfo = currentDetailRow ? allSystemForms.find(f => f.id === currentDetailRow.id) : null;
-    const availActions = activeMenuInfo ? activeMenuInfo.available_actions : [];
-    const availScopes = activeMenuInfo ? activeMenuInfo.available_scopes : [];
+    const activeMenuInfo = currentDetailRow ? allSystemForms.find(f => String(f.id) === String(currentDetailRow.id)) : null;
+    const _rawUA = activeMenuInfo ? activeMenuInfo.available_actions : [];
+    const _seenUA = new Set();
+    const availActions = _rawUA.reduce((acc, a) => {
+        const id = PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim();
+        const lbl = actionDictionary[id] || LOCAL_ACTION_LABELS[id];
+        const key = lbl ? lbl[isRtl ? 'fa' : 'en'] : id;
+        if (!_seenUA.has(key)) { _seenUA.add(key); acc.push(id); }
+        return acc;
+    }, []);
+    const availScopesRaw = activeMenuInfo ? activeMenuInfo.available_scopes : null;
+    const isNewScopeFormatUA = availScopesRaw && !Array.isArray(availScopesRaw) && typeof availScopesRaw === 'object';
+    const availScopeKeys = isNewScopeFormatUA ? Object.keys(availScopesRaw) : (Array.isArray(availScopesRaw) ? availScopesRaw : []);
     const activeSource = currentDetailRow ? currentDetailRow.breakdown.find(b => b.sourceId === activeSourceId) : null;
     const isReadOnly = activeSource ? activeSource.type === 'role' : true;
 
@@ -574,9 +590,9 @@
                         </span>
                         <div className="flex gap-1 flex-wrap items-center">
                             {assignedRoles.map(rId => {
-                                const role = allRoles.find(r => r.id === rId);
+                                const role = allRoles.find(r => String(r.id) === String(rId));
                                 return (
-                                    <div key={rId} className="flex items-center gap-1 bg-white dark:bg-slate-700 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[11px] font-bold shadow-sm">
+                                    <div key={rId} className="flex items-center gap-1 bg-white dark:bg-slate-700 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded text-[12px] font-bold shadow-sm">
                                         {role?.title || rId}
                                         <button onClick={() => handleRemoveRole(rId)} className="hover:text-red-500 rounded-full p-0.5 transition-colors">
                                             <X size={10} strokeWidth={3}/>
@@ -588,66 +604,65 @@
                         </div>
                     </div>
                     
-                    <div className="shrink-0 flex items-center bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded p-1">
-                        <select 
-                            className="bg-transparent text-[11px] font-medium text-slate-700 dark:text-slate-300 outline-none w-48 cursor-pointer"
-                            onChange={e => { if(e.target.value) handleAddRole(e.target.value); e.target.value = ''; }}
-                        >
-                            <option value="">{t('+ افزودن نقش جدید...', '+ Add new role...')}</option>
-                            {allRoles.filter(r => !assignedRoles.includes(r.id)).map(r => (
-                                <option key={r.id} value={r.id}>{r.title}</option>
-                            ))}
-                        </select>
+                    <div className="shrink-0 w-64">
+                        <SelectField 
+                            size="sm"
+                            placeholder={t('+ افزودن نقش جدید...', '+ Add new role...')}
+                            options={allRoles.filter(r => !assignedRoles.includes(r.id)).map(r => ({ value: r.id, label: r.title }))}
+                            value=""
+                            onChange={(e) => { if(e.target.value) handleAddRole(e.target.value); }}
+                            isRtl={isRtl}
+                        />
                     </div>
                 </div>
 
                 <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-5 gap-5">
                     
-                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${currentDetailRow ? 'w-full md:w-7/12' : 'w-full'}`}>
+                    <div className={`flex flex-col bg-white dark:bg-slate-900 overflow-hidden shrink-0 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${(currentDetailRow && !String(selectedMenuId).startsWith('temp_') && isDetailPanelVisible) ? 'w-full md:w-7/12' : 'w-full'}`}>
                         <div className="flex-1 min-h-0 relative">
                             <DataGrid 
                                 data={effectivePermissions}
                                 columns={columns}
                                 language={language}
                                 selectable={true}
+                                hideImport={true}
                                 selectedIds={gridSelectedIds}
                                 onSelectChange={setGridSelectedIds}
                                 activeRowId={selectedMenuId}
                                 onRowClick={(row) => {
-                                    if (row.isNewRow) return;
                                     setSelectedMenuId(row.id);
                                     if (row.breakdown && row.breakdown.length > 0) {
                                         if (!activeSourceId || !row.breakdown.find(b => b.sourceId === activeSourceId)) {
                                             setActiveSourceId(row.breakdown[0].sourceId);
                                         }
+                                        if (!row.id.toString().startsWith('temp_')) setIsDetailPanelVisible(true);
                                     } else {
-                                        setActiveSourceId(null);
+                                        setActiveSourceId('direct');
+                                        if (!row.id.toString().startsWith('temp_')) setIsDetailPanelVisible(true);
                                     }
                                 }}
-                                onAdd={() => {
-                                    setIsInlineAdding(true);
-                                    setInlineSearchTerm('');
-                                }}
+                                onAdd={handleInlineAddRow}
                                 onRowDoubleClick={(row) => {
-                                    if (row.isNewRow) return;
                                     setSelectedMenuId(row.id);
-                                    if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
+                                    if (row.breakdown && row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
+                                    if (!row.id.toString().startsWith('temp_')) setIsDetailPanelVisible(true);
                                 }}
                                 actions={[
                                     { 
                                         icon: Eye, 
                                         tooltip: t('مشاهده جزئیات', 'View Details'), 
+                                        hidden: (row) => row.id.toString().startsWith('temp_'),
                                         onClick: (row) => {
-                                            if (row.isNewRow) return;
                                             setSelectedMenuId(row.id);
-                                            if (row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
+                                            if (row.breakdown && row.breakdown.length > 0) setActiveSourceId(row.breakdown[0].sourceId);
+                                            setIsDetailPanelVisible(true);
                                         },
                                         className: 'text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-slate-800 dark:hover:bg-slate-700 p-1.5 rounded transition-colors'
                                     },
                                     {
                                         icon: Trash2,
                                         tooltip: t('حذف دسترسی مستقیم', 'Delete Direct Access'),
-                                        hidden: (row) => row.isNewRow || !row.breakdown.some(b => b.type === 'direct'),
+                                        hidden: (row) => !directPerms[String(row.id)],
                                         onClick: (row) => handleDeleteDirect(row.id),
                                         className: 'text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 p-1.5 rounded transition-colors'
                                     }
@@ -664,10 +679,10 @@
                         </div>
                     </div>
 
-                    {currentDetailRow && !currentDetailRow.isNewRow && (
+                    {currentDetailRow && !selectedMenuId.toString().startsWith('temp_') && isDetailPanelVisible && (
                         <div className="w-full md:w-5/12 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 flex flex-col overflow-hidden animate-in slide-in-from-right-5 duration-200 relative z-10 shadow-sm">
                             <div className="absolute top-3 left-3">
-                                <button onClick={() => setSelectedMenuId(null)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-500 transition-colors">
+                                <button onClick={() => { setSelectedMenuId(null); setIsDetailPanelVisible(false); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-500 transition-colors">
                                     <X size={14}/>
                                 </button>
                             </div>
@@ -677,137 +692,147 @@
                                 <div className="text-[10px] text-slate-500 font-sans leading-tight">{currentDetailRow.path}</div>
                             </div>
 
-                            <div className="p-4 flex-1 overflow-y-auto space-y-4">
-                                
-                                {currentDetailRow.breakdown.length > 1 && (
-                                    <div className="flex gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-                                        {currentDetailRow.breakdown.map((s, idx) => (
-                                            <button 
-                                                key={idx}
-                                                onClick={() => setActiveSourceId(s.sourceId)}
-                                                className={`px-3 py-1.5 rounded text-[11px] font-bold border transition-all flex items-center gap-1.5
-                                                ${activeSourceId === s.sourceId 
-                                                    ? 'bg-blue-100 text-blue-700 border-blue-300 shadow-sm dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-600' 
-                                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-blue-50 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700 dark:hover:bg-slate-700'}`}
-                                            >
-                                                {s.type === 'direct' ? <Zap size={12}/> : <Shield size={12}/>}
-                                                {s.label}
-                                            </button>
-                                        ))}
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                {currentDetailRow.breakdown && currentDetailRow.breakdown.length > 1 && (
+                                    <div className="px-4 pt-4 border-b border-slate-100 dark:border-slate-800">
+                                        <Tabs 
+                                            tabs={currentDetailRow.breakdown.map(s => ({ 
+                                                id: s.sourceId, 
+                                                label: s.label, 
+                                                icon: s.type === 'direct' ? Zap : Shield 
+                                            }))}
+                                            activeTab={activeSourceId}
+                                            onChange={setActiveSourceId}
+                                        />
                                     </div>
                                 )}
 
-                                {activeSource && (
-                                    <>
-                                        {!isReadOnly && (
-                                            <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 p-2.5 rounded shadow-sm">
-                                                <Zap size={14} className="text-blue-600 dark:text-blue-400" />
-                                                <span className="font-bold text-[11px] text-blue-800 dark:text-blue-300">
-                                                    {t('شما در حال ویرایش دسترسی مستقیم هستید.', 'Editing Direct Access.')}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {isReadOnly && (
-                                            <div className="flex items-start gap-2 text-[10px] text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 p-2.5 rounded leading-relaxed border border-slate-200 dark:border-slate-700 shadow-sm">
-                                                <Info size={14} className="shrink-0 text-amber-500 mt-0.5"/>
-                                                {t('این دسترسی‌ها از نقش به ارث رسیده‌اند و در اینجا قابل تغییر نیستند. برای ویرایش باید به فرم مدیریت نقش‌ها بروید.', 'Inherited from role. To edit, please use the Role Management screen.')}
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-3">
-                                            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
-                                                {t('عملیات مجاز (Actions)', 'Allowed Actions')}
-                                            </div>
-
-                                            {availActions.length === 0 ? (
-                                                <div className="text-[10px] text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
-                                                    {t('عملیاتی برای این فرم تعریف نشده است.', 'No actions defined.')}
-                                                </div>
-                                            ) : (
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-                                                    {availActions.map(actId => {
-                                                        const isChecked = activeSource.actions.includes(actId);
-                                                        const labelObj = actionDictionary[actId];
-                                                        const lbl = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actId;
-
-                                                        if (isReadOnly) {
-                                                            return (
-                                                                <div key={actId} className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 rounded border bg-slate-50 dark:bg-slate-800 ${isChecked ? 'border-blue-200 dark:border-blue-800 opacity-100 shadow-sm' : 'border-slate-100 dark:border-slate-800 opacity-50'}`}>
-                                                                    <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'text-transparent border-slate-300'}`}>
-                                                                        <Check size={12} strokeWidth={3}/>
-                                                                    </div>
-                                                                    <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{lbl}</span>
-                                                                </div>
-                                                            );
-                                                        }
-
-                                                        return (
-                                                            <label 
-                                                                key={actId} 
-                                                                onClick={() => handleUpdateDirectPermission(currentDetailRow.id, 'action', actId)}
-                                                                className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 rounded border cursor-pointer transition-all bg-white dark:bg-slate-800 ${isChecked ? 'border-blue-400 ring-1 ring-blue-100 dark:ring-0 dark:border-blue-500 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:border-blue-300'}`}
-                                                            >
-                                                                <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border transition-colors ${isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 dark:border-slate-600'}`}>
-                                                                    {isChecked && <Check size={12} strokeWidth={3}/>}
-                                                                </div>
-                                                                <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 leading-tight">{lbl}</span>
-                                                            </label>
-                                                        );
-                                                    })}
+                                <div className="p-4 flex-1 overflow-y-auto space-y-4">
+                                    {activeSource && (
+                                        <>
+                                            {!isReadOnly && (
+                                                <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 dark:bg-blue-900/20 dark:border-blue-800 p-2.5 rounded shadow-sm mb-4">
+                                                    <Zap size={14} className="text-blue-600 dark:text-blue-400" />
+                                                    <span className="font-bold text-[12px] text-blue-800 dark:text-blue-300">
+                                                        {t('شما در حال ویرایش دسترسی مستقیم هستید.', 'Editing Direct Access.')}
+                                                    </span>
                                                 </div>
                                             )}
-                                        </div>
 
-                                        {availScopes.length > 0 && (
-                                            <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
-                                                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                                            {isReadOnly && (
+                                                <div className="flex items-start gap-2 text-[10px] text-slate-600 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 p-2.5 rounded leading-relaxed border border-slate-200 dark:border-slate-700 shadow-sm mb-4">
+                                                    <Info size={14} className="shrink-0 text-amber-500 mt-0.5"/>
+                                                    {t('این دسترسی‌ها از نقش به ارث رسیده‌اند و در اینجا قابل تغییر نیستند. برای ویرایش باید به فرم مدیریت نقش‌ها بروید.', 'Inherited from role. To edit, please use the Role Management screen.')}
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-3">
+                                                <div className="text-[12px] font-bold text-slate-500 dark:text-slate-400 tracking-wider mb-2">
+                                                    {t('عملیات مجاز (Actions)', 'Allowed Actions')}
+                                                </div>
+
+                                                {availActions.length === 0 ? (
+                                                    <div className="text-[10px] text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
+                                                        {t('عملیاتی برای این فرم تعریف نشده است.', 'No actions defined.')}
+                                                    </div>
+                                                ) : (
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                        {availActions.map(actId => {
+                                                            const normalizeA = (a) => PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim();
+                                                            const isChecked = (activeSource.actions || []).some(a => normalizeA(a) === actId);
+                                                            const lblObj = actionDictionary[actId] || LOCAL_ACTION_LABELS[actId];
+                                                            const displayLbl = lblObj ? lblObj[isRtl ? 'fa' : 'en'] : actId;
+                                                            return (
+                                                                <button
+                                                                    key={actId}
+                                                                    type="button"
+                                                                    onClick={() => !isReadOnly && handleUpdateDirectPermission(currentDetailRow.id, 'action', actId)}
+                                                                    className={[
+                                                                        'w-full inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all duration-150 select-none',
+                                                                        isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer',
+                                                                        isChecked
+                                                                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                                                                            + (isReadOnly ? '' : ' hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400')
+                                                                    ].join(' ')}
+                                                                >
+                                                                    {isChecked && React.createElement(Check, { size: 11, className: 'shrink-0' })}
+                                                                    {displayLbl}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-slate-800">
+                                                <div className="text-[12px] font-bold text-slate-500 dark:text-slate-400 tracking-wider mb-2">
                                                     {t('محدودیت دسترسی به داده‌ها', 'Data Scopes')}
                                                 </div>
-                                                
-                                                {availScopes.map(scopeId => {
-                                                    const scopeDataList = scopesData[scopeId] || [];
-                                                    const displayLabel = SCOPE_DICT[scopeId]?.[isRtl ? 'fa' : 'en'] || scopeId;
 
-                                                    return (
-                                                        <div key={scopeId} className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded overflow-hidden flex flex-col shadow-sm">
-                                                            <div className="px-3 py-2 bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-[10px] font-black text-slate-600 dark:text-slate-400">
-                                                                {displayLabel}
-                                                            </div>
-                                                            <div className="p-2.5 flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-                                                                {scopeDataList.length > 0 ? scopeDataList.map(item => {
-                                                                    const isSelected = activeSource.scopes?.[scopeId]?.includes(item.id);
+                                                <div className="flex flex-col gap-0.5">
+                                                    <ToggleField
+                                                        checked={!!activeSource.scopes?.own_data_only}
+                                                        onChange={() => !isReadOnly && handleUpdateDirectPermission(currentDetailRow.id, 'own_data_only')}
+                                                        disabled={isReadOnly}
+                                                        isRtl={isRtl}
+                                                        label={t('ایجادکننده باشد', 'Created By Me')}
+                                                    />
+                                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 ps-10">{t('کاربر فقط رکوردهایی را می‌بیند که خودش ایجاد کرده است', 'User can only see records they created')}</div>
+                                                </div>
 
-                                                                    if (isReadOnly) {
-                                                                        if (!isSelected) return null;
+                                                {availScopeKeys.length > 0 && (
+                                                    <>
+                                                    {availScopeKeys.map(scopeKey => {
+                                                        const scopeDef = isNewScopeFormatUA ? availScopesRaw[scopeKey] : null;
+                                                        const displayLabel = scopeDef
+                                                            ? (isRtl ? (scopeDef.label_fa || scopeKey) : (scopeDef.label_en || scopeKey))
+                                                            : (SCOPE_DICT[scopeKey]?.[isRtl ? 'fa' : 'en'] || scopeKey);
+                                                        const itemsList = scopeDef ? (scopeDef.options || []) : (scopesData[scopeKey] || []);
+
+                                                        return (
+                                                            <div key={scopeKey}>
+                                                                <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                                                                    {displayLabel}
+                                                                </div>
+                                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                                                    {itemsList.length > 0 ? itemsList.map(item => {
+                                                                        const itemValue = scopeDef ? item.value : item.id;
+                                                                        const itemLabel = scopeDef
+                                                                            ? (isRtl ? (item.label_fa || item.value) : (item.label_en || item.value))
+                                                                            : item.title;
+                                                                        const isSelected = activeSource.scopes?.[scopeKey]?.includes(itemValue);
                                                                         return (
-                                                                            <span key={item.id} className="px-2.5 py-1 text-[10px] rounded bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 font-bold flex items-center gap-1 shadow-sm">
-                                                                                <Check size={10} strokeWidth={3}/> {item.title}
-                                                                            </span>
+                                                                            <button
+                                                                                key={itemValue}
+                                                                                type="button"
+                                                                                onClick={() => !isReadOnly && handleUpdateDirectPermission(currentDetailRow.id, 'scope', scopeKey, itemValue)}
+                                                                                className={[
+                                                                                    'w-full inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all duration-150 select-none',
+                                                                                    isReadOnly ? 'cursor-default opacity-80' : 'cursor-pointer',
+                                                                                    isSelected
+                                                                                        ? 'bg-teal-600 border-teal-600 text-white shadow-sm'
+                                                                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'
+                                                                                        + (isReadOnly ? '' : ' hover:border-teal-300 dark:hover:border-teal-700 hover:text-teal-600 dark:hover:text-teal-400')
+                                                                                ].join(' ')}
+                                                                            >
+                                                                                {isSelected && React.createElement(Check, { size: 11, className: 'shrink-0' })}
+                                                                                {itemLabel}
+                                                                            </button>
                                                                         );
-                                                                    }
-
-                                                                    return (
-                                                                        <div 
-                                                                            key={item.id} 
-                                                                            onClick={() => handleUpdateDirectPermission(currentDetailRow.id, 'scope', scopeId, item.id)}
-                                                                            className={`px-2.5 py-1 text-[10px] rounded border cursor-pointer select-none transition-all flex items-center gap-1 shadow-sm ${isSelected ? 'bg-blue-600 border-blue-600 text-white font-bold' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-400'}`}
-                                                                        >
-                                                                            {isSelected && <Check size={10} strokeWidth={3}/>}
-                                                                            {item.title}
-                                                                        </div>
-                                                                    );
-                                                                }) : (
-                                                                    <span className="text-[10px] text-slate-400 italic">{t('داده‌ای یافت نشد.', 'No data found.')}</span>
-                                                                )}
+                                                                    }) : (
+                                                                        <span className="text-[10px] text-slate-400 italic col-span-full">{t('داده‌ای یافت نشد.', 'No data found.')}</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                    </>
+                                                )}
                                             </div>
-                                        )}
-                                    </>
-                                )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -1,22 +1,24 @@
-/* Filename: OrganizationInfo.js */
+/* Filename: general/OrganizationInfo.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect } = React;
+  const { useState, useEffect, useRef, useCallback, useMemo } = React;
   
   const { 
     Button, PageHeader, Modal, DataGrid, 
-    TextField, ToggleField, Badge
-  } = window.DesignSystem || {};
+    TextField, ToggleField, Badge, EmptyState, Avatar
+  } = window.DesignSystem || window.DSCore || {};
   
   const { 
     Building2, Plus, Edit, Trash2, MapPin, Upload, X, Save, 
-    AlertTriangle, Lock 
+    AlertTriangle, Lock, Briefcase
   } = window.LucideIcons || {};
+  const { LOVField } = window.DSGrid || window.DesignSystem || {};
   const supabase = window.supabase;
 
   const OrganizationInfo = ({ isAdmin, language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+    const FORM_CODE = 'organization_info_main';
     
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +29,8 @@
     
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
     
+    const [filteredRecordId, setFilteredRecordId] = useState(null);
+
     const [formData, setFormData] = useState({
       code: '', 
       name: '', 
@@ -38,25 +42,29 @@
       isActive: true
     });
     const [newAddress, setNewAddress] = useState('');
+    const [logoError, setLogoError] = useState('');
 
     const [gridState, setGridState] = useState(null);
 
-    const viewConfig = {
-      pageId: 'organization_info_main',
-      currentState: () => ({ 
-        gridState
-      }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.gridState) setGridState(state.gridState);
-        } else {
-          setGridState(null);
-        }
-      }
-    };
+    const [officesModal, setOfficesModal] = useState({ isOpen: false, org: null });
+    const [offices, setOffices] = useState([]);
+    const [officesLoading, setOfficesLoading] = useState(false);
+    const [officeInlineEdit, setOfficeInlineEdit] = useState(null);
+    const [employees, setEmployees] = useState([]);
+    const [orgIdsWithOffices, setOrgIdsWithOffices] = useState(new Set());
 
     useEffect(() => {
       fetchData();
+    }, []);
+
+    useEffect(() => {
+      const handleFilterToRecord = (e) => {
+          if (e.detail && e.detail.form_component === 'OrganizationInfo') {
+              setFilteredRecordId(String(e.detail.entity_id));
+          }
+      };
+      window.addEventListener('filterToRecord', handleFilterToRecord);
+      return () => window.removeEventListener('filterToRecord', handleFilterToRecord);
     }, []);
 
     const fetchData = async () => {
@@ -82,6 +90,12 @@
         }));
         
         setData(mappedData);
+
+        // fetch which orgs have offices
+        try {
+          const { data: officeRows } = await supabase.from('fm_org_offices').select('org_id');
+          if (officeRows) setOrgIdsWithOffices(new Set(officeRows.map(r => r.org_id)));
+        } catch (_) {}
       } catch (err) {
         console.error('Fetch Error:', err);
       } finally {
@@ -91,6 +105,7 @@
 
     const handleSave = async () => {
       if (!formData.code || !formData.name) return;
+      if (logoError) return;
 
       setIsLoading(true);
       try {
@@ -139,14 +154,19 @@
         if (deleteConfirm.type === 'single') {
           const { error } = await supabase.from('organization_info').delete().eq('id', deleteConfirm.data.id);
           if (error) throw error;
+          setSelectedIds([]);
+          fetchData();
         } else if (deleteConfirm.type === 'bulk') {
           const { error } = await supabase.from('organization_info').delete().in('id', deleteConfirm.data);
           if (error) throw error;
+          setSelectedIds([]);
+          fetchData();
+        } else if (deleteConfirm.type === 'office') {
+          const { error } = await supabase.from('fm_org_offices').delete().eq('id', deleteConfirm.data);
+          if (error) throw error;
+          fetchOffices(officesModal.org?.id);
         }
-        
-        setSelectedIds([]);
         setDeleteConfirm({ isOpen: false, type: null, data: null });
-        fetchData();
       } catch (err) {
         console.error("Delete error:", err);
       } finally {
@@ -162,6 +182,84 @@
       setCurrentRecord(record);
       setNewAddress('');
       setIsModalOpen(true);
+    };
+
+    const fetchEmployees = useCallback(async () => {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase.from('parties')
+          .select('id, code, first_name, last_name, company_name, party_type, roles, mobile, email')
+          .eq('is_active', true);
+        if (error) throw error;
+        setEmployees(
+          (data || [])
+            .filter(p => (p.roles || []).includes('employee'))
+            .map(p => ({
+              id: p.id, value: p.id,
+              label: p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim(),
+              code: p.code,
+              mobile: p.mobile || '-',
+              email: p.email || '-',
+            }))
+        );
+      } catch (err) {
+        console.error('Error fetching employees:', err);
+      }
+    }, [supabase]);
+
+    const fetchOffices = useCallback(async (orgId) => {
+      if (!orgId) return;
+      setOfficesLoading(true);
+      try {
+        const { data, error } = await supabase.from('fm_org_offices').select('*').eq('org_id', orgId).order('created_at', { ascending: true });
+        if (error) throw error;
+        const mapped = (data || []).map(o => ({
+          id: o.id, title: o.title, managerId: o.manager_id, managerName: o.manager_name, isActive: o.is_active
+        }));
+        setOffices(mapped);
+        setOrgIdsWithOffices(prev => {
+          const next = new Set(prev);
+          if (mapped.length > 0) next.add(orgId);
+          else next.delete(orgId);
+          return next;
+        });
+      } catch (err) {
+        console.error('Error fetching offices:', err);
+      } finally {
+        setOfficesLoading(false);
+      }
+    }, [supabase]);
+
+    const handleOpenOfficesModal = (row) => {
+      setOfficesModal({ isOpen: true, org: row });
+      setOfficeInlineEdit(null);
+      fetchOffices(row.id);
+      fetchEmployees();
+    };
+
+    const handleSaveOffice = async () => {
+      const form = officeInlineEdit?.data;
+      if (!form || !form.title) return;
+      try {
+        const payload = {
+          org_id: officesModal.org?.id,
+          title: form.title,
+          manager_id: form.manager_id || null,
+          manager_name: form.manager_name || null,
+          is_active: form.isActive ?? true,
+        };
+        if (officeInlineEdit.id === 'new') {
+          const { error } = await supabase.from('fm_org_offices').insert([payload]);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('fm_org_offices').update(payload).eq('id', officeInlineEdit.id);
+          if (error) throw error;
+        }
+        setOfficeInlineEdit(null);
+        fetchOffices(officesModal.org?.id);
+      } catch (err) {
+        console.error('Error saving office:', err);
+      }
     };
 
     const handleSetDefaultAddress = (addrId) => {
@@ -194,13 +292,13 @@
           description={t('تنظیمات پایه و مدیریت ساختار شرکت', 'Base settings and company structure')}
           language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('سازمان', 'Organization') }]}
-          viewConfig={viewConfig}
+          notifFilter={filteredRecordId ? { isActive: true, onClear: () => setFilteredRecordId(null) } : null}
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
           <div className="flex-1 min-h-0">
             <DataGrid 
-              data={data}
+              data={filteredRecordId ? data.filter(r => String(r.id) === filteredRecordId) : data}
               columns={columns} 
               language={language}
               selectable={true}
@@ -213,6 +311,7 @@
               onGridStateChange={setGridState}
               hideImport={true}
               actions={[
+                { icon: Briefcase, tooltip: t('مدیریت دفاتر', 'Manage Offices'), onClick: (row) => handleOpenOfficesModal(row), className: (row) => orgIdsWithOffices.has(row.id) ? 'text-emerald-500 hover:text-emerald-700' : 'text-slate-400 hover:text-emerald-600' },
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
               ]}
@@ -230,41 +329,60 @@
           language={language}
         >
           <div className="p-4 flex flex-col gap-4">
-            <div className="flex flex-col items-center justify-center p-3 border border-dashed border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50/50 dark:bg-slate-800/50">
-               {formData.logo ? (
-                 <div className="relative group">
-                   <img src={formData.logo} className="h-16 object-contain" alt="Logo" />
-                   <button onClick={() => setFormData({...formData, logo: null})} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"><X size={12}/></button>
-                 </div>
-               ) : (
-                 <label className="cursor-pointer flex flex-col items-center gap-1.5 text-indigo-600 dark:text-indigo-400">
-                   <Upload size={20}/>
-                   <span className="text-[12px] font-bold">{t('بارگذاری لوگوی سازمان', 'Upload Logo')}</span>
-                   <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+            <div className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+               <Avatar src={formData.logo} name={formData.name || 'Org'} size="lg" />
+               <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                     <Button variant="outline" size="sm" icon={Upload} onClick={() => document.getElementById('logo-upload-input').click()}>
+                        {t('انتخاب لوگو', 'Select Logo')}
+                     </Button>
+                     {formData.logo && (
+                        <Button variant="danger-outline" size="sm" icon={Trash2} onClick={() => setFormData({...formData, logo: null})}>
+                           {t('حذف لوگو', 'Remove Logo')}
+                        </Button>
+                     )}
+                  </div>
+                  <input id="logo-upload-input" type="file" className="hidden" accept="image/png,image/jpeg" onChange={(e) => {
+                     setLogoError('');
+                     const f = e.target.files && e.target.files[0];
+                     if(!f) return;
+                     const maxBytes = 1024 * 1024; // 1 MB
+                     const allowed = ['image/png','image/jpeg'];
+                     if(f.size > maxBytes) {
+                       setLogoError(t('حجم فایل نباید بیش از 1 مگابایت باشد', 'File size must not exceed 1 MB'));
+                       return;
+                     }
+                     if(!allowed.includes(f.type)) {
+                       setLogoError(t('فرمت فایل باید png یا jpg باشد', 'File format must be png or jpg'));
+                       return;
+                     }
                      const reader = new FileReader();
                      reader.onload = () => setFormData({...formData, logo: reader.result});
-                     if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
-                   }} />
-                 </label>
-               )}
+                     reader.readAsDataURL(f);
+                  }} />
+                  {logoError && <div className="text-sm text-red-500 mt-2">{logoError}</div>}
+                  <div className="text-[12px] text-slate-500 dark:text-slate-300 mt-2">
+                    {t('راهنما: حداکثر حجم 1 مگابایت. فرمت‌های مجاز: png, jpg.', 'Hint: max size 1 MB. Allowed formats: png, jpg.')}
+                  </div>
+               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <TextField size="sm" label={t('کد سازمان', 'Code')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} required dir="ltr" />
-              <TextField size="sm" label={t('نام سازمان', 'Name')} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} isRtl={isRtl} required />
-              <TextField size="sm" label={t('شماره ثبت', 'Reg No')} value={formData.regNo} onChange={e => setFormData({...formData, regNo: e.target.value})} isRtl={isRtl} dir="ltr" />
+              <TextField size="sm" label={t('کد سازمان', 'Code')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} required dir="ltr" formCode={FORM_CODE} />
+              <TextField size="sm" label={t('نام سازمان', 'Name')} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} isRtl={isRtl} required formCode={FORM_CODE} />
+              <TextField size="sm" label={t('شماره ثبت', 'Reg No')} value={formData.regNo} onChange={e => setFormData({...formData, regNo: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
               <div className="flex items-center mt-6">
-                <ToggleField size="sm" label={t('فعال', 'Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
+                <ToggleField size="sm" label={t('فعال', 'Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} formCode={FORM_CODE} />
               </div>
-              <TextField size="sm" label={t('تلفن', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" />
-              <TextField size="sm" label={t('فکس', 'Fax')} value={formData.fax} onChange={e => setFormData({...formData, fax: e.target.value})} isRtl={isRtl} dir="ltr" />
+              <TextField size="sm" label={t('تلفن', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
+              <TextField size="sm" label={t('فکس', 'Fax')} value={formData.fax} onChange={e => setFormData({...formData, fax: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
             </div>
 
             <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-2">
                <label className="text-[12px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
                <div className="flex gap-2 mb-3">
                  <div className="flex-1">
-                   <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'New address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="m-0" />
+                   <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'New address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="m-0" formCode={FORM_CODE} />
                  </div>
                  <Button variant="secondary" size="sm" icon={Plus} onClick={() => {
                    if(!newAddress.trim()) return;
@@ -279,24 +397,15 @@
                      <div className="flex items-center gap-2 flex-1 min-w-0">
                        <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
                      </div>
-                     <div className="flex items-center gap-2 shrink-0">
+                     <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                        {a.isDefault ? (
-                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 px-1">{t('پیش‌فرض', 'Default')}</span>
+                         <Badge variant="indigo" className="!py-0.5">{t('پیش‌فرض', 'Default')}</Badge>
                        ) : (
-                         <button 
-                           onClick={() => handleSetDefaultAddress(a.id)} 
-                           className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors px-1"
-                         >
-                           {t('پیش‌فرض', 'Default')}
-                         </button>
+                         <Button variant="ghost" size="sm" className="!h-6 !text-[10px] !px-2 text-slate-400 hover:text-indigo-600" onClick={() => handleSetDefaultAddress(a.id)}>
+                           {t('انتخاب پیش‌فرض', 'Set Default')}
+                         </Button>
                        )}
-                       <button 
-                         onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} 
-                         className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                         title={t('حذف', 'Delete')}
-                       >
-                         <Trash2 size={12}/>
-                       </button>
+                       <Button variant="ghost" size="sm" className="!h-6 !w-6 !p-0 text-slate-300 hover:text-red-500" icon={Trash2} onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} title={t('حذف', 'Delete')} />
                      </div>
                    </div>
                  ))}
@@ -315,26 +424,117 @@
           </div>
         </Modal>
 
-        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
-               <AlertTriangle size={22} />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
-               <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
-                : t(`آیا از حذف سازمان ${deleteConfirm.data?.name} اطمینان دارید؟`, `Delete ${deleteConfirm.data?.name}?`)
+        {/* Offices management modal */}
+        <Modal
+          isOpen={officesModal.isOpen}
+          onClose={() => { setOfficesModal({ isOpen: false, org: null }); setOfficeInlineEdit(null); }}
+          title={t(`مدیریت دفاتر: ${officesModal.org?.name || ''}`, `Manage Offices: ${officesModal.org?.name || ''}`)}
+          width="max-w-3xl"
+          language={language}
+        >
+          {(() => {
+            const officesGridData = (() => {
+              const d = [...offices];
+              if (officeInlineEdit?.id === 'new') d.unshift({ id: 'new', _isNew: true, ...officeInlineEdit.data });
+              return d;
+            })();
+
+            const officeColumns = [
+              {
+                field: 'title', header_fa: 'عنوان دفتر', header_en: 'Office Title', width: '200px',
+                render: (val, row) => {
+                  if (officeInlineEdit?.id === row.id) {
+                    return <div onClick={e => e.stopPropagation()}><TextField size="sm" value={officeInlineEdit.data.title} onChange={e => setOfficeInlineEdit(p => ({...p, data: {...p.data, title: e.target.value}}))} isRtl={isRtl} required wrapperClassName="!mb-0" formCode={FORM_CODE} /></div>;
+                  }
+                  return <span className="font-semibold text-slate-700 dark:text-slate-200">{val}</span>;
+                }
+              },
+              {
+                field: 'managerId', header_fa: 'مدیر دفتر', header_en: 'Manager', width: '220px',
+                render: (val, row) => {
+                  if (officeInlineEdit?.id === row.id) {
+                    return (
+                      <div onClick={e => e.stopPropagation()}>
+                        <LOVField size="sm" data={employees}
+                          columns={[
+                            { field: 'code', header_fa: 'کد', header_en: 'Code', width: '70px' },
+                            { field: 'label', header_fa: 'نام کامل', header_en: 'Full Name', width: '170px' },
+                            { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '110px' },
+                            { field: 'email', header_fa: 'ایمیل', header_en: 'Email', width: '160px' },
+                          ]}
+                          dropdownWidth="min-w-[560px]"
+                          displayValue={officeInlineEdit.data.manager_obj ? officeInlineEdit.data.manager_obj.label : (officeInlineEdit.data.managerName || '')}
+                          onChange={r => setOfficeInlineEdit(p => ({...p, data: {...p.data, manager_id: r?.value, manager_obj: r, manager_name: r?.label}}))}
+                        />
+                      </div>
+                    );
+                  }
+                  return <span className="text-slate-600 dark:text-slate-300">{row.managerName || '-'}</span>;
+                }
+              },
+              {
+                field: 'isActive', header_fa: 'فعال', header_en: 'Active', width: '80px',
+                render: (val, row) => {
+                  if (officeInlineEdit?.id === row.id) {
+                    return <div onClick={e => e.stopPropagation()}><ToggleField size="sm" checked={officeInlineEdit.data.isActive ?? true} onChange={v => setOfficeInlineEdit(p => ({...p, data: {...p.data, isActive: v}}))} isRtl={isRtl} /></div>;
+                  }
+                  return <Badge variant={val ? 'emerald' : 'slate'} size="sm" className="text-[10px]">{val ? t('بله', 'Yes') : t('خیر', 'No')}</Badge>;
+                }
               }
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500">{t('تایید حذف', 'Delete')}</Button>
-            </div>
-          </div>
+            ];
+
+            const officeActions = [
+              { icon: Save, tooltip: t('ذخیره', 'Save'), hidden: row => officeInlineEdit?.id !== row.id, onClick: () => handleSaveOffice(), className: '!text-emerald-600 hover:!text-emerald-800' },
+              { icon: X, tooltip: t('انصراف', 'Cancel'), hidden: row => officeInlineEdit?.id !== row.id, onClick: () => setOfficeInlineEdit(null), className: '!text-slate-500 hover:!text-slate-700' },
+              { icon: Edit, tooltip: t('ویرایش', 'Edit'), hidden: row => officeInlineEdit?.id === row.id || row._isNew, onClick: row => {
+                  const mgr = employees.find(e => String(e.value) === String(row.managerId));
+                  setOfficeInlineEdit({ id: row.id, data: { title: row.title, manager_id: row.managerId, manager_obj: mgr, manager_name: row.managerName, isActive: row.isActive } });
+              }, className: 'text-slate-400 hover:text-indigo-500' },
+              { icon: Trash2, tooltip: t('حذف', 'Delete'), hidden: row => officeInlineEdit?.id === row.id || row._isNew, onClick: row => setDeleteConfirm({ isOpen: true, type: 'office', data: row.id }), className: 'text-red-500 hover:text-red-600' }
+            ];
+
+            return (
+              <div className="p-4 h-[480px] flex flex-col">
+                <DataGrid
+                  data={officesGridData}
+                  columns={officeColumns}
+                  actions={officeActions}
+                  language={language}
+                  formCode={FORM_CODE}
+                  isLoading={officesLoading}
+                  hideImport={true}
+                  hideExport={true}
+                  onAdd={() => {
+                    if (officeInlineEdit) return;
+                    setOfficeInlineEdit({ id: 'new', data: { title: '', manager_id: '', manager_obj: null, manager_name: '', isActive: true } });
+                  }}
+                />
+              </div>
+            );
+          })()}
         </Modal>
+
+        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={
+              deleteConfirm.type === 'bulk'
+                ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
+                : deleteConfirm.type === 'office'
+                  ? t('آیا از حذف این دفتر اطمینان دارید؟', 'Delete this office?')
+                  : t(`آیا از حذف سازمان ${deleteConfirm.data?.name} اطمینان دارید؟`, `Delete ${deleteConfirm.data?.name}?`)
+            }
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1">{t('تایید حذف', 'Delete')}</Button>
+              </div>
+            }
+          />
+        </Modal>
+
+
       </div>
     );
   };

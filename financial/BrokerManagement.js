@@ -3,7 +3,6 @@
   const React = window.React;
   const { useState, useEffect, useMemo, useRef } = React;
   
-  // --- Safe Component Destructuring ---
   const Fallback = () => null;
   const DS = window.DesignSystem || {};
   const DSCore = window.DSCore || DS;
@@ -14,6 +13,7 @@
   const Button = DSCore.Button || DS.Button || Fallback;
   const PageHeader = DSCore.PageHeader || DS.PageHeader || Fallback;
   const Modal = DSFeedback.Modal || DS.Modal || Fallback;
+  const Toast = DSFeedback.Toast || DS.Toast || Fallback;
   const DataGrid = DSGrid.DataGrid || DS.DataGrid || Fallback;
   const LOVField = DSGrid.LOVField || DS.LOVField || Fallback;
   const TextField = DSForms.TextField || DS.TextField || Fallback;
@@ -22,6 +22,16 @@
   const CheckboxField = DSForms.CheckboxField || DS.CheckboxField || Fallback;
   const DatePicker = DSForms.DatePicker || DS.DatePicker || Fallback;
   const LogTimeline = DSFeedback.LogTimeline || DS.LogTimeline || Fallback;
+  const EmptyState = DSCore.EmptyState || DS.EmptyState || Fallback;
+  const Badge = DSCore.Badge || DS.Badge || Fallback;
+
+  // برمی‌گرداند اعتبار زمانی بروکر — بر اساس valid_from / valid_to
+  const getBrokerValidityStatus = (validFrom, validTo) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (validTo   && validTo   < today) return 'expired';
+    if (validFrom && validFrom > today) return 'notyet';
+    return 'valid';
+  };
   
   const LucideIcons = window.LucideIcons || {};
   const FallbackIcon = () => null;
@@ -37,65 +47,6 @@
   
   const supabase = window.supabase;
 
-  // --- کامپوننت محلی برای انتخاب حساب ---
-  const SearchableAccountSelect = ({ accounts, value, onChange, disabled, placeholder, isRtl }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const wrapperRef = useRef(null);
-    
-    const selectedAcc = accounts.find(a => String(a.id) === String(value));
-    const displaySelected = selectedAcc ? `${selectedAcc.code} - ${isRtl ? selectedAcc.titleFa : selectedAcc.titleEn}` : '';
-
-    useEffect(() => {
-      const handleClickOutside = (event) => { 
-        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false); 
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const filtered = accounts.filter(a => {
-        const searchLower = search.toLowerCase();
-        const codeStr = a.code || '';
-        const titleStr = (isRtl ? a.titleFa : a.titleEn) || '';
-        const pathStr = (isRtl ? a.pathFa : a.pathEn) || '';
-        return codeStr.includes(searchLower) || titleStr.includes(searchLower) || pathStr.includes(searchLower);
-    });
-
-    return (
-      <div className="relative w-full flex flex-col gap-1.5" ref={wrapperRef}>
-        <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">
-          {isRtl ? 'حساب مرتبط (آخرین سطح)' : 'Linked Account'}
-        </label>
-        <div className="relative w-full">
-          <input 
-            type="text" 
-            className={`w-full h-8 px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 outline-none transition-all focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 focus:border-indigo-400 disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 cursor-pointer`}
-            value={isOpen ? search : displaySelected} 
-            onChange={e => { setSearch(e.target.value); setIsOpen(true); }} 
-            onFocus={() => { setIsOpen(true); setSearch(''); }} 
-            disabled={disabled} 
-            placeholder={placeholder} 
-            dir={isRtl ? 'rtl' : 'ltr'}
-          />
-          {isOpen && !disabled && (
-            <div className={`absolute z-[9999] w-[350px] mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
-              {filtered.length > 0 ? filtered.map(acc => (
-                <div key={acc.id} className="px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-indigo-500/20 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0" onMouseDown={(e) => { e.preventDefault(); onChange(acc.id); setIsOpen(false); }}>
-                  <div className="font-bold text-slate-800 dark:text-slate-200 text-right dir-ltr">{acc.code} - {isRtl ? acc.titleFa : acc.titleEn}</div>
-                  <div className="text-slate-500 dark:text-slate-400 truncate mt-0.5 text-[10px] text-right" title={isRtl ? acc.pathFa : acc.pathEn}>{isRtl ? acc.pathFa : acc.pathEn}</div>
-                </div>
-              )) : (
-                <div className="p-3 text-center text-slate-500 text-[12px]">{isRtl ? 'موردی یافت نشد' : 'No results'}</div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-  // -------------------------------------------------------------
-
   const BrokerManagement = ({ language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
@@ -104,10 +55,14 @@
     const [data, setData] = useState([]);
     const [allParties, setAllParties] = useState([]);
     const [partiesDropdown, setPartiesDropdown] = useState([]);
-    const [accounts, setAccounts] = useState([]);
 
     const [isLoading, setIsLoading] = useState(false);
-    
+    const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+    const showToast = (message, type = 'success') => {
+      setToast({ isVisible: true, message, type });
+      setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3500);
+    };
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
@@ -120,7 +75,6 @@
 
     const [formData, setFormData] = useState({
       partyId: '',
-      accountId: '',
       validFrom: '',
       validTo: '',
       isActive: true
@@ -128,12 +82,14 @@
 
     const [isQuickPartyModalOpen, setIsQuickPartyModalOpen] = useState(false);
     const [isSavingParty, setIsSavingParty] = useState(false);
+
     const [quickPartyData, setQuickPartyData] = useState({
       partyType: 'real',
       companyName: '',
       code: '',
       firstName: '',
       lastName: '',
+      latinTitle: '',
       nationalId: '',
       mobile: '',
       email: '',
@@ -152,18 +108,6 @@
 
     const [gridState, setGridState] = useState(null);
 
-    const viewConfig = {
-      pageId: 'brokers_main',
-      currentState: () => ({ gridState }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.gridState) setGridState(state.gridState);
-        } else {
-          setGridState(null);
-        }
-      }
-    };
-
     useEffect(() => {
       fetchDropdownData();
       fetchData();
@@ -171,40 +115,18 @@
 
     const fetchDropdownData = async () => {
         try {
-          const { data: coaData } = await supabase
-            .from('fm_coa_accounts')
-            .select('id, parent_id, title_fa, title_en, code');
-          if (coaData) {
-            const parentIds = new Set(coaData.map(c => c.parent_id).filter(Boolean));
-            const leaves = coaData.filter(c => !parentIds.has(c.id));
-            
-            const buildPath = (node) => {
-              let pathFa = node.title_fa || '';
-              let pathEn = node.title_en || node.title_fa || '';
-              let current = node;
-              while(current.parent_id) {
-                const parent = coaData.find(c => c.id === current.parent_id);
-                if(parent) {
-                  pathFa = (parent.title_fa || '') + ' > ' + pathFa;
-                  pathEn = (parent.title_en || parent.title_fa || '') + ' > ' + pathEn;
-                  current = parent;
-                } else { break; }
-              }
-              return { pathFa, pathEn };
-            };
-  
-            const accOptions = leaves.map(leaf => {
-              const paths = buildPath(leaf);
-              return {
-                id: leaf.id,
-                code: leaf.code,
-                titleFa: leaf.title_fa,
-                titleEn: leaf.title_en,
-                pathFa: paths.pathFa,
-                pathEn: paths.pathEn
-              };
-            });
-            setAccounts(accOptions);
+          const { data: partiesData } = await supabase
+            .from('parties')
+            .select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email');
+          if (partiesData) {
+            setAllParties(partiesData);
+            setPartiesDropdown(partiesData.map(p => ({
+              id: p.id,
+              label: `${p.party_type === 'legal' ? (p.company_name || '') : ((p.first_name || '') + ' ' + (p.last_name || '')).trim()} (${p.code})`,
+              code: p.code || '---',
+              mobile: p.mobile || '---',
+              email: p.email
+            })));
           }
         } catch (err) {
           console.error('Fetch Accounts Error:', err);
@@ -219,7 +141,7 @@
           { data: brokersData, error: bError }
         ] = await Promise.all([
           supabase.from('parties').select('id, first_name, last_name, company_name, party_type, code, roles, mobile, email'),
-          supabase.from('fm_brokers').select('*, account:fm_coa_accounts(id, title_fa, title_en, code)').order('created_at', { ascending: false })
+          supabase.from('fm_brokers').select('*').order('created_at', { ascending: false })
         ]);
           
         if (pData && !pError) {
@@ -235,10 +157,18 @@
 
         if (bError) throw bError;
         
-        const mappedData = (brokersData || []).map(item => ({
+        const mappedData = (brokersData || []).map(item => {
+          const party = (pData || []).find(p => p.id === item.party_id);
+          const brokerName = party
+            ? (party.party_type === 'legal'
+                ? (party.company_name || '-')
+                : `${party.first_name || ''} ${party.last_name || ''}`.trim() || '-')
+            : '-';
+          return {
             ...item,
-            accountName: item.account ? `[${item.account.code}] ${isRtl ? item.account.title_fa : item.account.title_en}` : '---'
-        }));
+            brokerName
+          };
+        });
 
         setData(mappedData);
 
@@ -301,7 +231,6 @@
       try {
         const payload = {
           party_id: formData.partyId,
-          account_id: formData.accountId || null,
           valid_from: formData.validFrom || null,
           valid_to: formData.validTo || null,
           is_active: formData.isActive,
@@ -339,7 +268,7 @@
 
     const handleSaveQuickParty = async () => {
       const isLegal = quickPartyData.partyType === 'legal';
-      if (!quickPartyData.code || (isLegal && !quickPartyData.companyName) || (!isLegal && (!quickPartyData.firstName || !quickPartyData.lastName))) {
+      if (!quickPartyData.code || !quickPartyData.latinTitle || (isLegal && !quickPartyData.companyName) || (!isLegal && (!quickPartyData.firstName || !quickPartyData.lastName))) {
          alert(t('لطفاً فیلدهای ستاره‌دار را تکمیل کنید.', 'Please fill required fields.'));
          return;
       }
@@ -352,6 +281,7 @@
           first_name: isLegal ? null : quickPartyData.firstName,
           last_name: isLegal ? null : quickPartyData.lastName,
           company_name: isLegal ? quickPartyData.companyName : null,
+          latin_title: quickPartyData.latinTitle,
           national_id: quickPartyData.nationalId,
           mobile: quickPartyData.mobile,
           email: quickPartyData.email,
@@ -392,7 +322,7 @@
         }));
 
         setIsQuickPartyModalOpen(false);
-        setQuickPartyData({ partyType: 'real', companyName: '', code: '', firstName: '', lastName: '', nationalId: '', mobile: '', email: '', roles: ['broker'] });
+        setQuickPartyData({ partyType: 'real', companyName: '', code: '', firstName: '', lastName: '', latinTitle: '', nationalId: '', mobile: '', email: '', roles: ['broker'] });
       } catch (err) {
         console.error('Save Quick Party Error:', err);
         alert(t('خطا در ذخیره اطلاعات شخص.', 'Error saving party.'));
@@ -448,13 +378,11 @@
     const handleOpenModal = (record = null) => {
       setFormData(record ? {
         partyId: record.party_id || '',
-        accountId: record.account_id || '',
         validFrom: record.valid_from ? record.valid_from.substring(0, 10) : '',
         validTo: record.valid_to ? record.valid_to.substring(0, 10) : '',
         isActive: record.is_active ?? true
       } : { 
         partyId: '',
-        accountId: '',
         validFrom: '',
         validTo: '',
         isActive: true
@@ -470,21 +398,132 @@
       return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
     };
 
+    const handleDownloadSample = () => {
+      const headers = isRtl
+        ? 'کد Party,نام Party (برای اطمینان),تاریخ اعتبار از (YYYY-MM-DD),تاریخ اعتبار تا (YYYY-MM-DD),وضعیت (1/0)'
+        : 'Party Code,Party Name (for reference),Valid From (YYYY-MM-DD),Valid To (YYYY-MM-DD),Status (1/0)';
+
+      const sampleRows = [
+        'BRK001,شرکت آلفا تجارت,2024-01-01,2024-12-31,1',
+        'BRK002,محمد احمدی,2024-03-01,,1',
+      ];
+
+      const csv = '\uFEFF' + headers + '\n' + sampleRows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'Brokers_Import_Sample.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    const handleImportBrokers = (file) => {
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const cleanText = (e.target.result || '').replace(/^\uFEFF/, '');
+          const lines = cleanText.split(/\r?\n/).filter(l => l.trim());
+
+          if (lines.length < 2) {
+            return showToast(t('فایل خالی یا نامعتبر است', 'File is empty or invalid'), 'error');
+          }
+
+          const rows = lines.slice(1).map(line => {
+            const parts = line.split(',');
+            return {
+              partyCode:   (parts[0] || '').trim(),
+              partyName:   (parts[1] || '').trim().replace(/^"|"$/g, ''),
+              validFrom:   (parts[2] || '').trim(),
+              validTo:     (parts[3] || '').trim(),
+              isActive:    (parts[4] || '1').trim() !== '0',
+            };
+          }).filter(r => r.partyCode);
+
+          if (rows.length === 0) {
+            return showToast(t('هیچ داده‌ای برای ورود وجود ندارد', 'No data to import'), 'warning');
+          }
+
+          let insertedCount = 0;
+          let updatedCount  = 0;
+          let errorCount    = 0;
+          const notFoundCodes = [];
+
+          for (const row of rows) {
+            try {
+              const party = allParties.find(p => (p.code || '').trim() === row.partyCode);
+              if (!party) {
+                notFoundCodes.push(row.partyCode);
+                errorCount++;
+                continue;
+              }
+
+              const payload = {
+                party_id:   party.id,
+                valid_from: row.validFrom || null,
+                valid_to:   row.validTo   || null,
+                is_active:  row.isActive,
+                updated_at: new Date().toISOString(),
+              };
+
+              const existing = data.find(b => String(b.party_id) === String(party.id));
+              if (existing) {
+                const { error } = await supabase.from('fm_brokers').update(payload).eq('id', existing.id);
+                if (error) throw error;
+                updatedCount++;
+              } else {
+                const { error } = await supabase.from('fm_brokers').insert([{ ...payload, created_at: new Date().toISOString() }]);
+                if (error) throw error;
+                insertedCount++;
+              }
+            } catch (err) {
+              console.error('Import row error:', row, err);
+              errorCount++;
+            }
+          }
+
+          await fetchData();
+
+          let msg = isRtl
+            ? `ورود اطلاعات کامل شد: ${insertedCount} جدید، ${updatedCount} به‌روزرسانی`
+            : `Import complete: ${insertedCount} inserted, ${updatedCount} updated`;
+          if (notFoundCodes.length > 0) {
+            msg += isRtl
+              ? `\nکدهای Party یافت نشد: ${notFoundCodes.join(', ')}`
+              : `\nParty codes not found: ${notFoundCodes.join(', ')}`;
+          }
+          showToast(msg, errorCount > 0 ? 'warning' : 'success');
+        } catch (err) {
+          showToast(t('خطا در پردازش فایل', 'Error processing file'), 'error');
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    };
+
     const columns = [
       { 
-        field: 'party_id', 
+        field: 'brokerName', 
         header_fa: 'نام بروکر (شخص/شرکت)', 
         header_en: 'Broker Name', 
         width: '250px',
-        render: (val) => <span className="font-bold text-slate-700 dark:text-slate-200">{getPartyName(val)}</span>
+        render: (val, row) => {
+          const status = getBrokerValidityStatus(row.valid_from, row.valid_to);
+          return (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-slate-700 dark:text-slate-200">{val}</span>
+              {status === 'expired' && (
+                <Badge variant="red" size="sm">{t('منقضی شده', 'Expired')}</Badge>
+              )}
+              {status === 'notyet' && (
+                <Badge variant="yellow" size="sm">{t('نامعتبر', 'Not Yet Valid')}</Badge>
+              )}
+            </div>
+          );
+        }
       },
       {
-        field: 'accountName',
-        header_fa: 'حساب مرتبط',
-        header_en: 'Linked Account',
-        width: '220px'
-      },
-      { 
         field: 'valid_from', 
         header_fa: 'تاریخ اعتبار از', 
         header_en: 'Valid From', 
@@ -519,10 +558,9 @@
         <PageHeader 
           title={t('مدیریت بروکرها', 'Broker Management')} 
           icon={Briefcase}
-          description={t('تعریف بروکرها، حساب‌های مرتبط و سوابق قرارداد', 'Manage brokers, linked accounts, and contract histories')}
+          description={t('تعریف بروکرها و سوابق قرارداد', 'Manage brokers and contract histories')}
           language={language}
           breadcrumbs={[{ label: t('مالی', 'Financial') }, { label: t('بروکرها', 'Brokers') }]}
-          viewConfig={viewConfig}
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-2 animate-in fade-in duration-300">
@@ -542,6 +580,8 @@
               onToggle={(row, field, val) => {
                  if (field === 'is_active') handleToggleActive(row, val);
               }}
+              onDownloadSample={handleDownloadSample}
+              onImport={handleImportBrokers}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش مشخصات', 'Edit Details'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
                 { icon: Percent, tooltip: t('قراردادها و کارمزدها', 'Contracts & Commissions'), onClick: (row) => { setSelectedBroker(row); setIsContractsModalOpen(true); }, className: 'text-slate-400 hover:text-emerald-600' },
@@ -564,17 +604,18 @@
           <div className="p-4 flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-end gap-2">
-                <LOVField 
-                  wrapperClassName="flex-1"
-                  size="sm" 
-                  label={t('انتخاب شخص / شرکت (بروکر)', 'Select Party (Broker)')} 
-                  data={partiesDropdown}
-                  columns={providerLovColumns}
-                  displayValue={partiesDropdown.find(p => p.id === formData.partyId)?.label || ''}
-                  onChange={row => setFormData({...formData, partyId: row ? row.id : ''})}
-                  isRtl={isRtl} 
-                  required
-                />
+                <div className="flex-1 min-w-0">
+                  <LOVField 
+                    size="sm" 
+                    label={t('انتخاب شخص / شرکت (بروکر)', 'Select Party (Broker)')} 
+                    data={partiesDropdown}
+                    columns={providerLovColumns}
+                    displayValue={partiesDropdown.find(p => p.id === formData.partyId)?.label || ''}
+                    onChange={row => setFormData({...formData, partyId: row ? row.id : ''})}
+                    isRtl={isRtl} 
+                    required
+                  />
+                </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -585,14 +626,8 @@
                 />
               </div>
 
-              <div>
-                <SearchableAccountSelect 
-                  accounts={accounts}
-                  value={formData.accountId} 
-                  onChange={val => setFormData({...formData, accountId: val})} 
-                  isRtl={isRtl} 
-                  placeholder={t('جستجوی حساب...', 'Search Account...')}
-                />
+              <div className="flex items-center h-full mt-1 md:mt-0">
+                 <ToggleField size="sm" label={t('بروکر فعال است', 'Is Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
               </div>
 
               <DatePicker 
@@ -613,9 +648,6 @@
                 dir="ltr" 
               />
 
-              <div className="md:col-span-2 flex items-center mt-2 border-t border-slate-100 dark:border-slate-700/50 pt-3">
-                 <ToggleField size="sm" label={t('بروکر فعال است', 'Is Active')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
-              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
@@ -638,7 +670,7 @@
                   size="sm" 
                   label={t('نوع شخص', 'Party Type')} 
                   value={quickPartyData.partyType} 
-                  onChange={e => setQuickPartyData({...quickPartyData, partyType: e.target.value, companyName: '', firstName: '', lastName: '', roles: ['broker']})} 
+                  onChange={e => setQuickPartyData({...quickPartyData, partyType: e.target.value, companyName: '', firstName: '', lastName: '', latinTitle: '', roles: ['broker']})} 
                   isRtl={isRtl}
                   options={[
                     { value: 'real', label: t('حقیقی (فرد)', 'Real Person') },
@@ -661,32 +693,32 @@
                   </div>
               )}
 
+              <TextField size="sm" label={t('عنوان لاتین', 'Latin Title')} value={quickPartyData.latinTitle} onChange={e => setQuickPartyData({...quickPartyData, latinTitle: e.target.value})} isRtl={isRtl} required dir="ltr" />
               <TextField size="sm" label={quickPartyData.partyType === 'real' ? t('کد ملی', 'National ID') : t('شناسه ملی / ثبت', 'Registration ID')} value={quickPartyData.nationalId} onChange={e => setQuickPartyData({...quickPartyData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('موبایل / تلفن', 'Mobile / Phone')} value={quickPartyData.mobile} onChange={e => setQuickPartyData({...quickPartyData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('ایمیل', 'Email')} value={quickPartyData.email} onChange={e => setQuickPartyData({...quickPartyData, email: e.target.value})} isRtl={isRtl} dir="ltr" />
-            </div>
-            
-            <div className="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-               <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-3 block">{t('نقش‌های مرتبط', 'Associated Roles')}</label>
-               <div className="flex flex-wrap gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                 {EXTERNAL_PARTY_ROLES.map(role => (
-                   <CheckboxField 
-                     key={role.id} 
-                     size="sm" 
-                     label={role.label} 
-                     checked={quickPartyData.roles.includes(role.id)} 
-                     disabled={role.id === 'broker'} 
-                     onChange={(checked) => {
-                       if (role.id === 'broker') return;
-                       setQuickPartyData(prev => ({
-                         ...prev,
-                         roles: checked ? [...prev.roles, role.id] : prev.roles.filter(r => r !== role.id)
-                       }));
-                     }} 
-                     isRtl={isRtl} 
-                   />
-                 ))}
-               </div>
+              <div className="md:col-span-2 flex flex-col justify-end">
+                <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">{t('نقش‌های مرتبط', 'Associated Roles')}</label>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                  {EXTERNAL_PARTY_ROLES.map(role => (
+                    <CheckboxField 
+                      key={role.id} 
+                      size="sm" 
+                      label={role.label} 
+                      checked={quickPartyData.roles.includes(role.id)} 
+                      disabled={role.id === 'broker'} 
+                      onChange={(checked) => {
+                        if (role.id === 'broker') return;
+                        setQuickPartyData(prev => ({
+                          ...prev,
+                          roles: checked ? [...prev.roles, role.id] : prev.roles.filter(r => r !== role.id)
+                        }));
+                      }} 
+                      isRtl={isRtl} 
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
@@ -696,8 +728,7 @@
           </div>
         </Modal>
 
-        <Modal
-            isOpen={isContractsModalOpen}
+        <Modal            isOpen={isContractsModalOpen}
             onClose={() => setIsContractsModalOpen(false)}
             title={t('قراردادها و کارمزدهای بروکر', 'Broker Contracts & Commissions')}
             width="max-w-5xl"
@@ -726,25 +757,23 @@
           <LogTimeline logs={recordLogs} isLoading={isLogsLoading} language={language} />
         </Modal>
 
+        <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} language={language} />
+
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
-               <AlertTriangle size={22} />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
-               <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
-                : t(`آیا از حذف این رکورد اطمینان دارید؟`, `Are you sure you want to delete this record?`)
-              }
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500">{t('تایید حذف', 'Delete')}</Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={deleteConfirm.type === 'bulk' 
+              ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
+              : t(`آیا از حذف این رکورد اطمینان دارید؟`, `Are you sure you want to delete this record?`)
+            }
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1">{t('تایید حذف', 'Delete')}</Button>
+              </div>
+            }
+          />
         </Modal>
         
       </div>

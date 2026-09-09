@@ -44,6 +44,23 @@
     return theme;
   };
 
+  const getGlobalLanguage = () => window.localStorage.getItem('fm_language') || 'fa';
+
+  const setGlobalLanguage = (lang) => {
+    window.localStorage.setItem('fm_language', lang);
+    window.dispatchEvent(new CustomEvent('fm_language_change', { detail: lang }));
+  };
+
+  const useLanguage = (initialLang) => {
+    const [lang, setLang] = useState(initialLang || getGlobalLanguage());
+    useEffect(() => {
+      const handler = (e) => setLang(e.detail);
+      window.addEventListener('fm_language_change', handler);
+      return () => window.removeEventListener('fm_language_change', handler);
+    }, []);
+    return [lang, setLang];
+  };
+
   const j2g = (jy, jm, jd) => {
     let gy = (jy <= 979) ? 621 : 1600;
     jy -= (jy <= 979) ? 0 : 979;
@@ -201,7 +218,7 @@
                   {collapsed ? (isRtl ? <ChevronLeft size={16}/> : <ChevronRight size={16}/>) : <ChevronDown size={16}/>}
                 </span>
               )}
-              <h3 className="font-black text-[12px] text-slate-800 dark:text-slate-100 truncate">{title}</h3>
+              <div className="font-black text-[12px] text-slate-800 dark:text-slate-100 truncate flex items-center gap-2 w-full">{title}</div>
             </div>
             {action && <div className="shrink-0" onClick={e => e.stopPropagation()}>{action}</div>}
           </div>
@@ -217,19 +234,22 @@
 
   const Badge = ({ children, variant = 'gray', className = '' }) => {
     const variants = {
-      gray: "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-600", 
-      success: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800",
-      warning: "bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800", 
-      danger: "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800", 
-      indigo: "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800",
-      blue: "bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800",
-      orange: "bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800",
-      emerald: "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+      gray: "bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300", 
+      slate: "bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300", 
+      success: "bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+      warning: "bg-amber-100/50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400", 
+      danger: "bg-red-100/50 dark:bg-red-900/30 text-red-600 dark:text-red-400", 
+      indigo: "bg-indigo-100/50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400",
+      blue: "bg-blue-100/50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+      orange: "bg-orange-100/50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400",
+      emerald: "bg-emerald-100/50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+      teal: "bg-teal-100/50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400",
+      red: "bg-red-100/50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
     };
-    return <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
+    return <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-[12px] font-black tracking-wide ${variants[variant] || variants.gray} ${className}`}>{children}</span>;
   };
 
-  const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa', actions, viewConfig }) => {
+  const PageHeader = ({ title, icon: Icon, breadcrumbs = [], language = 'fa', actions, viewConfig, notifFilter }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [views, setViews] = useState([]);
@@ -442,6 +462,16 @@
           </div>
           
           <div className="flex items-center gap-2 shrink-0">
+            {notifFilter && notifFilter.isActive && (
+              <div className="flex items-center gap-1.5 px-3 h-8 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-700/50 text-[12px] font-bold text-amber-700 dark:text-amber-300">
+                <span>{isRtl ? 'فیلتر اعلان' : 'Notif Filter'}</span>
+                <button
+                  onClick={notifFilter.onClear}
+                  className="mr-1 text-amber-500 hover:text-amber-700 dark:hover:text-amber-200 transition-colors leading-none"
+                  title={isRtl ? 'حذف فیلتر' : 'Clear filter'}
+                >✕</button>
+              </div>
+            )}
             {viewConfig && (
               <div className={`relative ${isDropdownOpen ? 'z-[9999]' : 'z-10'}`} ref={dropdownRef}>
                 <button 
@@ -767,6 +797,7 @@
   Object.assign(window.DSCore, {
     getGlobalCalendarMode, setGlobalCalendarMode, useCalendarMode, formatGlobalDate, j2g, g2j,
     getGlobalTheme, setGlobalTheme, useTheme,
+    getGlobalLanguage, setGlobalLanguage, useLanguage,
     useSecureDataScope, applyDataScope, useSecureAccess,
     Button, Card, Badge, PageHeader, Tabs, Skeleton, EmptyState, StatCard, 
     Timeline, Avatar, DropdownMenu, ProgressBar, Stepper, Spinner

@@ -7,15 +7,15 @@
   const LucideIcons = window.LucideIcons || {};
   const { 
     Edit = FallbackIcon, Trash2 = FallbackIcon, History = FallbackIcon, Calculator = FallbackIcon, Save = FallbackIcon, Globe = FallbackIcon, 
-    ArrowRightLeft = FallbackIcon, AlertTriangle = FallbackIcon, Clock = FallbackIcon, Calendar = FallbackIcon, Zap = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Lock = FallbackIcon
+    ArrowRightLeft = FallbackIcon, AlertTriangle = FallbackIcon, Clock = FallbackIcon, Calendar = FallbackIcon, Zap = FallbackIcon, ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, Lock = FallbackIcon, Copy = FallbackIcon
   } = LucideIcons;
 
-  const CurrencyHistory = ({ currencies = [], language = 'fa', formCode, access, rateFilters, setRateFilters, ratesGridState, setRatesGridState }) => {
+  const CurrencyHistory = ({ currencies = [], language = 'fa', formCode, access, ratesGridState, setRatesGridState }) => {
     const FallbackComponent = () => null;
     const Core = window.DSCore || window.DesignSystem || {};
     const { Button = FallbackComponent, SelectField = FallbackComponent, Badge = FallbackComponent, CurrencyField = FallbackComponent, DatePicker = FallbackComponent } = Core;
     const Grid = window.DSGrid || window.DesignSystem || {};
-    const { DataGrid = FallbackComponent, AdvancedFilter = FallbackComponent } = Grid;
+    const { DataGrid = FallbackComponent } = Grid;
     const Feedback = window.DSFeedback || window.DesignSystem || {};
     const { Modal = FallbackComponent, Toast = FallbackComponent, LogTimeline = FallbackComponent } = Feedback;
 
@@ -55,6 +55,17 @@
 
     const showToast = useCallback((message, type = 'success') => { setToast({ isVisible: true, message, type }); setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000); }, []);
 
+    const triggerBlobDownload = useCallback((blob, filename) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, []);
+
     const logAction = async (entityType, recordId, action, details = '', oldData = null, newData = null) => {
       try {
         if (!supabase) return;
@@ -81,9 +92,19 @@
     const fetchRates = useCallback(async () => {
       try {
         if (!supabase) return;
-        const { data, error } = await supabase.from('fm_currency_rates').select('*').order('created_at', { ascending: false });
-        if (error) throw error;
-        setRates(data || []);
+        const batchSize = 1000;
+        const allRates = [];
+        for (let offset = 0; ; offset += batchSize) {
+          const { data, error } = await supabase
+            .from('fm_currency_rates')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(offset, offset + batchSize - 1);
+          if (error) throw error;
+          if (data && data.length) allRates.push(...data);
+          if (!data || data.length < batchSize) break;
+        }
+        setRates(allRates);
       } catch (err) { console.error("Fetch rates error:", err); }
     }, [supabase]);
 
@@ -104,10 +125,10 @@
            const { data, error } = await supabase.from('fm_currency_rates').insert(newRates).select();
            if (error) throw error;
            if (data) for (const rate of data) await logAction('fm_currency_rates', rate.id, 'ایجاد', `دریافت اتوماتیک نرخ: ${rate.base_currency} به ${rate.target_currency} = ${rate.rate}`, null, rate);
-           showToast(t('نرخ‌های روزانه با موفقیت از سرور XE دریافت شد.', 'Rates fetched successfully from XE.'));
+           showToast(t('نرخ‌های روزانه با موفقیت از سرور دریافت شد.', 'Rates fetched successfully from server.'));
            fetchRates();
         }
-      } catch (err) { showToast(t('خطا در ارتباط با سرور XE', 'Error connecting to XE'), 'error'); }
+      } catch (err) { showToast(t('خطا در ارتباط با سرور ', 'Error connecting to server'), 'error'); }
     };
 
     const openManualUpdateModal = () => {
@@ -120,13 +141,228 @@
       setIsManualModalOpen(true);
     };
 
+    const handleDownloadSample = useCallback(() => {
+      const XLSX = window.XLSX;
+      if (!XLSX) {
+        showToast(t('کتابخانه ساخت فایل اکسل در دسترس نیست.', 'Excel library is not available.'), 'error');
+        return;
+      }
+
+      const sampleBaseCurrency = currencies[0]?.code || 'USD';
+      const sampleTargetCurrency = currencies.find(c => c.code !== sampleBaseCurrency)?.code || 'EUR';
+      const today = new Date();
+      const sampleDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      const headers = [
+        t('ارز پایه', 'Base Currency'),
+        t('ارز هدف', 'Target Currency'),
+        t('نرخ', 'Rate'),
+        t('تاریخ نرخ (YYYY-MM-DD)', 'Rate Date (YYYY-MM-DD)'),
+        t('منبع', 'Source'),
+      ];
+
+      const sampleRows = [
+        [sampleBaseCurrency, sampleTargetCurrency, 12345.67, sampleDate, 'Manual'],
+        [sampleTargetCurrency, sampleBaseCurrency, 0.000081, sampleDate, 'Manual'],
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CurrencyRates');
+      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      triggerBlobDownload(blob, `Currency_Rates_Sample_${new Date().getTime()}.xlsx`);
+    }, [currencies, showToast, t, triggerBlobDownload]);
+
+    const handleExportRates = useCallback(() => {
+      const XLSX = window.XLSX;
+      if (!XLSX) {
+        showToast(t('کتابخانه خروجی اکسل در دسترس نیست.', 'Excel export library is not available.'), 'error');
+        return;
+      }
+
+      const headers = [
+        t('تاریخ و زمان', 'Date & Time'),
+        t('ارز پایه', 'Base Currency'),
+        t('ارز هدف', 'Target Currency'),
+        t('نرخ', 'Rate'),
+        t('تاریخ نرخ', 'Rate Date'),
+        t('منبع', 'Source'),
+        t('ایجاد شده توسط', 'Created By'),
+        t('بروزرسانی شده توسط', 'Updated By'),
+      ];
+
+      const rows = rates.map((rate) => [
+        rate.created_at || '',
+        rate.base_currency || '',
+        rate.target_currency || '',
+        rate.rate ?? '',
+        rate.rate_date || '',
+        rate.source || '',
+        rate.created_by || '',
+        rate.updated_by || '',
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'CurrencyRates');
+      const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      triggerBlobDownload(blob, `Currency_Rates_Export_${new Date().getTime()}.xlsx`);
+    }, [rates, showToast, t, triggerBlobDownload]);
+
+    const parseImportedDate = useCallback((dateValue) => {
+      if (!dateValue) return '';
+      const value = String(dateValue).trim();
+      if (!value) return '';
+      if (value.includes('/')) {
+        const parts = value.split('/').map(Number);
+        if (parts.length === 3 && parts.every(n => !Number.isNaN(n))) {
+          const [y, m, d] = parts;
+          if (Core.j2g && y >= 1300 && y < 1600) {
+            const [gy, gm, gd] = Core.j2g(y, m, d);
+            return `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`;
+          }
+          return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        }
+      }
+      return value.substring(0, 10).replace(/\//g, '-');
+    }, [Core.j2g]);
+
+    const handleImportRates = useCallback((file) => {
+      if (!file) return;
+      const XLSX = window.XLSX;
+      if (!XLSX) {
+        showToast(t('کتابخانه پردازش فایل در دسترس نیست.', 'File processing library is not available.'), 'error');
+        return;
+      }
+
+      const chunkArray = (items, size) => {
+        const chunks = [];
+        for (let index = 0; index < items.length; index += size) {
+          chunks.push(items.slice(index, index + size));
+        }
+        return chunks;
+      };
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const ext = (file.name.split('.').pop() || '').toLowerCase();
+          const workbook = ext === 'csv'
+            ? XLSX.read(new TextDecoder('utf-8').decode(e.target.result).replace(/^\uFEFF/, ''), { type: 'string', cellDates: true })
+            : XLSX.read(e.target.result, { type: 'array', cellDates: true });
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+
+          if (rawRows.length < 2) {
+            showToast(t('فایل خالی یا نامعتبر است.', 'File is empty or invalid.'), 'error');
+            return;
+          }
+
+          const currencyCodes = new Set(currencies.map(c => String(c.code || '').trim()).filter(Boolean));
+          const payloads = [];
+          const errors = [];
+
+          for (let i = 1; i < rawRows.length; i++) {
+            const cols = rawRows[i].map(col => String(col ?? '').trim());
+            const baseCurrency = cols[0] || '';
+            const targetCurrency = cols[1] || '';
+            const rateValue = parseFloat(String(cols[2] || '').replace(/,/g, ''));
+            const rateDate = parseImportedDate(cols[3]) || getTodayGregorian().replace(/\//g, '-');
+            const source = cols[4] || 'Manual';
+            const rowLabel = t(`ردیف ${i + 1}`, `Row ${i + 1}`);
+
+            if (!baseCurrency || !targetCurrency) {
+              errors.push(t(`${rowLabel}: ارز پایه و ارز هدف الزامی هستند.`, `${rowLabel}: Base and target currencies are required.`));
+              continue;
+            }
+            if (currencyCodes.size > 0 && (!currencyCodes.has(baseCurrency) || !currencyCodes.has(targetCurrency))) {
+              errors.push(t(`${rowLabel}: یکی از کدهای ارز در سیستم یافت نشد.`, `${rowLabel}: One of the currency codes was not found in the system.`));
+              continue;
+            }
+            if (Number.isNaN(rateValue) || rateValue <= 0) {
+              errors.push(t(`${rowLabel}: نرخ معتبر نیست.`, `${rowLabel}: Rate is invalid.`));
+              continue;
+            }
+            if (!rateDate) {
+              errors.push(t(`${rowLabel}: تاریخ نرخ الزامی است.`, `${rowLabel}: Rate date is required.`));
+              continue;
+            }
+
+            const createdAt = `${rateDate}T00:00:00.000Z`;
+            payloads.push({
+              base_currency: baseCurrency,
+              target_currency: targetCurrency,
+              rate: rateValue,
+              rate_date: rateDate,
+              created_at: createdAt,
+              source,
+              created_by: currentUser,
+              updated_by: currentUser,
+              updated_at: createdAt,
+            });
+          }
+
+          if (errors.length > 0) showToast(errors[0], 'warning');
+          if (payloads.length === 0) return;
+
+          const batchSize = 200;
+          const batches = chunkArray(payloads, batchSize);
+          const insertedRates = [];
+
+          for (const batch of batches) {
+            const { data, error } = await supabase.from('fm_currency_rates').insert(batch).select();
+            if (error) throw error;
+            if (data?.length) insertedRates.push(...data);
+          }
+
+          for (const rate of insertedRates) {
+            await logAction('fm_currency_rates', rate.id, 'ایجاد', `ایمپورت نرخ: ${rate.base_currency} به ${rate.target_currency}`, null, rate);
+          }
+
+          showToast(t('فایل نرخ ارز با موفقیت ایمپورت شد.', 'Currency rates imported successfully.'));
+          await fetchRates();
+        } catch (err) {
+          console.error('Import rates error:', err);
+          showToast(t('خطا در ایمپورت فایل نرخ ارز.', 'Error importing currency rates file.'), 'error');
+        } finally {
+          if (importInputRef.current) importInputRef.current.value = '';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }, [currencies, currentUser, fetchRates, getTodayGregorian, logAction, parseImportedDate, showToast, supabase, t]);
+
+    const handleCopyLastRates = useCallback(() => {
+      const filled = manualRatesList.map(item => {
+        const lastRate = rates
+          .filter(r => r.base_currency === item.base && r.target_currency === item.target)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        return { ...item, rate: lastRate ? String(lastRate.rate) : item.rate };
+      });
+      setManualRatesList(filled);
+      showToast(t('آخرین نرخ‌های موجود کپی شدند.', 'Last available rates copied.'));
+    }, [manualRatesList, rates, showToast, t]);
+
     const handleSaveManualRates = async () => {
       try {
         const validRates = manualRatesList.filter(r => r.rate && r.rate !== '0');
         if (validRates.length === 0) return showToast(t('لطفاً حداقل یک نرخ معتبر وارد کنید.', 'Please enter at least one valid rate.'), 'error');
         if (!manualDate || !manualTime) return showToast(t('تاریخ و زمان الزامی است.', 'Date and time are required.'), 'error');
 
-        const formattedDate = manualDate.replace(/\//g, '-');
+        const formattedDate = (() => {
+          const j2g = Core.j2g;
+          const raw = manualDate.replace(/-/g, '/');
+          const parts = raw.split('/');
+          if (parts.length !== 3) return manualDate.replace(/\//g, '-');
+          const y = parseInt(parts[0], 10), m = parseInt(parts[1], 10), d = parseInt(parts[2], 10);
+          // اگر سال در بازه شمسی (1300-1599) باشد، به میلادی تبدیل کن
+          if (j2g && y >= 1300 && y < 1600) {
+            const [gy, gm, gd] = j2g(y, m, d);
+            return `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`;
+          }
+          return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        })();
         const dateTimeStr = `${formattedDate}T${manualTime}:00.000Z`;
 
         const payloads = validRates.map(r => ({
@@ -139,7 +375,8 @@
         if (data) for (const rate of data) await logAction('fm_currency_rates', rate.id, 'ایجاد', `ثبت دستی نرخ: ${rate.base_currency} به ${rate.target_currency}`, null, rate);
 
         showToast(t('نرخ‌های دستی با موفقیت ثبت شدند.', 'Manual rates saved successfully.'));
-        setIsManualModalOpen(false); fetchRates();
+        setIsManualModalOpen(false);
+        await fetchRates();
       } catch (err) { showToast(t('خطا در ثبت نرخ‌های دستی', 'Error saving manual rates'), 'error'); }
     };
 
@@ -178,30 +415,51 @@
       } catch (err) { showToast(t('خطا در حذف', 'Delete error'), 'error'); setDeleteConfirm({ isOpen: false, type: null, data: null }); }
     };
 
-    const getRateValue = (baseCode, targetCode, targetDate) => {
-      if (baseCode === targetCode) return 1;
-      const formattedDate = targetDate ? targetDate.replace(/\//g, '-') : null;
-      const validRates = formattedDate ? rates.filter(r => r.rate_date === formattedDate) : rates;
-      if (validRates.length === 0) return null;
-      let direct = validRates.find(r => r.base_currency === baseCode && r.target_currency === targetCode); if (direct) return direct.rate;
-      let inverse = validRates.find(r => r.base_currency === targetCode && r.target_currency === baseCode); if (inverse) return 1 / inverse.rate;
-      const intermediates = currencies.map(c => c.code).filter(c => c !== baseCode && c !== targetCode);
-      for (let intermediate of intermediates) {
-        const r1 = validRates.find(r => r.base_currency === baseCode && r.target_currency === intermediate)?.rate || (validRates.find(r => r.base_currency === intermediate && r.target_currency === baseCode) ? 1/validRates.find(r => r.base_currency === intermediate && r.target_currency === baseCode).rate : null);
-        const r2 = validRates.find(r => r.base_currency === intermediate && r.target_currency === targetCode)?.rate || (validRates.find(r => r.base_currency === targetCode && r.target_currency === intermediate) ? 1/validRates.find(r => r.base_currency === targetCode && r.target_currency === intermediate).rate : null);
+    const currentConvRate = useMemo(() => {
+      if (!convFrom || !convTo || !convDate) return null;
+      if (convFrom === convTo) return 1;
+      const fd = convDate.replace(/\//g, '-');
+
+      // پیدا کردن آخرین نرخ به ازای هر جفت ارز که rate_date <= تاریخ انتخابی باشد
+      const eligible = rates.filter(r => r.rate_date && String(r.rate_date).substring(0, 10) <= fd);
+      if (!eligible.length) return null;
+
+      // مرتب‌سازی: اول rate_date نزولی، بعد created_at نزولی (تعیین تکلیف در تاریخ‌های مساوی)
+      const sorted = eligible.slice().sort((a, b) => {
+        const da = String(a.rate_date).substring(0, 10);
+        const db = String(b.rate_date).substring(0, 10);
+        if (db > da) return 1;
+        if (db < da) return -1;
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      });
+
+      // جدیدترین نرخ هر جفت ارز (اولین رکورد بعد از sort)
+      const seen = new Set();
+      const vr = [];
+      for (const r of sorted) {
+        const key = `${r.base_currency}|${r.target_currency}`;
+        if (!seen.has(key)) { seen.add(key); vr.push(r); }
+      }
+      if (!vr.length) return null;
+
+      const find = (b, tgt) => vr.find(r => r.base_currency === b && r.target_currency === tgt);
+      let dir = find(convFrom, convTo); if (dir) return dir.rate;
+      let inv = find(convTo, convFrom); if (inv) return 1 / inv.rate;
+      for (const c of currencies) {
+        if (c.code === convFrom || c.code === convTo) continue;
+        const r1 = find(convFrom, c.code)?.rate ?? (find(c.code, convFrom) ? 1 / find(c.code, convFrom).rate : null);
+        const r2 = find(c.code, convTo)?.rate ?? (find(convTo, c.code) ? 1 / find(convTo, c.code).rate : null);
         if (r1 && r2) return r1 * r2;
       }
       return null;
-    };
-
-    const currentConvRate = useMemo(() => (!convFrom || !convTo || !convDate) ? null : getRateValue(convFrom, convTo, convDate), [convFrom, convTo, convDate, rates, currencies]);
+    }, [convFrom, convTo, convDate, rates, currencies]);
     const convResult = useMemo(() => {
       if (!convAmount || currentConvRate === null) return null;
       const amount = parseFloat(String(convAmount).replace(/,/g, ''));
       return isNaN(amount) ? null : (amount * currentConvRate).toLocaleString(undefined, { maximumFractionDigits: 10 });
     }, [convAmount, currentConvRate]);
 
-    const openConverter = () => { setConvDate(getTodayGregorian()); setConvFrom(currencies[0]?.code || ''); setConvTo(currencies[1]?.code || ''); setIsConverterOpen(true); };
+    const openConverter = () => { fetchRates(); setConvDate(getTodayGregorian()); setConvFrom(currencies[0]?.code || ''); setConvTo(currencies[1]?.code || ''); setIsConverterOpen(true); };
 
     const historyColumns = [
       { 
@@ -212,16 +470,16 @@
           return (
              <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
                <Calendar size={12} className="text-slate-400 dark:text-slate-500" />
-               <span className="font-mono text-[12px] font-medium" dir="ltr">{formattedDate}</span>
+               <span className="font-sans text-[12px] font-medium" dir="ltr">{formattedDate}</span>
                <Clock size={12} className="text-slate-400 dark:text-slate-500 ml-1" />
-               <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-700 px-1 rounded" dir="ltr">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
+               <span className="font-sans text-[10px] bg-slate-100 dark:bg-slate-700 px-1 rounded" dir="ltr">{String(d.getHours()).padStart(2, '0')}:{String(d.getMinutes()).padStart(2, '0')}</span>
              </div>
           );
         }
       },
       { field: 'base_currency', header_fa: 'ارز پایه', header_en: 'Base', width: '100px', render: (v) => <span className="font-bold text-slate-800 dark:text-slate-200">{v}</span> },
       { field: 'target_currency', header_fa: 'ارز هدف', header_en: 'Target', width: '100px' },
-      { field: 'rate', header_fa: 'نرخ تبدیل', header_en: 'Rate', width: '150px', render: (v) => <span className="font-mono font-bold text-indigo-700 dark:text-indigo-400">{v.toLocaleString()}</span> },
+      { field: 'rate', header_fa: 'نرخ تبدیل', header_en: 'Rate', width: '150px', render: (v) => <span className="font-sans font-bold text-indigo-700 dark:text-indigo-400">{v.toLocaleString()}</span> },
       { field: 'source', header_fa: 'منبع', header_en: 'Source', width: '100px', render: (v) => <Badge variant={v === 'XE' ? 'emerald' : 'blue'} size="sm">{v}</Badge> }
     ];
 
@@ -238,18 +496,8 @@
       }
     ];
 
-    const filteredRates = useMemo(() => {
-      let result = [...rates];
-      if (rateFilters.base) result = result.filter(r => r.base_currency === rateFilters.base);
-      if (rateFilters.target) result = result.filter(r => r.target_currency === rateFilters.target);
-      if (rateFilters.source) result = result.filter(r => r.source === rateFilters.source);
-      if (rateFilters.fromDate) result = result.filter(r => r.rate_date >= rateFilters.fromDate.replace(/\//g, '-'));
-      if (rateFilters.toDate) result = result.filter(r => r.rate_date <= rateFilters.toDate.replace(/\//g, '-'));
-      return result;
-    }, [rates, rateFilters]);
-
     const rateOps = [
-      { label: t('گرفتن نرخ ارزها از XE', 'Fetch Rates from XE'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300', requiredAccess: 'xe_fetch' },
+      { label: t('دریافت اتوماتیک نرخ‌ها', 'Auto Rate Update'), icon: Globe, onClick: handleXeFetch, className: 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300', requiredAccess: 'xe_fetch' },
       { label: t('بروزرسانی دستی نرخ‌ها', 'Manual Rate Update'), icon: Edit, onClick: openManualUpdateModal, className: 'text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300', requiredAccess: 'manual_rate' },
       { divider: true },
       { label: t('تبدیل‌گر (ماشین حساب)', 'Currency Converter'), icon: Calculator, onClick: openConverter, className: 'text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400', requiredAccess: 'converter' }
@@ -259,21 +507,13 @@
 
     return (
       <>
-        <AdvancedFilter 
-          fields={[
-            { name: 'base', label: t('ارز پایه', 'Base Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
-            { name: 'target', label: t('ارز هدف', 'Target Currency'), type: 'select', options: currencies.map(c => ({value: c.code, label: c.code})) },
-            { name: 'fromDate', label: t('از تاریخ', 'From Date'), type: 'date' },
-            { name: 'toDate', label: t('تا تاریخ', 'To Date'), type: 'date' },
-            { name: 'source', label: t('منبع', 'Source'), type: 'select', options: [{value:'XE', label:'XE (اتوماتیک)'}, {value:'Manual', label:'دستی'}] }
-          ]}
-          initialValues={rateFilters} onFilter={setRateFilters} onClear={() => setRateFilters({})} language={language}
-        />
-        
         <div className="flex-1 min-h-0">
             <DataGrid 
-              data={filteredRates} columns={historyColumns} language={language} formCode={formCode} selectable={true}
+              data={rates} columns={historyColumns} language={language} formCode={formCode} selectable={true}
               gridState={ratesGridState} onGridStateChange={setRatesGridState} bulkActions={historyBulkActions}
+              onDownloadSample={handleDownloadSample}
+              onImport={handleImportRates}
+              onExport={handleExportRates}
               actions={[
                 { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currency_rates', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
                 { id: 'edit', icon: Edit, tooltip: t('ویرایش سابقه', 'Edit Record'), onClick: (row) => { setEditingRate({...row}); setIsEditRateModalOpen(true); }, hidden: (row) => !(row.source === 'Manual' && isWithinOneWeek(row.created_at)), className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
@@ -291,6 +531,10 @@
                     <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('ساعت ثبت', 'Rate Time')} <span className="text-red-500 dark:text-red-400">*</span></label>
                     <input type="time" disabled={isReadOnly} value={manualTime} onChange={(e) => setManualTime(e.target.value)} className={`h-8 text-[12px] rounded-lg outline-none px-2.5 transition-all ${isReadOnly ? 'bg-slate-100/50 dark:bg-slate-800/50 text-slate-500 border border-slate-200 dark:border-slate-700 cursor-not-allowed' : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-100 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 px-2.5'}`} required />
                  </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] text-slate-400 dark:text-slate-500">{t('نرخ‌های دستی را وارد کنید یا از آخرین نرخ‌های ثبت‌شده کپی بگیرید.', 'Enter rates or copy from last saved values.')}</span>
+                {!isReadOnly && <Button variant="outline" size="sm" icon={Copy} onClick={handleCopyLastRates} disabled={manualRatesList.length === 0}>{t('کپی از آخرین نرخ‌ها', 'Copy Last Rates')}</Button>}
               </div>
               <div className="flex flex-col max-h-[350px] overflow-y-auto custom-scrollbar pr-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
                  {manualRatesList.map((item, idx) => (
@@ -317,7 +561,7 @@
               <div className="flex flex-col gap-3 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg">
                  <div className="flex items-center justify-between text-[14px]"><span className="text-slate-500 dark:text-slate-400 font-bold">{t('ارز پایه:', 'Base:')}</span><span className="font-black text-slate-800 dark:text-slate-200">{editingRate?.base_currency}</span></div>
                  <div className="flex items-center justify-between text-[14px]"><span className="text-slate-500 dark:text-slate-400 font-bold">{t('ارز هدف:', 'Target:')}</span><span className="font-black text-slate-800 dark:text-slate-200">{editingRate?.target_currency}</span></div>
-                 <div className="flex items-center justify-between text-[14px]"><span className="text-slate-500 dark:text-slate-400 font-bold">{t('تاریخ:', 'Date:')}</span><span className="font-black text-slate-800 dark:text-slate-200 font-mono" dir="ltr">{formatGlobalDate ? formatGlobalDate(editingRate?.rate_date, globalCalendarMode) : editingRate?.rate_date}</span></div>
+                 <div className="flex items-center justify-between text-[14px]"><span className="text-slate-500 dark:text-slate-400 font-bold">{t('تاریخ:', 'Date:')}</span><span className="font-black text-slate-800 dark:text-slate-200 font-sans" dir="ltr">{formatGlobalDate ? formatGlobalDate(editingRate?.rate_date, globalCalendarMode) : editingRate?.rate_date}</span></div>
               </div>
               <CurrencyField formCode={formCode} label={t('مبلغ نرخ', 'Rate Amount')} value={editingRate?.rate || ''} onChange={(v) => setEditingRate({...editingRate, rate: v})} isRtl={isRtl} size="md" required />
               <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
@@ -341,12 +585,12 @@
               {currentConvRate !== null && (
                  <div className="w-full mt-4 flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-100 dark:border-emerald-800/50 rounded-lg animate-in fade-in">
                     <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400">{t('نرخ برابری:', 'Exchange Rate:')}</span>
-                    <span className="text-[14px] font-black font-mono text-emerald-800 dark:text-emerald-300" dir="ltr">1 {convFrom} = {currentConvRate.toLocaleString(undefined, { maximumFractionDigits: 10 })} {convTo}</span>
+                    <span className="text-[14px] font-black font-sans text-emerald-800 dark:text-emerald-300" dir="ltr">1 {convFrom} = {currentConvRate.toLocaleString(undefined, { maximumFractionDigits: 10 })} {convTo}</span>
                  </div>
               )}
               <div className="mt-6 w-full p-5 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center gap-1 shadow-sm">
                  <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">{t('حاصل تبدیل بر اساس تاریخ انتخابی', 'Conversion Result by Date')}</span>
-                 <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 font-mono tracking-tight" dir="ltr">{convResult === null ? t('نامشخص', 'Unknown') : convResult} <span className="text-sm text-slate-400 dark:text-slate-500 font-sans ml-1">{convTo}</span></div>
+                 <div className="text-2xl font-black text-indigo-700 dark:text-indigo-400 font-sans tracking-tight" dir="ltr">{convResult === null ? t('نامشخص', 'Unknown') : convResult} <span className="text-sm text-slate-400 dark:text-slate-500 font-sans ml-1">{convTo}</span></div>
               </div>
            </div>
         </Modal>

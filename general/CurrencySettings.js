@@ -19,7 +19,7 @@
     } = Core;
     
     const Grid = window.DSGrid || window.DesignSystem || {};
-    const { DataGrid = FallbackComponent, AdvancedFilter = FallbackComponent } = Grid;
+    const { DataGrid = FallbackComponent } = Grid;
     
     const Feedback = window.DSFeedback || window.DesignSystem || {};
     const { Modal = FallbackComponent, Toast = FallbackComponent, LogTimeline = FallbackComponent } = Feedback;
@@ -42,38 +42,19 @@
     const [isLoading, setIsLoading] = useState(false);
     
     const [currencies, setCurrencies] = useState([]);
+    const [selectedIds, setSelectedIds] = useState([]);
     const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
     const [selectedCurrency, setSelectedCurrency] = useState(null);
-    const [currencyFilters, setCurrencyFilters] = useState({});
     const [currenciesGridState, setCurrenciesGridState] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
+    const [systemRoles, setSystemRoles] = useState({ baseId: '', secondaryId: '' });
+    const [isSavingRoles, setIsSavingRoles] = useState(false);
     
     const [isLogModalOpen, setIsLogModalOpen] = useState(false);
     const [recordLogs, setRecordLogs] = useState([]);
     const [isLogsLoading, setIsLogsLoading] = useState(false);
 
-    const [rateFilters, setRateFilters] = useState({ fromDate: todayStr, toDate: todayStr });
     const [ratesGridState, setRatesGridState] = useState(null);
-
-    const viewConfig = {
-      pageId: 'currency_settings_main',
-      currentState: () => ({ activeTab, currencyFilters, currenciesGridState, rateFilters, ratesGridState }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.activeTab) setActiveTab(state.activeTab);
-          if (state.currencyFilters) setCurrencyFilters(state.currencyFilters);
-          if (state.currenciesGridState) setCurrenciesGridState(state.currenciesGridState);
-          if (state.rateFilters) setRateFilters(state.rateFilters);
-          if (state.ratesGridState) setRatesGridState(state.ratesGridState);
-        } else {
-          setActiveTab('list');
-          setCurrencyFilters({});
-          setCurrenciesGridState(null);
-          setRateFilters({ fromDate: todayStr, toDate: todayStr });
-          setRatesGridState(null);
-        }
-      }
-    };
 
     const supabase = window.supabase;
     const currentUser = window.NavigationSystem?.currentUser?.name || 'مدیر سیستم';
@@ -95,7 +76,7 @@
       }
     };
 
-    const openLogModal = async (entityType, recordId) => {
+    const openLogModal = useCallback(async (entityType, recordId) => {
       setIsLogModalOpen(true); setIsLogsLoading(true);
       try {
         if (!supabase) throw new Error("Supabase is not initialized");
@@ -103,11 +84,11 @@
         if (error) throw error;
         setRecordLogs(data || []);
       } catch (err) {
-        showToast(t('خطا در دریافت تاریخچه تغییرات', 'Error fetching logs'), 'error');
+        showToast(isRtl ? 'خطا در دریافت تاریخچه تغییرات' : 'Error fetching logs', 'error');
       } finally {
         setIsLogsLoading(false);
       }
-    };
+    }, [supabase, showToast, isRtl]);
 
     const fetchCurrencies = useCallback(async () => {
       setIsLoading(true);
@@ -117,13 +98,19 @@
         if (error) throw error;
         setCurrencies(data || []);
       } catch (err) {
-        showToast(t('خطا در دریافت اطلاعات ارزها', 'Error fetching currencies'), 'error');
+        showToast(isRtl ? 'خطا در دریافت اطلاعات ارزها' : 'Error fetching currencies', 'error');
       } finally {
         setIsLoading(false);
       }
-    }, [supabase, showToast, t]);
+    }, [supabase, showToast, isRtl]);
 
     useEffect(() => { fetchCurrencies(); }, [fetchCurrencies]);
+
+    useEffect(() => {
+      const base = currencies.find(c => c.system_role === 'base');
+      const secondary = currencies.find(c => c.system_role === 'secondary');
+      setSystemRoles({ baseId: base ? String(base.id) : '', secondaryId: secondary ? String(secondary.id) : '' });
+    }, [currencies]);
 
     const handleSaveCurrency = async () => {
       try {
@@ -136,6 +123,7 @@
           code: selectedCurrency.code.toUpperCase(), title: selectedCurrency.title, symbol: selectedCurrency.symbol,
           is_active: selectedCurrency.is_active ?? true, fetch_type: selectedCurrency.fetch_type || 'manual',
           decimal_places: parseInt(selectedCurrency.decimal_places) || 0, targets: selectedCurrency.targets || [],
+          currency_type: selectedCurrency.currency_type || 'fiat',
           updated_by: currentUser, updated_at: nowStr
         };
 
@@ -159,28 +147,68 @@
       }
     };
 
-    const handleBulkAction = async (actionType, selectedIds) => {
-      if (!selectedIds || !selectedIds.length) return;
+    const handleBulkAction = useCallback(async (actionType, targetIds) => {
+      if (!targetIds || !targetIds.length) return;
       try {
         const nowStr = new Date().toISOString();
         let updatePayload = { updated_by: currentUser, updated_at: nowStr };
         let actionDesc = '';
-        if (actionType === 'activate') { updatePayload.is_active = true; actionDesc = 'فعال‌سازی ارز'; }
-        if (actionType === 'deactivate') { updatePayload.is_active = false; actionDesc = 'غیرفعال‌سازی ارز'; }
-        if (actionType === 'setAuto') { updatePayload.fetch_type = 'auto'; actionDesc = 'تغییر به دریافت اتوماتیک'; }
-        if (actionType === 'setManual') { updatePayload.fetch_type = 'manual'; actionDesc = 'تغییر به دریافت دستی'; }
+        if (actionType === 'activate') { updatePayload.is_active = true; actionDesc = isRtl ? 'فعال‌سازی ارز' : 'Activate currency'; }
+        if (actionType === 'deactivate') { updatePayload.is_active = false; actionDesc = isRtl ? 'غیرفعال‌سازی ارز' : 'Deactivate currency'; }
+        if (actionType === 'setAuto') { updatePayload.fetch_type = 'auto'; actionDesc = isRtl ? 'تغییر به دریافت اتوماتیک' : 'Set to auto fetch'; }
+        if (actionType === 'setManual') { updatePayload.fetch_type = 'manual'; actionDesc = isRtl ? 'تغییر به دریافت دستی' : 'Set to manual fetch'; }
 
-        const { error } = await supabase.from('fm_currencies').update(updatePayload).in('id', selectedIds);
+        const { error } = await supabase.from('fm_currencies').update(updatePayload).in('id', targetIds);
         if (error) throw error;
         
-        for (const id of selectedIds) {
+        for (const id of targetIds) {
            const oldRecord = currencies.find(c => c.id === id);
            await logAction('fm_currencies', id, 'update', `عملیات گروهی: ${actionDesc}`, oldRecord, { ...oldRecord, ...updatePayload });
         }
-        showToast(t('عملیات گروهی با موفقیت انجام شد', 'Bulk action successful'));
+        showToast(isRtl ? 'عملیات گروهی با موفقیت انجام شد' : 'Bulk action successful');
+        setSelectedIds([]);
         fetchCurrencies();
       } catch (err) {
-        showToast(t('خطا در اجرای عملیات گروهی', 'Error executing bulk action'), 'error');
+        showToast(isRtl ? 'خطا در اجرای عملیات گروهی' : 'Error executing bulk action', 'error');
+      }
+    }, [supabase, currencies, currentUser, showToast, fetchCurrencies, isRtl]);
+
+    const handleSaveSystemRoles = async () => {
+      if (systemRoles.baseId && systemRoles.baseId === systemRoles.secondaryId) {
+        showToast(t('ارز پایه و ارز دوم نمی‌توانند یکسان باشند', 'Base and secondary currencies must be different'), 'error');
+        return;
+      }
+      setIsSavingRoles(true);
+      try {
+        const nowStr = new Date().toISOString();
+        const prevBase = currencies.find(c => c.system_role === 'base');
+        const prevSecondary = currencies.find(c => c.system_role === 'secondary');
+        const newBaseId = systemRoles.baseId ? Number(systemRoles.baseId) : null;
+        const newSecondaryId = systemRoles.secondaryId ? Number(systemRoles.secondaryId) : null;
+        // Clear old roles first (to avoid unique constraint conflict)
+        if (prevBase && prevBase.id !== newBaseId) {
+          await supabase.from('fm_currencies').update({ system_role: null, updated_by: currentUser, updated_at: nowStr }).eq('id', prevBase.id);
+        }
+        if (prevSecondary && prevSecondary.id !== newSecondaryId) {
+          await supabase.from('fm_currencies').update({ system_role: null, updated_by: currentUser, updated_at: nowStr }).eq('id', prevSecondary.id);
+        }
+        // Set new roles
+        if (newBaseId) {
+          await supabase.from('fm_currencies').update({ system_role: 'base', updated_by: currentUser, updated_at: nowStr }).eq('id', newBaseId);
+          const rec = currencies.find(c => c.id === newBaseId);
+          if (rec) await logAction('fm_currencies', newBaseId, 'update', `تعیین به عنوان ارز پایه سیستم`, rec, { ...rec, system_role: 'base' });
+        }
+        if (newSecondaryId) {
+          await supabase.from('fm_currencies').update({ system_role: 'secondary', updated_by: currentUser, updated_at: nowStr }).eq('id', newSecondaryId);
+          const rec = currencies.find(c => c.id === newSecondaryId);
+          if (rec) await logAction('fm_currencies', newSecondaryId, 'update', `تعیین به عنوان ارز دوم سیستم`, rec, { ...rec, system_role: 'secondary' });
+        }
+        showToast(t('تنظیمات ارزهای سیستمی ذخیره شد', 'System currencies saved'));
+        fetchCurrencies();
+      } catch (err) {
+        showToast(t('خطا در ذخیره تنظیمات ارزهای سیستمی', 'Error saving system currencies'), 'error');
+      } finally {
+        setIsSavingRoles(false);
       }
     };
 
@@ -197,6 +225,7 @@
           if (error) throw error;
           for (const oldRec of oldRecords) await logAction('fm_currencies', oldRec.id, 'delete', `حذف گروهی ارز`, oldRec, null);
         }
+        setSelectedIds([]);
         fetchCurrencies();
         showToast(t('عملیات حذف با موفقیت انجام شد', 'Deletion successful'));
         setDeleteConfirm({ isOpen: false, type: null, data: null });
@@ -206,12 +235,12 @@
       }
     };
 
-    const tabs = [
+    const tabs = useMemo(() => [
       { id: 'list', label: t('فهرست ارزها', 'Currency List'), icon: Globe },
       { id: 'rates', label: t('سوابق نرخ ارزها', 'Exchange Rate History'), icon: History },
-    ];
+    ], [isRtl]);
 
-    const currencyColumns = [
+    const currencyColumns = useMemo(() => [
       { field: 'code', header_fa: 'کد ارز', header_en: 'Code', width: '90px', render: (v) => <span className="font-black text-slate-800 dark:text-slate-200">{v}</span> },
       { field: 'title', header_fa: 'عنوان', header_en: 'Title', width: '180px' },
       { field: 'symbol', header_fa: 'نماد', header_en: 'Symbol', width: '70px' },
@@ -220,32 +249,43 @@
         render: (val) => (
           <div className="flex gap-1 flex-wrap">
             {Array.isArray(val) && val.map(c => <Badge key={c} variant="indigo" size="sm" className="px-1.5 py-0 text-[10px]">{c}</Badge>)}
-            {(!val || val.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px]">{t('بدون وابستگی', 'No targets')}</span>}
+            {(!val || val.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px]">{isRtl ? 'بدون وابستگی' : 'No targets'}</span>}
           </div>
         )
       },
       { 
         field: 'fetch_type', header_fa: 'نوع دریافت', header_en: 'Fetch Type', width: '110px', type: 'select',
-        options: [{value: 'auto', label: t('اتوماتیک', 'Auto')}, {value: 'manual', label: t('دستی', 'Manual')}],
-        render: (v) => <Badge variant={v === 'auto' ? 'emerald' : 'slate'} className="text-[10px]">{v === 'auto' ? t('اتوماتیک', 'Auto') : t('دستی', 'Manual')}</Badge>
+        options: [{value: 'auto', label: isRtl ? 'اتوماتیک' : 'Auto'}, {value: 'manual', label: isRtl ? 'دستی' : 'Manual'}],
+        render: (v) => <Badge variant={v === 'auto' ? 'emerald' : 'slate'} className="text-[10px]">{v === 'auto' ? (isRtl ? 'اتوماتیک' : 'Auto') : (isRtl ? 'دستی' : 'Manual')}</Badge>
       },
-      { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '70px', render: (v) => <span className="text-slate-500 dark:text-slate-400 font-mono">{v}</span> },
+      { field: 'decimal_places', header_fa: 'اعشار', header_en: 'Decimals', width: '70px', render: (v) => <span className="text-slate-500 dark:text-slate-400 font-sans">{v}</span> },
+      { 
+        field: 'currency_type', header_fa: 'نوع ارز', header_en: 'Currency Type', width: '110px', type: 'select',
+        options: [{value: 'fiat', label: isRtl ? 'فیات' : 'Fiat'}, {value: 'digital', label: isRtl ? 'دیجیتال' : 'Digital'}],
+        render: (v) => <Badge variant={v === 'digital' ? 'indigo' : 'amber'} className="text-[10px]">{v === 'digital' ? (isRtl ? 'دیجیتال' : 'Digital') : (isRtl ? 'فیات' : 'Fiat')}</Badge>
+      },
       { field: 'is_active', header_fa: 'وضعیت', header_en: 'Status', type: 'toggle', width: '90px' },
-    ];
+    ], [isRtl]);
 
-    const currencyBulkActions = [
-      { id: 'activate', label: t('فعال‌سازی', 'Activate'), icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400', requiredAccess: 'edit' },
-      { id: 'deactivate', label: t('غیرفعال‌سازی', 'Deactivate'), icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400', requiredAccess: 'edit' },
-      { id: 'setAuto', label: t('دریافت اتوماتیک', 'Set Auto'), icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400', requiredAccess: 'edit' },
-      { id: 'setManual', label: t('دریافت دستی', 'Set Manual'), icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400', requiredAccess: 'edit' },
-      { id: 'delete', label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
-    ];
+    const handleOpenEdit = useCallback((row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, []);
+    const handleOpenDelete = useCallback((row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), []);
+    const handleOpenLog = useCallback((row) => openLogModal('fm_currencies', row.id), [openLogModal]);
+    const handleOpenAdd = useCallback(() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [], currency_type: 'fiat' }); setIsCurrencyModalOpen(true); }, []);
+    const handleRowDoubleClick = useCallback((row) => { if (access.canEdit || access.canView) { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); } }, [access.canEdit, access.canView]);
 
-    const filteredCurrencies = useMemo(() => {
-      let result = [...currencies];
-      if (currencyFilters.code) result = result.filter(c => c.code.toLowerCase().includes(currencyFilters.code.toLowerCase()));
-      return result;
-    }, [currencies, currencyFilters]);
+    const gridActions = useMemo(() => [
+      { id: 'view_log', icon: History, tooltip: isRtl ? 'مشاهده لاگ سیستم' : 'View System Log', onClick: handleOpenLog, className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
+      { id: 'update', icon: Edit, tooltip: isRtl ? 'ویرایش' : 'Edit', onClick: handleOpenEdit, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
+      { id: 'delete', icon: Trash2, tooltip: isRtl ? 'حذف' : 'Delete', onClick: handleOpenDelete, className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
+    ], [isRtl, handleOpenLog, handleOpenEdit, handleOpenDelete]);
+
+    const currencyBulkActions = useMemo(() => [
+      { id: 'activate', label: isRtl ? 'فعال‌سازی' : 'Activate', icon: Check, onClick: (ids) => handleBulkAction('activate', ids), variant: 'outline', className: 'text-emerald-600 dark:text-emerald-400', requiredAccess: 'edit' },
+      { id: 'deactivate', label: isRtl ? 'غیرفعال‌سازی' : 'Deactivate', icon: X, onClick: (ids) => handleBulkAction('deactivate', ids), variant: 'outline', className: 'text-slate-600 dark:text-slate-400', requiredAccess: 'edit' },
+      { id: 'setAuto', label: isRtl ? 'دریافت اتوماتیک' : 'Set Auto', icon: RefreshCw, onClick: (ids) => handleBulkAction('setAuto', ids), variant: 'outline', className: 'text-blue-600 dark:text-blue-400', requiredAccess: 'edit' },
+      { id: 'setManual', label: isRtl ? 'دریافت دستی' : 'Set Manual', icon: Lock, onClick: (ids) => handleBulkAction('setManual', ids), variant: 'outline', className: 'text-amber-600 dark:text-amber-400', requiredAccess: 'edit' },
+      { id: 'delete', label: isRtl ? 'حذف گروهی' : 'Delete Selected', icon: Trash2, onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }), variant: 'danger-outline', className: '!text-red-500 dark:!text-red-400 !border-red-500 dark:!border-red-800 hover:!bg-red-50 dark:hover:!bg-red-900/30' },
+    ], [isRtl, handleBulkAction]);
 
     const CurrencyHistoryComponent = window.CurrencyHistory;
 
@@ -255,8 +295,30 @@
           title={t('تنظیمات و مدیریت نرخ ارزها', 'Currency & Exchange Management')}
           icon={DollarSign} language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('ارزها', 'Currencies') }]}
-          viewConfig={viewConfig}
         />
+
+        {!isReadOnly && (
+          <div className="mb-3 flex flex-wrap items-end gap-3 px-3 py-2.5 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl shadow-sm">
+            <div className="flex items-center gap-1.5 self-center">
+              <DollarSign size={14} className="text-slate-400 dark:text-slate-500" />
+            </div>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="w-44">
+                <SelectField formCode={formCode} label={t('ارز پایه سیستم', 'System Base Currency')} value={systemRoles.baseId} onChange={(e) => setSystemRoles(prev => ({ ...prev, baseId: e.target.value }))} isRtl={isRtl} size="sm"
+                  options={[{ value: '', label: t('— انتخاب نشده —', '— None —') }, ...currencies.filter(c => String(c.id) !== systemRoles.secondaryId).map(c => ({ value: String(c.id), label: `${c.title} (${c.code})` }))]}
+                />
+              </div>
+              <div className="w-44">
+                <SelectField formCode={formCode} label={t('ارز دوم سیستم', '  Secondary Currency')} value={systemRoles.secondaryId} onChange={(e) => setSystemRoles(prev => ({ ...prev, secondaryId: e.target.value }))} isRtl={isRtl} size="sm"
+                  options={[{ value: '', label: t('— انتخاب نشده —', '— None —') }, ...currencies.filter(c => String(c.id) !== systemRoles.baseId).map(c => ({ value: String(c.id), label: `${c.title} (${c.code})` }))]}
+                />
+              </div>
+              <Button variant="primary" size="sm" icon={Save} onClick={handleSaveSystemRoles} disabled={isSavingRoles} className="whitespace-nowrap mb-0.5">
+                {isSavingRoles ? t('در حال ذخیره...', 'Saving...') : t('ذخیره', 'Save')}
+              </Button>
+            </div>
+          </div>
+        )}
 
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
@@ -264,23 +326,17 @@
           
           {activeTab === 'list' && (
             <>
-              <AdvancedFilter 
-                fields={[{ name: 'code', label: t('کد ارز', 'Code'), type: 'text' }]} 
-                initialValues={currencyFilters} onFilter={setCurrencyFilters} onClear={() => setCurrencyFilters({})} language={language} 
-              />
               <div className="flex-1 min-h-0">
                 <DataGrid 
-                  data={filteredCurrencies} columns={currencyColumns} language={language} formCode={formCode}
+                  data={currencies} columns={currencyColumns} language={language} formCode={formCode}
                   gridState={currenciesGridState} onGridStateChange={setCurrenciesGridState}
-                  actions={[
-                    { id: 'view_log', icon: History, tooltip: t('مشاهده لاگ سیستم', 'View System Log'), onClick: (row) => openLogModal('fm_currencies', row.id), className: 'text-indigo-400 dark:text-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-300' },
-                    { id: 'update', icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); }, className: 'text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400' },
-                    { id: 'delete', icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400' }
-                  ]}
+                  actions={gridActions}
                   selectable={true}
-                  onRowDoubleClick={(row) => { if(access.canEdit || access.canView) { setSelectedCurrency({...row}); setIsCurrencyModalOpen(true); } }}
+                  selectedIds={selectedIds}
+                  onSelectChange={setSelectedIds}
+                  onRowDoubleClick={handleRowDoubleClick}
                   bulkActions={currencyBulkActions}
-                  onAdd={() => { setSelectedCurrency({ code: '', title: '', symbol: '', is_active: true, fetch_type: 'manual', decimal_places: 0, targets: [] }); setIsCurrencyModalOpen(true); }}
+                  onAdd={handleOpenAdd}
                 />
               </div>
             </>
@@ -290,7 +346,7 @@
              <CurrencyHistoryComponent 
                 currencies={currencies} language={language} formCode={formCode} 
                 access={access}
-                rateFilters={rateFilters} setRateFilters={setRateFilters}
+
                 ratesGridState={ratesGridState} setRatesGridState={setRatesGridState}
              />
           ) : activeTab === 'rates' ? (
@@ -301,12 +357,10 @@
         <Modal isOpen={isCurrencyModalOpen} onClose={() => setIsCurrencyModalOpen(false)} title={selectedCurrency?.id ? t('ویرایش اطلاعات ارز', 'Edit Currency Info') : t('تعریف ارز جدید در سیستم', 'Define New Currency')} language={language} width="max-w-xl">
           <div className="p-4 flex flex-col gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <TextField formCode={formCode} label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" wrapperClassName="sm:col-span-1" />
-              <div className="sm:col-span-2 flex flex-col gap-1 w-full">
-                  <div className="flex items-center justify-between">
-                      <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('عنوان ارز', 'Title')} <span className="text-red-500 dark:text-red-400">*</span></label>
-                      <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
-                  </div>
+              <TextField formCode={formCode} label={t('کد ارز', 'Code')} value={selectedCurrency?.code || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, code: e.target.value.toUpperCase()})} isRtl={isRtl} required size="sm" />
+              <SelectField formCode={formCode} label={t('نوع ارز', 'Currency Type')} value={selectedCurrency?.currency_type || 'fiat'} onChange={(e) => setSelectedCurrency({...selectedCurrency, currency_type: e.target.value})} isRtl={isRtl} size="sm" options={[{value: 'fiat', label: t('فیات', 'Fiat')}, {value: 'digital', label: t('دیجیتال', 'Digital')}]} />
+              <div className="flex flex-col gap-1 w-full">
+                  <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{t('عنوان ارز', 'Title')} <span className="text-red-500 dark:text-red-400">*</span></label>
                   <input
                       type="text" disabled={isReadOnly} value={selectedCurrency?.title || ''} onChange={(e) => setSelectedCurrency({...selectedCurrency, title: e.target.value})}
                       className={`w-full h-8 text-[12px] px-2.5 rounded-lg transition-all outline-none 
@@ -321,21 +375,24 @@
               <SelectField formCode={formCode} label={t('نوع دریافت نرخ', 'Fetch Method')} value={selectedCurrency?.fetch_type || 'manual'} onChange={(e) => setSelectedCurrency({...selectedCurrency, fetch_type: e.target.value})} isRtl={isRtl} size="sm" options={[{value: 'manual', label: t('دستی', 'Manual')}, {value: 'auto', label: t('اتوماتیک (API)', 'Automatic')}]} />
               <TextField formCode={formCode} label={t('تعداد اعشار', 'Decimals')} type="number" value={selectedCurrency?.decimal_places ?? 0} onChange={(e) => setSelectedCurrency({...selectedCurrency, decimal_places: e.target.value})} isRtl={isRtl} size="sm" />
             </div>
-            
-            <div className="mt-1 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-               <label className="text-[12px] font-black text-slate-500 dark:text-slate-400 mb-1.5 block uppercase tracking-wider">{t('ارزهای هدف (ارزهایی که این ارز به آنها تبدیل می‌شود):', 'Target Currencies (Conversion Base):')}</label>
-               <div className="flex flex-col gap-2">
-                 <SelectField formCode={formCode} value="" onChange={(e) => { const val = e.target.value; if (val && !(selectedCurrency?.targets || []).includes(val)) setSelectedCurrency({...selectedCurrency, targets: [...(selectedCurrency?.targets || []), val]}); }} isRtl={isRtl} size="sm" wrapperClassName="w-full sm:w-1/2" options={[{ value: '', label: t('انتخاب ارز جهت افزودن...', 'Select currency to add...') }, ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))]} />
-                 <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)] mt-1">
-                    {(selectedCurrency?.targets || []).map(tcode => (
-                      <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
-                        <span className="font-bold text-[10px]">{tcode}</span>
-                        {!isReadOnly && <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 dark:bg-indigo-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}><X size={10} /></div>}
-                      </Badge>
-                    ))}
-                    {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px] italic py-1">{t('هیچ ارزی انتخاب نشده است.', 'No targets selected.')}</span>}
-                 </div>
-               </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{t('ارزهای هدف', 'Target Currencies')}</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div className="sm:col-span-2">
+                  <SelectField formCode={formCode} value="" onChange={(e) => { const val = e.target.value; if (val && !(selectedCurrency?.targets || []).includes(val)) setSelectedCurrency({...selectedCurrency, targets: [...(selectedCurrency?.targets || []), val]}); }} isRtl={isRtl} size="sm" options={[{ value: '', label: t('انتخاب ارز جهت افزودن...', 'Select currency to add...') }, ...currencies.filter(c => c.code !== selectedCurrency?.code && !(selectedCurrency?.targets || []).includes(c.code)).map(c => ({value: c.code, label: `${c.title} (${c.code})`}))]} />
+                </div>
+                <ToggleField formCode={formCode} label={t('فعال', 'Active')} checked={selectedCurrency?.is_active ?? true} onChange={(val) => setSelectedCurrency({...selectedCurrency, is_active: val})} isRtl={isRtl} />
+              </div>
+              <div className="flex flex-wrap gap-1.5 p-2.5 min-h-[44px] bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]">
+                {(selectedCurrency?.targets || []).map(tcode => (
+                  <Badge key={tcode} variant="indigo" className="flex items-center gap-1.5 pl-1 pr-2 py-0.5 group">
+                    <span className="font-bold text-[10px]">{tcode}</span>
+                    {!isReadOnly && <div className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-indigo-200/50 dark:bg-indigo-900/50 hover:bg-red-100 dark:hover:bg-red-900/50 hover:text-red-600 dark:hover:text-red-400 cursor-pointer transition-all" onClick={() => setSelectedCurrency({...selectedCurrency, targets: selectedCurrency.targets.filter(x => x !== tcode)})}><X size={10} /></div>}
+                  </Badge>
+                ))}
+                {(!selectedCurrency?.targets || selectedCurrency.targets.length === 0) && <span className="text-slate-300 dark:text-slate-500 text-[10px] italic py-1">{t('هیچ ارزی انتخاب نشده است.', 'No targets selected.')}</span>}
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">

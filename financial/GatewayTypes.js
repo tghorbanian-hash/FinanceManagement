@@ -1,78 +1,36 @@
 /* Filename: financial/GatewayTypes.js */
 (() => {
   const React = window.React;
-  const { useState, useEffect, useRef } = React;
+  const { useState, useEffect } = React;
   
-  const { 
-    Button, PageHeader, Modal, 
-    TextField, ToggleField, SelectField, CurrencyField, DatePicker, CheckboxField
-  } = window.DesignSystem || window.DSCore || window.DSForms || {};
+  const DS = window.DesignSystem || {};
+  const DSCore = window.DSCore || DS;
+  const DSForms = window.DSForms || DS;
+  const DSGrid = window.DSGrid || DS;
+  const DSFeedback = window.DSFeedback || DS;
+
+  const Button = DSCore.Button || DS.Button || (() => null);
+  const PageHeader = DSCore.PageHeader || DS.PageHeader || (() => null);
+  const Modal = DSFeedback.Modal || DSCore.Modal || DS.Modal || (() => null);
+  const EmptyState = DSCore.EmptyState || DS.EmptyState || (() => null);
+  const Toast = DSFeedback.Toast || DS.Toast || (() => null);
   
-  const { DataGrid, LOVField } = window.DSGrid || window.DesignSystem || {};
+  const TextField = DSForms.TextField || DS.TextField || (() => null);
+  const ToggleField = DSForms.ToggleField || DS.ToggleField || (() => null);
+  const SelectField = DSForms.SelectField || DS.SelectField || (() => null);
+  const CurrencyField = DSForms.CurrencyField || DS.CurrencyField || (() => null);
+  const DatePicker = DSForms.DatePicker || DS.DatePicker || (() => null);
+  const CheckboxField = DSForms.CheckboxField || DS.CheckboxField || (() => null);
+  
+  const DataGrid = DSGrid.DataGrid || DS.DataGrid || (() => null);
+  const LOVField = DSGrid.LOVField || DS.LOVField || (() => null);
 
   const { 
     CreditCard, Plus, Edit, Trash2, Save, 
-    AlertTriangle, Lock, Users
+    AlertTriangle, Lock
   } = window.LucideIcons || {};
   
   const supabase = window.supabase;
-
-  const SearchableAccountSelect = ({ accounts, value, onChange, disabled, placeholder, isRtl }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [search, setSearch] = useState('');
-    const wrapperRef = useRef(null);
-    
-    const selectedAcc = accounts.find(a => String(a.id) === String(value));
-    const displaySelected = selectedAcc ? `${selectedAcc.code} - ${isRtl ? selectedAcc.titleFa : selectedAcc.titleEn}` : '';
-
-    useEffect(() => {
-      const handleClickOutside = (event) => { 
-        if (wrapperRef.current && !wrapperRef.current.contains(event.target)) setIsOpen(false); 
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const filtered = accounts.filter(a => {
-        const searchLower = search.toLowerCase();
-        const codeStr = a.code || '';
-        const titleStr = (isRtl ? a.titleFa : a.titleEn) || '';
-        const pathStr = (isRtl ? a.pathFa : a.pathEn) || '';
-        return codeStr.includes(searchLower) || titleStr.includes(searchLower) || pathStr.includes(searchLower);
-    });
-
-    return (
-      <div className="relative w-full flex flex-col gap-1.5" ref={wrapperRef}>
-        <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300">
-          {isRtl ? 'حساب مرتبط (آخرین سطح)' : 'Linked Account'}
-        </label>
-        <div className="relative w-full">
-          <input 
-            type="text" 
-            className={`w-full h-8 px-2.5 bg-white dark:bg-slate-700/40 border border-slate-300 dark:border-slate-500 rounded-lg text-[12px] text-slate-800 dark:text-slate-100 outline-none transition-all focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-400/20 focus:border-indigo-400 disabled:bg-slate-100 dark:disabled:bg-slate-800/50 disabled:text-slate-500 cursor-pointer`}
-            value={isOpen ? search : displaySelected} 
-            onChange={e => { setSearch(e.target.value); setIsOpen(true); }} 
-            onFocus={() => { setIsOpen(true); setSearch(''); }} 
-            disabled={disabled} 
-            placeholder={placeholder} 
-            dir={isRtl ? 'rtl' : 'ltr'}
-          />
-          {isOpen && !disabled && (
-            <div className={`absolute z-[9999] w-[350px] mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
-              {filtered.length > 0 ? filtered.map(acc => (
-                <div key={acc.id} className="px-3 py-2 text-[12px] hover:bg-indigo-50 dark:hover:bg-indigo-500/20 cursor-pointer border-b border-slate-100 dark:border-slate-700 last:border-0" onMouseDown={(e) => { e.preventDefault(); onChange(acc.id); setIsOpen(false); }}>
-                  <div className="font-bold text-slate-800 dark:text-slate-200 text-right dir-ltr">{acc.code} - {isRtl ? acc.titleFa : acc.titleEn}</div>
-                  <div className="text-slate-500 dark:text-slate-400 truncate mt-0.5 text-[10px] text-right" title={isRtl ? acc.pathFa : acc.pathEn}>{isRtl ? acc.pathFa : acc.pathEn}</div>
-                </div>
-              )) : (
-                <div className="p-3 text-center text-slate-500 text-[12px]">{isRtl ? 'موردی یافت نشد' : 'No results'}</div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   const GatewayTypes = ({ isAdmin, language = 'fa' }) => {
     const isRtl = language === 'fa';
@@ -81,8 +39,12 @@
     const [data, setData] = useState([]);
     const [providers, setProviders] = useState([]);
     const [currencies, setCurrencies] = useState([]);
-    const [accounts, setAccounts] = useState([]);
-    
+    const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
+    const showToast = (message, type = 'success') => {
+      setToast({ isVisible: true, message, type });
+      setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3500);
+    };
+
     const [isLoading, setIsLoading] = useState(false);
     
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,7 +58,6 @@
       title: '', 
       providerId: '', 
       currencyId: '',
-      accountId: '',
       minAmount: '', 
       maxAmount: '', 
       validFrom: '',
@@ -112,6 +73,7 @@
       code: '',
       firstName: '',
       lastName: '',
+      latinTitle: '',
       nationalId: '',
       mobile: '',
       email: '',
@@ -130,18 +92,6 @@
     const formatPartyName = (p) => {
        if (!p) return '---';
        return p.party_type === 'legal' ? p.company_name : `${p.first_name || ''} ${p.last_name || ''}`.trim();
-    };
-
-    const viewConfig = {
-      pageId: 'gateway_types_main',
-      currentState: () => ({ gridState }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.gridState) setGridState(state.gridState);
-        } else {
-          setGridState(null);
-        }
-      }
     };
 
     useEffect(() => {
@@ -172,41 +122,6 @@
           setCurrencies(currData.map(c => ({ value: c.id, label: `${c.title} (${c.code})` })));
         }
 
-        const { data: coaData } = await supabase
-          .from('fm_coa_accounts')
-          .select('id, parent_id, title_fa, title_en, code');
-        if (coaData) {
-          const parentIds = new Set(coaData.map(c => c.parent_id).filter(Boolean));
-          const leaves = coaData.filter(c => !parentIds.has(c.id));
-          
-          const buildPath = (node) => {
-            let pathFa = node.title_fa || '';
-            let pathEn = node.title_en || node.title_fa || '';
-            let current = node;
-            while(current.parent_id) {
-              const parent = coaData.find(c => c.id === current.parent_id);
-              if(parent) {
-                pathFa = (parent.title_fa || '') + ' > ' + pathFa;
-                pathEn = (parent.title_en || parent.title_fa || '') + ' > ' + pathEn;
-                current = parent;
-              } else { break; }
-            }
-            return { pathFa, pathEn };
-          };
-
-          const accOptions = leaves.map(leaf => {
-            const paths = buildPath(leaf);
-            return {
-              id: leaf.id,
-              code: leaf.code,
-              titleFa: leaf.title_fa,
-              titleEn: leaf.title_en,
-              pathFa: paths.pathFa,
-              pathEn: paths.pathEn
-            };
-          });
-          setAccounts(accOptions);
-        }
       } catch (err) {
         console.error('Fetch Dropdowns Error:', err);
       }
@@ -220,8 +135,7 @@
           .select(`
             *,
             provider:parties(id, first_name, last_name, company_name, party_type),
-            currency:fm_currencies(id, title, code),
-            account:fm_coa_accounts(id, title_fa, title_en, code)
+            currency:fm_currencies(id, title, code)
           `)
           .order('created_at', { ascending: false });
 
@@ -235,8 +149,6 @@
           providerName: formatPartyName(item.provider),
           currencyId: item.currency_id,
           currencyName: item.currency ? `${item.currency.title} (${item.currency.code})` : '---',
-          accountId: item.account_id,
-          accountName: item.account ? `[${item.account.code}] ${isRtl ? item.account.title_fa : item.account.title_en}` : '---',
           minAmount: item.min_amount,
           maxAmount: item.max_amount,
           validFrom: item.valid_from,
@@ -262,7 +174,6 @@
           title: formData.title,
           provider_id: formData.providerId,
           currency_id: formData.currencyId ? parseInt(formData.currencyId) : null,
-          account_id: formData.accountId || null,
           min_amount: formData.minAmount || 0,
           max_amount: formData.maxAmount || 0,
           valid_from: formData.validFrom || null,
@@ -279,7 +190,11 @@
         if (error) throw error;
         
         if (isNew && window.AutoNumberingService) {
-           await window.AutoNumberingService.consumeNext('GATEWAY_TYPE');
+           try {
+               await window.AutoNumberingService.consumeNext('GATEWAYS');
+           } catch(err) {
+               console.error('AutoNumbering consume error:', err);
+           }
         }
 
         setIsModalOpen(false);
@@ -293,7 +208,7 @@
 
     const handleSaveQuickParty = async () => {
       const isLegal = quickPartyData.partyType === 'legal';
-      if (!quickPartyData.code || (isLegal && !quickPartyData.companyName) || (!isLegal && (!quickPartyData.firstName || !quickPartyData.lastName))) {
+      if (!quickPartyData.code || !quickPartyData.latinTitle || (isLegal && !quickPartyData.companyName) || (!isLegal && (!quickPartyData.firstName || !quickPartyData.lastName))) {
          alert(t('لطفاً فیلدهای ستاره‌دار را تکمیل کنید.', 'Please fill required fields.'));
          return;
       }
@@ -306,6 +221,7 @@
           first_name: isLegal ? null : quickPartyData.firstName,
           last_name: isLegal ? null : quickPartyData.lastName,
           company_name: isLegal ? quickPartyData.companyName : null,
+          latin_title: quickPartyData.latinTitle,
           national_id: quickPartyData.nationalId,
           mobile: quickPartyData.mobile,
           email: quickPartyData.email,
@@ -340,7 +256,7 @@
            
            setFormData(prev => ({ ...prev, providerId: newParty.id }));
            setIsPartyModalOpen(false);
-           setQuickPartyData({ partyType: 'legal', companyName: '', code: '', firstName: '', lastName: '', nationalId: '', mobile: '', email: '', roles: ['vendor'] });
+           setQuickPartyData({ partyType: 'legal', companyName: '', code: '', firstName: '', lastName: '', latinTitle: '', nationalId: '', mobile: '', email: '', roles: ['vendor'] });
         }
       } catch (err) {
         console.error('Save Party Error:', err);
@@ -388,12 +304,20 @@
     const handleOpenModal = async (record = null) => {
       let nextCode = '';
       if (!record && window.AutoNumberingService) {
-        const preview = await window.AutoNumberingService.previewNext('GATEWAY_TYPE');
-        if (preview) nextCode = preview.formattedCode;
+        try {
+            const preview = await window.AutoNumberingService.previewNext('GATEWAYS');
+            if (preview && preview.formattedCode) {
+                nextCode = preview.formattedCode;
+            } else if (typeof preview === 'string') {
+                nextCode = preview;
+            }
+        } catch (err) {
+            console.error('AutoNumbering Error:', err);
+        }
       }
 
       setFormData(record ? { ...record } : { 
-        code: nextCode, title: '', providerId: '', currencyId: '', accountId: '', minAmount: '', maxAmount: '', 
+        code: nextCode, title: '', providerId: '', currencyId: '', minAmount: '', maxAmount: '', 
         validFrom: '', validTo: '', isActive: true 
       });
       setCurrentRecord(record);
@@ -405,7 +329,6 @@
       { field: 'title', header_fa: 'عنوان درگاه', header_en: 'Title', width: '180px' },
       { field: 'providerName', header_fa: 'تامین‌کننده', header_en: 'Provider', width: '150px' },
       { field: 'currencyName', header_fa: 'ارز', header_en: 'Currency', width: '120px' },
-      { field: 'accountName', header_fa: 'حساب مرتبط', header_en: 'Linked Account', width: '220px' },
       { 
         field: 'minAmount', 
         header_fa: 'کف تراکنش', 
@@ -441,10 +364,9 @@
         <PageHeader 
           title={t('مدیریت درگاه‌های پرداخت', 'Payment Gateways Management')} 
           icon={CreditCard}
-          description={t('مدیریت و تعریف درگاه‌های بانکی، ارزها و حساب‌های مرتبط', 'Manage gateways, currencies, and linked accounts')}
+          description={t('مدیریت و تعریف درگاه‌های بانکی و ارزها', 'Manage gateways and currencies')}
           language={language}
           breadcrumbs={[{ label: t('مدیریت مالی', 'Financial') }, { label: t('درگاه‌های پرداخت', 'Gateways') }]}
-          viewConfig={viewConfig}
         />
 
         <div className="flex-1 flex flex-col min-h-0 mt-4 animate-in fade-in duration-300">
@@ -524,12 +446,14 @@
                 />
               </div>
 
-              <SearchableAccountSelect 
-                accounts={accounts}
-                value={formData.accountId} 
-                onChange={val => setFormData({...formData, accountId: val})} 
+              <SelectField 
+                size="sm" 
+                label={t('نوع ارز', 'Currency')} 
+                value={formData.currencyId} 
+                onChange={e => setFormData({...formData, currencyId: e.target.value})} 
+                options={currencies}
                 isRtl={isRtl} 
-                placeholder={t('جستجوی حساب...', 'Search Account...')}
+                required
               />
 
               <CurrencyField 
@@ -564,15 +488,6 @@
                 dir="ltr"
               />
 
-              <SelectField 
-                size="sm" 
-                label={t('نوع ارز', 'Currency')} 
-                value={formData.currencyId} 
-                onChange={e => setFormData({...formData, currencyId: e.target.value})} 
-                options={currencies}
-                isRtl={isRtl} 
-                required
-              />
               <div className="flex items-center mt-6">
                 <ToggleField 
                   size="sm" 
@@ -604,7 +519,7 @@
                   size="sm" 
                   label={t('نوع شخص', 'Party Type')} 
                   value={quickPartyData.partyType} 
-                  onChange={e => setQuickPartyData({...quickPartyData, partyType: e.target.value, companyName: '', firstName: '', lastName: '', roles: ['vendor']})} 
+                  onChange={e => setQuickPartyData({...quickPartyData, partyType: e.target.value, companyName: '', firstName: '', lastName: '', latinTitle: '', roles: ['vendor']})} 
                   isRtl={isRtl}
                   options={[
                     { value: 'real', label: t('حقیقی (فرد)', 'Real Person') },
@@ -627,32 +542,32 @@
                   </div>
               )}
 
+              <TextField size="sm" label={t('عنوان لاتین', 'Latin Title')} value={quickPartyData.latinTitle} onChange={e => setQuickPartyData({...quickPartyData, latinTitle: e.target.value})} isRtl={isRtl} required dir="ltr" />
               <TextField size="sm" label={quickPartyData.partyType === 'real' ? t('کد ملی', 'National ID') : t('شناسه ملی / ثبت', 'Registration ID')} value={quickPartyData.nationalId} onChange={e => setQuickPartyData({...quickPartyData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('موبایل / تلفن', 'Mobile / Phone')} value={quickPartyData.mobile} onChange={e => setQuickPartyData({...quickPartyData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
               <TextField size="sm" label={t('ایمیل', 'Email')} value={quickPartyData.email} onChange={e => setQuickPartyData({...quickPartyData, email: e.target.value})} isRtl={isRtl} dir="ltr" />
-            </div>
-            
-            <div className="mt-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-               <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-3 block">{t('نقش‌های مرتبط', 'Associated Roles')}</label>
-               <div className="flex flex-wrap gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                 {AVAILABLE_ROLES.map(role => (
-                   <CheckboxField 
-                     key={role.value} 
-                     size="sm" 
-                     label={isRtl ? role.label_fa : role.label_en} 
-                     checked={quickPartyData.roles.includes(role.value)} 
-                     disabled={role.value === 'vendor'} 
-                     onChange={(checked) => {
-                       if (role.value === 'vendor') return;
-                       setQuickPartyData(prev => ({
-                         ...prev,
-                         roles: checked ? [...prev.roles, role.value] : prev.roles.filter(r => r !== role.value)
-                       }));
-                     }} 
-                     isRtl={isRtl} 
-                   />
-                 ))}
-               </div>
+              <div className="md:col-span-2 flex flex-col justify-end">
+                <label className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 block">{t('نقش‌های مرتبط', 'Associated Roles')}</label>
+                <div className="flex flex-wrap gap-x-4 gap-y-2 bg-slate-50 dark:bg-slate-800/50 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                  {AVAILABLE_ROLES.map(role => (
+                    <CheckboxField 
+                      key={role.value} 
+                      size="sm" 
+                      label={isRtl ? role.label_fa : role.label_en} 
+                      checked={quickPartyData.roles.includes(role.value)} 
+                      disabled={role.value === 'vendor'} 
+                      onChange={(checked) => {
+                        if (role.value === 'vendor') return;
+                        setQuickPartyData(prev => ({
+                          ...prev,
+                          roles: checked ? [...prev.roles, role.value] : prev.roles.filter(r => r !== role.value)
+                        }));
+                      }} 
+                      isRtl={isRtl} 
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
@@ -663,25 +578,22 @@
         </Modal>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
-               <AlertTriangle size={22} />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
-               <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              {deleteConfirm.type === 'bulk' 
-                ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
-                : t(`آیا از حذف درگاه "${deleteConfirm.data?.title}" اطمینان دارید؟`, `Delete gateway "${deleteConfirm.data?.title}"?`)
-              }
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500">{t('تایید حذف', 'Delete')}</Button>
-            </div>
-          </div>
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={deleteConfirm.type === 'bulk' 
+              ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
+              : t(`آیا از حذف درگاه "${deleteConfirm.data?.title}" اطمینان دارید؟`, `Delete gateway "${deleteConfirm.data?.title}"?`)
+            }
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1">{t('تایید حذف', 'Delete')}</Button>
+              </div>
+            }
+          />
         </Modal>
+        <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} language={language} />
       </div>
     );
   };

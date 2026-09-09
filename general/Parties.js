@@ -1,26 +1,29 @@
-/* Filename: Parties.js */
+/* Filename: general/Parties.js */
 (() => {
   const React = window.React;
   const { useState, useEffect, useMemo } = React;
   
   const { 
-    Button, PageHeader, Modal, AdvancedFilter, DataGrid, 
-    TextField, ToggleField, Badge, CheckboxField
+    Button, PageHeader, Modal, DataGrid, 
+    TextField, ToggleField, Badge, CheckboxField, RadioGroup, EmptyState
   } = window.DesignSystem || {};
+
+  const { Toast } = window.DSFeedback || window.DesignSystem || {};
   
   const { 
     Users, User, Building, Edit, Trash2, Save, 
-    AlertTriangle, Lock, MapPin, Plus 
+    AlertTriangle, Lock, MapPin, Plus, CheckCircle2,
+    Briefcase
   } = window.LucideIcons || {};
   const supabase = window.supabase;
 
   const Parties = ({ isAdmin, language = 'fa' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
+    const FORM_CODE = 'parties_main';
     
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [filters, setFilters] = useState({});
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentRecord, setCurrentRecord] = useState(null);
@@ -39,6 +42,7 @@
       mobile: '',
       phone: '',
       email: '',
+      latinTitle: '',
       addresses: [],
       roles: [],
       isActive: true
@@ -47,21 +51,15 @@
 
     const [gridState, setGridState] = useState(null);
 
-    const viewConfig = {
-      pageId: 'parties_main',
-      currentState: () => ({ 
-        filters,
-        gridState
-      }),
-      onApplyState: (state) => {
-        if (state) {
-          if (state.filters) setFilters(state.filters);
-          if (state.gridState) setGridState(state.gridState);
-        } else {
-          setFilters({});
-          setGridState(null);
-        }
-      }
+    // Toast State Management
+    const [toast, setToast] = useState({ isVisible: false, message: '', type: 'info' });
+
+    const showToast = (msgFa, msgEn, type = 'error') => {
+      const msg = isRtl ? msgFa : msgEn;
+      setToast({ isVisible: true, message: msg, type });
+      setTimeout(() => {
+        setToast(prev => ({ ...prev, isVisible: false }));
+      }, 5000);
     };
 
     useEffect(() => {
@@ -90,6 +88,7 @@
           mobile: item.mobile,
           phone: item.phone,
           email: item.email,
+          latinTitle: item.latin_title || '',
           addresses: item.addresses || [],
           roles: item.roles || [],
           isActive: item.is_active ?? true
@@ -98,13 +97,47 @@
         setData(mappedData);
       } catch (err) {
         console.error('Fetch Error:', err);
+        showToast('خطا در دریافت اطلاعات.', 'Error fetching data.', 'error');
       } finally {
         setIsLoading(false);
       }
     };
 
     const handleSave = async () => {
-      if (!formData.code || (formData.partyType === 'real' && !formData.lastName) || (formData.partyType === 'legal' && !formData.companyName)) {
+      // 1. Validate Required Fields
+      if (!formData.code || !formData.latinTitle || (formData.partyType === 'real' && !formData.lastName) || (formData.partyType === 'legal' && !formData.companyName)) {
+         showToast('لطفا تمام فیلدهای اجباری (کد، عنوان لاتین، نام/عنوان) را وارد کنید.', 'Please fill all required fields including code, latin title and name.', 'warning');
+         return;
+      }
+
+      // 2. Generate Normalized Unique Name
+      const normalizePersian = (str) => str.replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+      const getUniqueName = (type, fName, lName, cName) => {
+        const rawStr = type === 'real' ? `${fName || ''}${lName || ''}` : `${cName || ''}`;
+        return normalizePersian(rawStr).replace(/[^a-zA-Zآابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیئءؤإأ]/g, '').toLowerCase();
+      };
+      const newUniqueName = getUniqueName(formData.partyType, formData.firstName, formData.lastName, formData.companyName);
+
+      // 3. Prevent Duplicates
+      const isCodeDuplicate = data.some(item => item.code === formData.code && item.id !== currentRecord?.id);
+      if (isCodeDuplicate) {
+         showToast('کد وارد شده در سیستم تکراری است.', 'The entered code already exists.', 'error');
+         return;
+      }
+
+      const isLatinTitleDuplicate = data.some(item => item.latinTitle?.toLowerCase() === formData.latinTitle?.toLowerCase() && item.id !== currentRecord?.id);
+      if (isLatinTitleDuplicate) {
+         showToast('عنوان لاتین وارد شده در سیستم تکراری است.', 'The entered Latin title already exists.', 'error');
+         return;
+      }
+
+      const isNameDuplicate = data.some(item => {
+         if (item.id === currentRecord?.id) return false;
+         const itemUniqueName = getUniqueName(item.partyType, item.firstName, item.lastName, item.companyName);
+         return itemUniqueName === newUniqueName;
+      });
+      if (isNameDuplicate) {
+         showToast('شخص یا شرکتی با این نام پیش از این در سیستم ثبت شده است (نام یکتا تکراری).', 'A party with this exact name already exists.', 'error');
          return;
       }
 
@@ -121,6 +154,7 @@
           mobile: formData.mobile,
           phone: formData.phone,
           email: formData.email,
+          latin_title: formData.latinTitle,
           addresses: formData.addresses || [],
           roles: formData.roles || [],
           is_active: formData.isActive,
@@ -132,10 +166,14 @@
           : await supabase.from('parties').insert([payload]);
 
         if (error) throw error;
+        
+        showToast('اطلاعات با موفقیت ذخیره شد.', 'Data saved successfully.', 'success');
+        
         setIsModalOpen(false);
         fetchData();
       } catch (err) {
         console.error('Save Error:', err);
+        showToast('خطا در ذخیره اطلاعات.', 'Error saving data.', 'error');
       } finally {
         setIsLoading(false);
       }
@@ -150,8 +188,10 @@
         
         if (error) throw error;
         setData(prev => prev.map(item => item.id === row.id ? { ...item, isActive: newValue } : item));
+        showToast('وضعیت با موفقیت تغییر کرد.', 'Status changed successfully.', 'success');
       } catch (err) {
         console.error("Toggle Error:", err);
+        showToast('خطا در تغییر وضعیت.', 'Error changing status.', 'error');
       }
     };
 
@@ -166,11 +206,13 @@
           if (error) throw error;
         }
         
+        showToast('حذف با موفقیت انجام شد.', 'Deleted successfully.', 'success');
         setSelectedIds([]);
         setDeleteConfirm({ isOpen: false, type: null, data: null });
         fetchData();
       } catch (err) {
         console.error("Delete error:", err);
+        showToast('خطا در حذف اطلاعات. ممکن است این رکورد در جای دیگری استفاده شده باشد.', 'Error deleting data. It might be in use.', 'error');
       } finally {
         setIsLoading(false);
       }
@@ -188,6 +230,7 @@
         mobile: '',
         phone: '',
         email: '',
+        latinTitle: '',
         addresses: [],
         roles: [],
         isActive: true 
@@ -214,15 +257,23 @@
     };
 
     const handleDownloadSample = () => {
+      const rolesCol = isRtl
+        ? 'نقش‌ها (با | جدا شود: customer|vendor|employee|shareholder|system_user|exchange|broker)'
+        : 'Roles (separate with |: customer|vendor|employee|shareholder|system_user|exchange|broker)';
+
       const headers = isRtl
-        ? 'کد شخص,نوع شخص (real/legal),نام,نام خانوادگی,نام شرکت,کد/شناسه ملی,کد اقتصادی,موبایل,تلفن ثابت,ایمیل'
-        : 'Code,Party Type (real/legal),First Name,Last Name,Company Name,National ID,Economic Code,Mobile,Phone,Email';
-        
-      const sampleRow = isRtl
-        ? '1001,real,علی,احمدی,,1234567890,,09120000000,0210000000,test@test.com'
-        : '1001,real,Ali,Ahmadi,,1234567890,,09120000000,0210000000,test@test.com';
-        
-      const csv = '\uFEFF' + headers + '\n' + sampleRow;
+        ? `کد شخص,نوع شخص (real/legal),نام,نام خانوادگی,نام شرکت,کد/شناسه ملی,کد اقتصادی,موبایل,تلفن ثابت,ایمیل,عنوان لاتین,${rolesCol}`
+        : `Code,Party Type (real/legal),First Name,Last Name,Company Name,National ID,Economic Code,Mobile,Phone,Email,Latin Title,${rolesCol}`;
+
+      const sampleRow1 = isRtl
+        ? '1001,real,علی,احمدی,,1234567890,,09120000000,0210000000,ali@test.com,AliAhmadi,customer|vendor'
+        : '1001,real,Ali,Ahmadi,,1234567890,,09120000000,0210000000,ali@test.com,AliAhmadi,customer|vendor';
+
+      const sampleRow2 = isRtl
+        ? '1002,legal,,,شرکت نمونه,10987654321,12345678901,09130000000,0211111111,co@test.com,NamonehCo,vendor|shareholder'
+        : '1002,legal,,,Sample Company,10987654321,12345678901,09130000000,0211111111,co@test.com,SampleCo,vendor|shareholder';
+
+      const csv = '\uFEFF' + headers + '\n' + sampleRow1 + '\n' + sampleRow2;
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -234,7 +285,141 @@
 
     const handleImportFile = (file) => {
       if (!file) return;
-      console.log('Import file selected:', file.name);
+
+      const validRoles = ['customer', 'vendor', 'employee', 'shareholder', 'system_user', 'exchange', 'broker'];
+
+      const processRows = async (rows) => {
+        try {
+          setIsLoading(true);
+          if (rows.length < 2) {
+            showToast('فایل خالی است یا فاقد داده می‌باشد.', 'File is empty or has no data.', 'warning');
+            return;
+          }
+
+          const dataRows = rows.slice(1);
+          const records = [];
+          const errors = [];
+
+          dataRows.forEach((cols, idx) => {
+            const normalize = (v) => (v !== undefined && v !== null) ? String(v).trim() : '';
+            const [code, partyType, firstName, lastName, companyName, nationalId, economicCode, mobile, phone, email, latinTitle, rolesRaw] = cols.map(normalize);
+
+            if (!code || !partyType || !latinTitle) {
+              errors.push(isRtl
+                ? `ردیف ${idx + 2}: کد، نوع شخص و عنوان لاتین اجباری هستند.`
+                : `Row ${idx + 2}: Code, party type, and latin title are required.`);
+              return;
+            }
+
+            if (partyType !== 'real' && partyType !== 'legal') {
+              errors.push(isRtl
+                ? `ردیف ${idx + 2}: نوع شخص باید real یا legal باشد.`
+                : `Row ${idx + 2}: Party type must be 'real' or 'legal'.`);
+              return;
+            }
+
+            const type = partyType;
+            const rolesParsed = rolesRaw
+              ? rolesRaw.split('|').map(r => r.trim().toLowerCase()).filter(r => validRoles.includes(r))
+              : [];
+            const finalRoles = type === 'legal'
+              ? rolesParsed.filter(r => r !== 'employee' && r !== 'system_user')
+              : rolesParsed;
+
+            records.push({
+              code,
+              party_type: type,
+              first_name: type === 'real' ? (firstName || null) : null,
+              last_name: type === 'real' ? (lastName || null) : null,
+              company_name: type === 'legal' ? (companyName || null) : null,
+              national_id: nationalId || null,
+              economic_code: type === 'legal' ? (economicCode || null) : null,
+              mobile: mobile || null,
+              phone: phone || null,
+              email: email || null,
+              latin_title: latinTitle,
+              addresses: [],
+              roles: finalRoles,
+              is_active: true,
+              updated_at: new Date().toISOString()
+            });
+          });
+
+          if (errors.length > 0) {
+            showToast(errors[0], errors[0], 'warning');
+            return;
+          }
+
+          if (records.length === 0) {
+            showToast('هیچ رکورد معتبری برای وارد کردن یافت نشد.', 'No valid records found to import.', 'warning');
+            return;
+          }
+
+          const { error } = await supabase.from('parties').insert(records);
+          if (error) throw error;
+
+          showToast(
+            `${records.length} رکورد با موفقیت وارد شد.`,
+            `${records.length} records imported successfully.`,
+            'success'
+          );
+          fetchData();
+        } catch (err) {
+          console.error('Import Error:', err);
+          showToast('خطا در وارد کردن اطلاعات. لطفا فرمت فایل را بررسی کنید.', 'Error importing data. Please check file format.', 'error');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'xlsx' || ext === 'xls') {
+        const loadXLSX = () => new Promise((resolve, reject) => {
+          if (window.XLSX) { resolve(window.XLSX); return; }
+          const script = document.createElement('script');
+          script.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+          script.onload = () => resolve(window.XLSX);
+          script.onerror = () => reject(new Error('Failed to load XLSX library'));
+          document.head.appendChild(script);
+        });
+
+        loadXLSX().then(XLSX => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+            processRows(rows);
+          };
+          reader.readAsArrayBuffer(file);
+        }).catch(() => {
+          showToast('خطا در بارگذاری کتابخانه پردازش Excel.', 'Error loading Excel library.', 'error');
+        });
+      } else {
+        const parseCSVLine = (line) => {
+          const result = [];
+          let current = '';
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            if (line[i] === '"') { inQuotes = !inQuotes; }
+            else if (line[i] === ',' && !inQuotes) { result.push(current.trim()); current = ''; }
+            else { current += line[i]; }
+          }
+          result.push(current.trim());
+          return result;
+        };
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          let text = e.target.result;
+          if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+          const lines = text.split('\n').map(l => l.replace(/\r$/, '')).filter(l => l.trim());
+          processRows(lines.map(parseCSVLine));
+        };
+        reader.readAsText(file, 'UTF-8');
+      }
     };
 
     const columns = [
@@ -244,8 +429,9 @@
         header_fa: 'نام طرف حساب', 
         header_en: 'Name', 
         width: '250px',
-        render: (val, row) => row.partyType === 'legal' ? row.companyName : `${row.firstName || ''} ${row.lastName || ''}`.trim()
+        render: (val, row) => row.partyType === 'legal' ? <span className="font-bold text-slate-800 dark:text-slate-100">{row.companyName}</span> : <span className="font-bold text-slate-800 dark:text-slate-100">{`${row.firstName || ''} ${row.lastName || ''}`.trim()}</span>
       },
+      { field: 'latinTitle', header_fa: 'عنوان لاتین', header_en: 'Latin Title', width: '150px' },
       { 
         field: 'partyType', 
         header_fa: 'نوع', 
@@ -258,7 +444,7 @@
         )
       },
       { field: 'nationalId', header_fa: 'کد/شناسه ملی', header_en: 'National ID', width: '120px' },
-      { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '120px' },
+      { field: 'mobile', header_fa: 'موبایل', header_en: 'Mobile', width: '120px', render: (val) => <span className="text-slate-500 dir-ltr inline-block text-[12px]">{val || '-'}</span> },
       { 
         field: 'roles', 
         header_fa: 'نقش‌ها', 
@@ -273,10 +459,12 @@
                   employee: t('کارمند', 'Employee'),
                   shareholder: t('سهامدار', 'Shareholder'),
                   system_user: t('کاربر سیستم', 'System User'),
-                  exchange: t('صرافی', 'Exchange')
+                  exchange: t('صرافی', 'Exchange'),
+                  broker: t('بروکر', 'Broker')
                 };
                 return <Badge key={r} variant="slate" size="sm" className="text-[10px] px-1.5 py-0.5">{roleLabels[r] || r}</Badge>
              })}
+             {(!roles || roles.length === 0) && <span className="text-[10px] text-slate-400">-</span>}
           </div>
         )
       },
@@ -290,30 +478,6 @@
       }
     ];
 
-    const filteredData = useMemo(() => {
-      let result = [...data];
-      if (filters.role) {
-         result = result.filter(c => c.roles && c.roles.includes(filters.role));
-      }
-      return result;
-    }, [data, filters]);
-
-    const filterFields = [
-      { 
-        name: 'role', 
-        label: t('نقش', 'Role'), 
-        type: 'select', 
-        options: [
-          {value: 'customer', label: t('مشتری', 'Customer')},
-          {value: 'vendor', label: t('تامین‌کننده', 'Vendor')},
-          {value: 'employee', label: t('کارمند', 'Employee')},
-          {value: 'shareholder', label: t('سهامدار', 'Shareholder')},
-          {value: 'system_user', label: t('کاربر سیستم', 'System User')},
-          {value: 'exchange', label: t('صرافی', 'Exchange')}
-        ]
-      }
-    ];
-
     return (
       <div className="flex flex-col h-full p-4 bg-[#f8fafc] dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <PageHeader 
@@ -322,21 +486,12 @@
           description={t('مدیریت اطلاعات پایه اشخاص حقیقی و حقوقی', 'Manage data of real and legal entities')}
           language={language}
           breadcrumbs={[{ label: t('تنظیمات پایه', 'Base Setup') }, { label: t('اشخاص', 'Parties') }]}
-          viewConfig={viewConfig}
         />
 
-        <div className="flex-1 flex flex-col min-h-0 mt-2 animate-in fade-in duration-300">
-          <AdvancedFilter 
-            fields={filterFields}
-            initialValues={filters}
-            onFilter={setFilters}
-            onClear={() => setFilters({})}
-            language={language}
-          />
-
-          <div className="flex-1 min-h-0 mt-1">
+        <div className="flex-1 flex flex-col min-h-0 mt-3 animate-in fade-in duration-300">
+          <div className="flex-1 min-h-0 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col">
             <DataGrid 
-              data={filteredData}
+              data={data}
               columns={columns} 
               language={language}
               selectable={true}
@@ -351,10 +506,10 @@
               onImport={handleImportFile}
               actions={[
                 { icon: Edit, tooltip: t('ویرایش', 'Edit'), onClick: (row) => handleOpenModal(row), className: 'text-slate-400 hover:text-indigo-600' },
-                { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-red-600' }
+                { icon: Trash2, tooltip: t('حذف', 'Delete'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'single', data: row }), className: 'text-slate-400 hover:text-rose-600' }
               ]}
               bulkActions={[
-                { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }) }
+                { label: t('حذف گروهی', 'Delete Selected'), icon: Trash2, variant: 'danger-outline', className: '!text-rose-600 !border-rose-200 hover:!bg-rose-50 dark:!border-rose-800/50 dark:hover:!bg-rose-900/30', onClick: (ids) => setDeleteConfirm({ isOpen: true, type: 'bulk', data: ids }) }
               ]}
             />
           </div>
@@ -363,115 +518,132 @@
         <Modal 
           isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} 
           title={currentRecord ? t('ویرایش مشخصات', 'Edit Party') : t('تعریف شخص/شرکت جدید', 'New Party')}
-          width="max-w-3xl"
+          width="max-w-5xl"
           language={language}
         >
-          <div className="p-4 flex flex-col gap-4">
-            <div className="flex items-center justify-center gap-6 p-2 bg-indigo-50/50 dark:bg-indigo-900/20 rounded-lg border border-indigo-100 dark:border-indigo-800/50 mb-1">
-               <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="radio" name="partyType" value="real" checked={formData.partyType === 'real'} onChange={() => setFormData({...formData, partyType: 'real'})} className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
-                 <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><User size={14}/> {t('شخص حقیقی', 'Real Person')}</span>
-               </label>
-               <label className="flex items-center gap-2 cursor-pointer">
-                 <input type="radio" name="partyType" value="legal" checked={formData.partyType === 'legal'} 
-                        onChange={() => setFormData({...formData, partyType: 'legal', roles: formData.roles.filter(r => r !== 'system_user' && r !== 'employee')})} 
-                        className="text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" />
-                 <span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1"><Building size={14}/> {t('شخص حقوقی', 'Legal Entity')}</span>
-               </label>
+          <div className="flex flex-col gap-3 p-3 bg-slate-50 dark:bg-slate-900/50">
+            
+            {/* Bento Panel 1: Configuration / Type */}
+            <div className="flex items-center justify-between p-2.5 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+               <div className="flex items-center gap-4">
+                 <span className="text-[12px] font-black text-slate-500 dark:text-slate-400 px-2">{t('نوع موجودیت:', 'Entity Type:')}</span>
+                 <RadioGroup 
+                    options={[
+                      { label: t('شخص حقیقی', 'Real Person'), value: 'real' },
+                      { label: t('شخص حقوقی', 'Legal Entity'), value: 'legal' }
+                    ]}
+                    value={formData.partyType}
+                    onChange={(val) => setFormData({...formData, partyType: val, roles: val === 'legal' ? formData.roles.filter(r => r !== 'system_user' && r !== 'employee') : formData.roles})}
+                    isRtl={isRtl}
+                    inline={true}
+                    formCode={FORM_CODE}
+                 />
+               </div>
+               <div className="flex items-center pr-4 border-r border-slate-100 dark:border-slate-700">
+                 <ToggleField size="sm" label={t('وضعیت فعال', 'Active Status')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} wrapperClassName="!m-0" formCode={FORM_CODE} />
+               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <TextField size="sm" label={t('کد شخص/شرکت', 'Code')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} required dir="ltr" wrapperClassName="md:col-span-1" />
-              
-              {formData.partyType === 'real' ? (
-                <>
-                  <TextField size="sm" label={t('نام', 'First Name')} value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} isRtl={isRtl} wrapperClassName="md:col-span-1" />
-                  <TextField size="sm" label={t('نام خانوادگی', 'Last Name')} value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} isRtl={isRtl} required wrapperClassName="md:col-span-1" />
-                </>
-              ) : (
-                <TextField size="sm" label={t('نام کامل شرکت', 'Company Name')} value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} isRtl={isRtl} required wrapperClassName="md:col-span-2" />
-              )}
+            {/* Bento Panel 2: Combined Identity & Contact Info (2 Rows, 4 Columns) */}
+            <div className="flex flex-col gap-2.5 p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Briefcase size={12}/> {t('اطلاعات هویتی و تماس', 'Identity & Contact Info')}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                {/* Row 1: Identity */}
+                <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('کد', 'Code')} value={formData.code} onChange={e => setFormData({...formData, code: e.target.value})} isRtl={isRtl} required dir="ltr" formCode={FORM_CODE} />
+                <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={formData.partyType === 'real' ? t('کد ملی', 'National ID') : t('شناسه ملی', 'National ID')} value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
+                
+                {formData.partyType === 'real' ? (
+                  <>
+                    <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('نام', 'First Name')} value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} isRtl={isRtl} formCode={FORM_CODE} />
+                    <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('نام خانوادگی', 'Last Name')} value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} isRtl={isRtl} required formCode={FORM_CODE} />
+                  </>
+                ) : (
+                  <>
+                    <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('کد اقتصادی', 'Economic Code')} value={formData.economicCode} onChange={e => setFormData({...formData, economicCode: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
+                    <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('نام کامل شرکت', 'Company Name')} value={formData.companyName} onChange={e => setFormData({...formData, companyName: e.target.value})} isRtl={isRtl} required formCode={FORM_CODE} />
+                  </>
+                )}
 
-              <TextField size="sm" label={formData.partyType === 'real' ? t('کد ملی', 'National ID') : t('شناسه ملی', 'National ID')} value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} isRtl={isRtl} dir="ltr" />
-              
-              {formData.partyType === 'legal' && (
-                <TextField size="sm" label={t('کد اقتصادی', 'Economic Code')} value={formData.economicCode} onChange={e => setFormData({...formData, economicCode: e.target.value})} isRtl={isRtl} dir="ltr" />
-              )}
-              
-              <TextField size="sm" label={t('موبایل', 'Mobile')} value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" />
-              <TextField size="sm" label={t('تلفن ثابت', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" />
-              <TextField size="sm" label={t('ایمیل', 'Email')} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} isRtl={isRtl} dir="ltr" wrapperClassName={formData.partyType === 'legal' ? "md:col-span-1" : "md:col-span-1"} />
-              
-              <div className="flex items-center mt-6">
-                 <ToggleField size="sm" label={t('وضعیت فعال', 'Active Status')} checked={formData.isActive} onChange={v => setFormData({...formData, isActive: v})} isRtl={isRtl} />
+                {/* Row 2: Contact */}
+                <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('شماره موبایل', 'Mobile')} value={formData.mobile} onChange={e => setFormData({...formData, mobile: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
+                <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('تلفن ثابت', 'Phone')} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
+                <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('پست الکترونیک', 'Email')} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} isRtl={isRtl} dir="ltr" formCode={FORM_CODE} />
+                <TextField size="sm" wrapperClassName="sm:col-span-3 !m-0" label={t('عنوان لاتین', 'Latin Title')} value={formData.latinTitle} onChange={e => setFormData({...formData, latinTitle: e.target.value})} isRtl={isRtl} dir="ltr" required formCode={FORM_CODE} />
               </div>
             </div>
 
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
-               <label className="text-[12px] font-bold text-slate-600 dark:text-slate-300 mb-2 flex items-center gap-1.5"><MapPin size={14} className="text-indigo-500"/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}</label>
-               <div className="flex gap-2 mb-3">
-                 <div className="flex-1">
-                   <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'New address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="m-0" />
+            {/* Layout Split: Roles (Left) & Addresses (Right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              
+              {/* Roles Panel (Horizontal Flow) */}
+              <div className="flex flex-col p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                  <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-700/50">
+                    <Users size={12}/> {t('نقش‌های سیستمی', 'System Roles')}
+                  </div>
+                  <div className="flex flex-wrap gap-x-6 gap-y-3 pt-3">
+                      <CheckboxField size="sm" wrapperClassName="!m-0" label={t('مشتری', 'Customer')} checked={formData.roles.includes('customer')} onChange={() => toggleRole('customer')} isRtl={isRtl} formCode={FORM_CODE} />
+                      <CheckboxField size="sm" wrapperClassName="!m-0" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} formCode={FORM_CODE} />
+                      <CheckboxField size="sm" wrapperClassName="!m-0" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} formCode={FORM_CODE} />
+                      <CheckboxField size="sm" wrapperClassName="!m-0" label={t('صرافی', 'Exchange')} checked={formData.roles.includes('exchange')} onChange={() => toggleRole('exchange')} isRtl={isRtl} formCode={FORM_CODE} />
+                      <CheckboxField size="sm" wrapperClassName="!m-0" label={t('بروکر', 'Broker')} checked={formData.roles.includes('broker')} onChange={() => toggleRole('broker')} isRtl={isRtl} formCode={FORM_CODE} />
+                      
+                      {formData.partyType === 'real' && (
+                        <div className="w-full flex flex-wrap gap-x-6 gap-y-3">
+                          <CheckboxField size="sm" wrapperClassName="!m-0" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} formCode={FORM_CODE} />
+                          <CheckboxField size="sm" wrapperClassName="!m-0" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} formCode={FORM_CODE} />
+                        </div>
+                      )}
+                  </div>
+              </div>
+
+              {/* Addresses Panel (Compact List) */}
+              <div className="flex flex-col p-3 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                 <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-700/50">
+                   <MapPin size={12}/> {t('مدیریت آدرس‌ها', 'Manage Addresses')}
                  </div>
-                 <Button variant="secondary" size="sm" icon={Plus} onClick={() => {
-                   if(!newAddress.trim()) return;
-                   setFormData({...formData, addresses: [...formData.addresses, { id: Date.now(), text: newAddress.trim(), isDefault: formData.addresses.length === 0 }]});
-                   setNewAddress('');
-                 }}>{t('افزودن', 'Add')}</Button>
-               </div>
-               
-               <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-1">
-                 {formData.addresses.map(a => (
-                   <div key={a.id} className={`flex justify-between items-center p-2 rounded-md border text-[12px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'}`}>
-                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                       <span className="text-slate-700 dark:text-slate-300 leading-relaxed truncate">{a.text}</span>
-                     </div>
-                     <div className="flex items-center gap-2 shrink-0">
-                       {a.isDefault ? (
-                         <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 px-1">{t('پیش‌فرض', 'Default')}</span>
-                       ) : (
-                         <button 
-                           onClick={() => handleSetDefaultAddress(a.id)} 
-                           className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors px-1"
-                         >
-                           {t('پیش‌فرض', 'Default')}
-                         </button>
-                       )}
-                       <button 
-                         onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} 
-                         className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                         title={t('حذف', 'Delete')}
-                       >
-                         <Trash2 size={12}/>
-                       </button>
-                     </div>
+                 
+                 <div className="flex gap-2 pt-2">
+                   <div className="flex-1">
+                     <TextField size="sm" placeholder={t('آدرس جدید را وارد کنید...', 'Enter new address...')} value={newAddress} onChange={e => setNewAddress(e.target.value)} isRtl={isRtl} wrapperClassName="!m-0" formCode={FORM_CODE} />
                    </div>
-                 ))}
-                 {formData.addresses.length === 0 && (
-                   <div className="text-center py-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-md">
-                      <span className="text-[10px] text-slate-400">{t('هیچ آدرسی ثبت نشده است.', 'No addresses found.')}</span>
-                   </div>
-                 )}
-               </div>
+                   <Button variant="secondary" size="sm" icon={Plus} onClick={() => {
+                     if(!newAddress.trim()) return;
+                     setFormData({...formData, addresses: [...formData.addresses, { id: Date.now(), text: newAddress.trim(), isDefault: formData.addresses.length === 0 }]});
+                     setNewAddress('');
+                   }} className="h-[30px]">{t('افزودن', 'Add')}</Button>
+                 </div>
+                 
+                 <div className="mt-2 space-y-1.5 max-h-[110px] overflow-y-auto custom-scrollbar pr-1 bg-slate-50 dark:bg-slate-900/30 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700/50">
+                   {formData.addresses.map(a => (
+                     <div key={a.id} className={`flex justify-between items-center px-2.5 py-1.5 rounded-md border text-[12px] group shadow-sm transition-all ${a.isDefault ? 'bg-indigo-50/80 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800/50' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600'}`}>
+                       <div className="flex items-center gap-2 flex-1 min-w-0">
+                         {a.isDefault && <CheckCircle2 size={12} className="text-indigo-600 dark:text-indigo-400 shrink-0" />}
+                         <span className="text-slate-700 dark:text-slate-300 truncate">{a.text}</span>
+                       </div>
+                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity pl-2 shrink-0">
+                         {!a.isDefault && (
+                           <Button variant="ghost" size="sm" className="!h-6 !text-[10px] !px-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" onClick={() => handleSetDefaultAddress(a.id)}>
+                             {t('انتخاب پیش‌فرض', 'Set Default')}
+                           </Button>
+                         )}
+                         <Button variant="ghost" size="sm" className="!h-6 !w-6 !p-0 text-slate-300 hover:text-rose-500" icon={Trash2} onClick={() => setFormData({...formData, addresses: formData.addresses.filter(x => x.id !== a.id)})} title={t('حذف', 'Delete')} />
+                       </div>
+                     </div>
+                   ))}
+                   {formData.addresses.length === 0 && (
+                     <div className="text-center py-4">
+                        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">{t('هیچ آدرسی ثبت نشده است.', 'No addresses found.')}</span>
+                     </div>
+                   )}
+                 </div>
+              </div>
+
             </div>
 
-            <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 mt-1">
-                <label className="text-[12px] font-bold text-slate-600 dark:text-slate-300 mb-3 block">{t('نقش‌های این شخص در سیستم', 'System Roles')}</label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    <CheckboxField size="sm" label={t('مشتری', 'Customer')} checked={formData.roles.includes('customer')} onChange={() => toggleRole('customer')} isRtl={isRtl} />
-                    <CheckboxField size="sm" label={t('تامین‌کننده', 'Vendor')} checked={formData.roles.includes('vendor')} onChange={() => toggleRole('vendor')} isRtl={isRtl} />
-                    <CheckboxField size="sm" label={t('سهامدار', 'Shareholder')} checked={formData.roles.includes('shareholder')} onChange={() => toggleRole('shareholder')} isRtl={isRtl} />
-                    <CheckboxField size="sm" label={t('صرافی', 'Exchange')} checked={formData.roles.includes('exchange')} onChange={() => toggleRole('exchange')} isRtl={isRtl} />
-                    {formData.partyType === 'real' && (
-                      <>
-                        <CheckboxField size="sm" label={t('کارمند', 'Employee')} checked={formData.roles.includes('employee')} onChange={() => toggleRole('employee')} isRtl={isRtl} />
-                        <CheckboxField size="sm" label={t('کاربر سیستم', 'System User')} checked={formData.roles.includes('system_user')} onChange={() => toggleRole('system_user')} isRtl={isRtl} />
-                      </>
-                    )}
-                </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-1 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-700 mt-1">
               <Button variant="outline" size="sm" onClick={() => setIsModalOpen(false)}>{t('انصراف', 'Cancel')}</Button>
               <Button variant="primary" size="sm" icon={Save} onClick={handleSave} isLoading={isLoading}>{t('ذخیره اطلاعات', 'Save Changes')}</Button>
             </div>
@@ -479,25 +651,31 @@
         </Modal>
 
         <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید عملیات حذف', 'Confirm Deletion')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1">
-               <AlertTriangle size={22} />
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1">
-               <Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
-            </div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
-              {deleteConfirm.type === 'bulk' 
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={deleteConfirm.type === 'bulk' 
                 ? t(`آیا از حذف ${deleteConfirm.data?.length} مورد انتخاب شده اطمینان دارید؟`, `Delete ${deleteConfirm.data?.length} selected items?`)
                 : t(`آیا از حذف شخص/شرکت "${deleteConfirm.data?.partyType === 'legal' ? deleteConfirm.data?.companyName : (deleteConfirm.data?.firstName + ' ' + deleteConfirm.data?.lastName).trim()}" اطمینان دارید؟`, `Delete this party?`)
-              }
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button variant="primary" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 dark:hover:bg-red-600 border-red-600 dark:border-red-500">{t('تایید حذف', 'Delete')}</Button>
-            </div>
-          </div>
+            }
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} isLoading={isLoading} className="flex-1">{t('تایید حذف', 'Delete')}</Button>
+              </div>
+            }
+          />
         </Modal>
+
+        {/* Global Toast Renderer */}
+        {Toast && (
+          <Toast 
+            isVisible={toast.isVisible} 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast({ ...toast, isVisible: false })} 
+          />
+        )}
       </div>
     );
   };

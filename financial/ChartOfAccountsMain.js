@@ -6,25 +6,25 @@
   const FallbackIcon = ({ size = 16 }) => React.createElement('span', { style: { display: 'inline-block', width: size, height: size } });
   const LucideIcons = window.LucideIcons || {};
   const {
-    Network = FallbackIcon, Plus = FallbackIcon, Trash2 = FallbackIcon, Save = FallbackIcon,
+    Network = FallbackIcon, Save = FallbackIcon,
     ArrowLeft = FallbackIcon, ArrowRight = FallbackIcon, AlertTriangle = FallbackIcon,
-    Lock = FallbackIcon, Shield = FallbackIcon, Info = FallbackIcon, RefreshCw = FallbackIcon
+    Lock = FallbackIcon, Info = FallbackIcon, RefreshCw = FallbackIcon
   } = LucideIcons;
 
   const ChartOfAccountsMain = ({ chart, onBack, language = 'fa', formCode = 'CHART_OF_ACCOUNTS' }) => {
     const FallbackComponent = () => null;
 
     const Core = window.DSCore || window.DesignSystem || {};
-    const { Button = FallbackComponent, Card = FallbackComponent, Badge = FallbackComponent } = Core;
+    const { Button = FallbackComponent, Card = FallbackComponent, Tabs = FallbackComponent, EmptyState = FallbackComponent } = Core;
 
     const Forms = window.DSForms || window.DesignSystem || {};
     const { TextField = FallbackComponent, SelectField = FallbackComponent, ToggleField = FallbackComponent } = Forms;
 
-    const Grid = window.DSGrid || window.DesignSystem || {};
-    const { DataGrid = FallbackComponent } = Grid;
-
     const Feedback = window.DSFeedback || window.DesignSystem || {};
-    const { Modal = FallbackComponent, Toast = FallbackComponent, Alert = FallbackComponent } = Feedback;
+    const { Modal = FallbackComponent, Toast = FallbackComponent } = Feedback;
+
+    const Grid = window.DSGrid || window.DesignSystem || {};
+    const { AdvancedFilter = FallbackComponent, LOVField = FallbackComponent } = Grid;
 
     const TreeSystem = window.DSTree || window.DesignSystem || {};
     const { Tree = FallbackComponent } = TreeSystem;
@@ -44,21 +44,28 @@
     const [activeTab, setActiveTab] = useState('details');
     const [toast, setToast] = useState({ isVisible: false, message: '', type: 'success' });
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, data: null });
+    const [importErrors, setImportErrors] = useState({ isOpen: false, errors: [], insertedCount: 0, updatedCount: 0 });
 
     const [rawAccounts, setRawAccounts] = useState([]);
     const [selectedNodeId, setSelectedNodeId] = useState(null);
     const [isCreatingNode, setIsCreatingNode] = useState(false);
     const [nodeFormData, setNodeFormData] = useState({});
     const [nodeDepth, setNodeDepth] = useState(1);
+    const [currencyRates, setCurrencyRates] = useState([]);
+    const [nodeBalanceSnapshot, setNodeBalanceSnapshot] = useState({ balance: 0, usd: 0, balanceDate: '' });
 
-    const [currencies, setCurrencies] = useState([]);
-    const [systemUsers, setSystemUsers] = useState([]);
-    const [systemRoles, setSystemRoles] = useState([]);
-    const [userRolesMapping, setUserRolesMapping] = useState([]);
-    const [systemParties, setSystemParties] = useState([]);
+    const [lookups, setLookups] = useState({
+      currencies: [],
+      systemUsers: [],
+      systemUserGroups: [],
+      userGroupsMapping: [],
+      systemParties: [],
+      balanceGroupsMaster: []
+    });
 
-    const [accountPermissions, setAccountPermissions] = useState([]);
-    const [permFormData, setPermFormData] = useState({ granteeType: 'user', granteeId: '', accessLevel: 'view' });
+    const [advancedFilter, setAdvancedFilter] = useState({});
+    const [allPermissions, setAllPermissions] = useState([]);
+    const [allAccountBalanceGroups, setAllAccountBalanceGroups] = useState([]);
 
     const showToast = useCallback((message, type = 'success') => {
       setToast({ isVisible: true, message, type });
@@ -85,24 +92,118 @@
       }
     };
 
+    const buildRateLookup = (rateRows = []) => {
+      const lookup = new Map();
+      (rateRows || []).forEach(rate => {
+        const base = String(rate.base_currency || '').toUpperCase();
+        const target = String(rate.target_currency || '').toUpperCase();
+        if (!base || !target) return;
+        const key = `${base}|${target}`;
+        if (!lookup.has(key)) lookup.set(key, []);
+        lookup.get(key).push({
+          rate: parseFloat(rate.rate || 0),
+          rate_date: String(rate.rate_date || ''),
+          created_at: String(rate.created_at || '')
+        });
+      });
+
+      lookup.forEach(list => {
+        list.sort((a, b) => {
+          const dateCmp = String(b.rate_date || '').localeCompare(String(a.rate_date || ''));
+          if (dateCmp !== 0) return dateCmp;
+          return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+        });
+      });
+
+      return lookup;
+    };
+
+    const getLatestRateForDate = (lookup, fromCode, toCode, dateIso) => {
+      const key = `${String(fromCode || '').toUpperCase()}|${String(toCode || '').toUpperCase()}`;
+      const list = lookup.get(key) || [];
+      for (const entry of list) {
+        if (!entry.rate_date || entry.rate_date <= dateIso) {
+          return entry.rate > 0 ? entry.rate : null;
+        }
+      }
+      return null;
+    };
+
+    const resolveConversionRate = (lookup, fromCode, toCode, dateIso, cache = new Map()) => {
+      const from = String(fromCode || '').toUpperCase();
+      const to = String(toCode || '').toUpperCase();
+      const day = String(dateIso || '9999-12-31');
+      const cacheKey = `${day}|${from}|${to}`;
+      if (cache.has(cacheKey)) return cache.get(cacheKey);
+
+      let rate = 1;
+      if (!from || !to || from === to) {
+        cache.set(cacheKey, rate);
+        return rate;
+      }
+
+      const direct = getLatestRateForDate(lookup, from, to, day);
+      if (direct) {
+        rate = direct;
+      } else {
+        const inverse = getLatestRateForDate(lookup, to, from, day);
+        if (inverse) {
+          rate = 1 / inverse;
+        } else {
+          const viaUsdFrom = from === 'USD' ? 1 : resolveConversionRate(lookup, from, 'USD', day, cache);
+          const viaUsdTo = to === 'USD' ? 1 : resolveConversionRate(lookup, 'USD', to, day, cache);
+          rate = (viaUsdFrom && viaUsdTo) ? (viaUsdFrom * viaUsdTo) : 1;
+        }
+      }
+
+      cache.set(cacheKey, rate || 1);
+      return rate || 1;
+    };
+
+    const formatAmount = (num) => {
+      if (num === null || num === undefined) return '—';
+      const v = parseFloat(num);
+      if (isNaN(v)) return '—';
+      return v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    };
+
     const fetchLookups = useCallback(async () => {
       try {
         if (!supabase) return;
-        const [currRes, userRes, roleRes, userRoleMapRes, partyRes] = await Promise.all([
+        const [currRes, userRes, userGroupRes, userGroupMapRes, partyRes, bgRes] = await Promise.all([
           safeFetch(supabase.from('fm_currencies').select('*')),
           safeFetch(supabase.from('sec_users').select('*')),
-          safeFetch(supabase.from('sec_roles').select('*')),
-          safeFetch(supabase.from('sec_user_roles').select('*')),
-          safeFetch(supabase.from('parties').select('id, first_name, last_name, company_name, party_type'))
+          safeFetch(supabase.from('sec_user_groups').select('id, code, title, is_active')),
+          safeFetch(supabase.from('sec_user_group_users').select('user_id, group_id')),
+          safeFetch(supabase.from('parties').select('id, first_name, last_name, company_name, party_type')),
+          safeFetch(supabase.from('fm_balance_groups').select('id, code, title_fa, title_en, is_active').eq('is_active', true))
         ]);
 
-        if (currRes.data) setCurrencies(currRes.data);
-        if (userRes.data) setSystemUsers(userRes.data.filter(u => u.is_active !== false));
-        if (roleRes.data) setSystemRoles(roleRes.data);
-        if (userRoleMapRes.data) setUserRolesMapping(userRoleMapRes.data);
-        if (partyRes.data) setSystemParties(partyRes.data);
+        setLookups({
+          currencies: currRes.data || [],
+          systemUsers: (userRes.data || []).filter(u => u.is_active !== false),
+          systemUserGroups: (userGroupRes.data || []).filter(g => g.is_active !== false),
+          userGroupsMapping: userGroupMapRes.data || [],
+          systemParties: partyRes.data || [],
+          balanceGroupsMaster: bgRes.data || []
+        });
       } catch (err) {
         console.error('Error fetching lookups:', err);
+      }
+    }, [supabase]);
+
+    const loadCurrencyRates = useCallback(async () => {
+      try {
+        if (!supabase) return;
+        const { data, error } = await supabase
+          .from('fm_currency_rates')
+          .select('base_currency, target_currency, rate, rate_date, created_at')
+          .order('rate_date', { ascending: false })
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setCurrencyRates(data || []);
+      } catch (err) {
+        console.error('Error loading currency rates:', err);
       }
     }, [supabase]);
 
@@ -154,14 +255,10 @@
       if (!chart) return;
       try {
         if (!supabase) return;
-        const [accRes, permRes] = await Promise.all([
-          supabase.from('fm_coa_accounts').select('*').eq('chart_id', chart.id).order('code', { ascending: true }),
-          supabase.from('fm_coa_permissions').select('*')
-        ]);
+        const { data, error } = await supabase.from('fm_coa_accounts').select('*').eq('chart_id', chart.id).order('code', { ascending: true });
+        if (error) throw error;
 
-        if (accRes.error) throw accRes.error;
-
-        const mapped = (accRes.data || []).map(a => ({
+        const mapped = (data || []).map(a => ({
           id: a.id,
           parentId: a.parent_id,
           code: a.code,
@@ -191,8 +288,19 @@
         });
 
         setRawAccounts(mapped);
-        if (permRes.data) {
-          setAccountPermissions(permRes.data);
+
+        // Fetch permissions and balance group assignments for filter
+        const accountIds = mapped.map(a => a.id);
+        if (accountIds.length > 0) {
+          const [permRes, bgRes] = await Promise.all([
+            safeFetch(supabase.from('fm_coa_permissions').select('account_id, grantee_type, grantee_id').in('account_id', accountIds)),
+            safeFetch(supabase.from('fm_balance_group_accounts').select('account_id, group_id').in('account_id', accountIds))
+          ]);
+          setAllPermissions(permRes.data || []);
+          setAllAccountBalanceGroups(bgRes.data || []);
+        } else {
+          setAllPermissions([]);
+          setAllAccountBalanceGroups([]);
         }
 
         if (retainNodeId) {
@@ -215,6 +323,10 @@
         fetchDesignerData();
       }
     }, [fetchLookups, fetchDesignerData, access.canView]);
+
+    useEffect(() => {
+      loadCurrencyRates();
+    }, [loadCurrencyRates]);
 
     const handleSelectTreeNode = (node) => {
       setSelectedNodeId(node.id);
@@ -284,22 +396,31 @@
       if (!validateNodeUniqueness()) return;
 
       try {
+        let safeCurrencyId = nodeFormData.currencyId;
+        if (!safeCurrencyId || safeCurrencyId === '' || safeCurrencyId === 'null' || safeCurrencyId === 'undefined') {
+            safeCurrencyId = null;
+        } else {
+            safeCurrencyId = parseInt(safeCurrencyId, 10);
+            if (isNaN(safeCurrencyId)) safeCurrencyId = null;
+        }
+
         const payload = {
-          chart_id: chart.id,
           parent_id: nodeFormData.parentId || null,
-          code: nodeFormData.code,
-          title_fa: nodeFormData.titleFa,
-          title_en: nodeFormData.titleEn,
-          currency_id: nodeFormData.currencyId || null,
-          is_active: nodeFormData.isActive,
-          account_type: nodeFormData.accountType,
-          control_inventory: nodeFormData.controlInventory
+          code: nodeFormData.code?.trim(),
+          title_fa: nodeFormData.titleFa?.trim(),
+          title_en: nodeFormData.titleEn?.trim() || null,
+          currency_id: safeCurrencyId,
+          is_active: nodeFormData.isActive !== false,
+          account_type: nodeFormData.accountType || 'main',
+          control_inventory: !!nodeFormData.controlInventory
         };
 
         let targetId = null;
         if (isCreatingNode) {
+          payload.chart_id = chart.id; 
           const { data, error } = await supabase.from('fm_coa_accounts').insert([payload]).select();
           if (error) throw error;
+          
           if (data && data.length > 0) {
             targetId = data[0].id;
           } else {
@@ -348,10 +469,6 @@
           setSelectedNodeId(null);
           setNodeFormData({});
           setIsCreatingNode(false);
-        } else if (deleteConfirm.type === 'permission') {
-          const { error } = await supabase.from('fm_coa_permissions').delete().eq('id', deleteConfirm.data.id);
-          if (error) throw error;
-          await fetchDesignerData(selectedNodeId);
         }
         showToast(t('رکورد با موفقیت حذف شد', 'Deleted successfully'));
         setDeleteConfirm({ isOpen: false, type: null, data: null });
@@ -361,131 +478,193 @@
       }
     };
 
-    const activeNodePermissions = useMemo(() => {
-      if (!selectedNodeId) return [];
-      return accountPermissions.filter(p => String(p.account_id) === String(selectedNodeId));
-    }, [accountPermissions, selectedNodeId]);
+    const handleDownloadSample = () => {
+      const headers = isRtl
+        ? 'کد حساب,عنوان فارسی,عنوان انگلیسی,نوع حساب (main/intermediate),کد ارز (مثال: IRR),کنترل موجودی (1/0),وضعیت (1/0)'
+        : 'Account Code,Persian Title,English Title,Account Type (main/intermediate),Currency Code (e.g. IRR),Control Inventory (1/0),Status (1/0)';
 
-    const handleAddPermission = async () => {
-      if (!permFormData.granteeId || !selectedNodeId) return;
-      const duplicate = activeNodePermissions.some(p => p.grantee_type === permFormData.granteeType && String(p.grantee_id) === String(permFormData.granteeId));
-      if (duplicate) {
-        return showToast(t('این دسترسی قبلاً برای حساب ثبت شده است', 'Access role/user already specified'), 'error');
-      }
+      const lenG  = parseInt(chart?.len_group        || 1, 10);
+      const lenGe = parseInt(chart?.len_general      || 2, 10);
+      const lenSb = parseInt(chart?.len_subsidiary   || 3, 10);
 
-      try {
-        const { error } = await supabase.from('fm_coa_permissions').insert([{
-          account_id: selectedNodeId,
-          grantee_type: permFormData.granteeType,
-          grantee_id: permFormData.granteeId,
-          access_level: permFormData.accessLevel
-        }]);
-        if (error) throw error;
+      const c1 = '1'.padEnd(lenG,  '0');
+      const c2 = c1 + '1'.padEnd(lenGe,  '0');
+      const c3 = c2 + '1'.padEnd(lenSb,  '0');
 
-        await fetchDesignerData(selectedNodeId);
-        setPermFormData({ granteeType: 'user', granteeId: '', accessLevel: 'view' });
-        showToast(t('دسترسی جدید اعمال شد', 'Permission granted'));
-      } catch (err) {
-        showToast(t('خطا در ذخیره دسترسی', 'Error adding permission'), 'error');
-      }
+      const sampleRows = [
+        `${c1},دارایی‌ها,Assets,intermediate,,0,1`,
+        `${c2},دارایی‌های جاری,Current Assets,intermediate,,0,1`,
+        `${c3},صندوق و بانک,Cash and Bank,main,IRR,0,1`,
+      ];
+
+      const csv = '\uFEFF' + headers + '\n' + sampleRows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', `ChartOfAccounts_${chart?.code || 'Sample'}_Import.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     };
 
-    const consolidatedUsersList = useMemo(() => {
-      if (!selectedNodeId) return [];
-      const result = [];
+    const handleImportTree = (file) => {
+      if (!file) return;
 
-      systemUsers.forEach(user => {
-        let maxAccess = null;
-        const reasons = [];
-
-        const directPerm = activeNodePermissions.find(p => p.grantee_type === 'user' && String(p.grantee_id) === String(user.id));
-        if (directPerm) {
-          maxAccess = directPerm.access_level;
-          reasons.push(t('دسترسی مستقیم', 'Direct Access'));
-        }
-
-        const userRoles = userRolesMapping.filter(m => String(m.user_id) === String(user.id)).map(m => String(m.role_id));
-        const rolePerms = activeNodePermissions.filter(p => p.grantee_type === 'role' && userRoles.includes(String(p.grantee_id)));
-
-        rolePerms.forEach(rp => {
-          const roleObj = systemRoles.find(r => String(r.id) === String(rp.grantee_id));
-          const rTitle = roleObj ? (roleObj.title || roleObj.name) : t('نقش سیستم', 'System Role');
-          reasons.push(`${t('ارث‌بری از نقش:', 'Inherited via Role:')} ${rTitle}`);
-          
-          if (!maxAccess || (maxAccess === 'view' && rp.access_level === 'full')) {
-            maxAccess = rp.access_level;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const XLSX = window.XLSX;
+          if (!XLSX) {
+            return showToast(t('کتابخانه پردازش فایل در دسترس نیست.', 'File processing library not available.'), 'error');
           }
+          const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const allRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+
+          if (allRows.length < 2) {
+            return showToast(t('فایل خالی یا نامعتبر است', 'File is empty or invalid'), 'error');
+          }
+
+          const rows = allRows.slice(1).map(cols => ({
+            code:             String(cols[0] ?? '').trim(),
+            titleFa:          String(cols[1] ?? '').trim(),
+            titleEn:          String(cols[2] ?? '').trim(),
+            accountType:      String(cols[3] ?? 'main').trim().toLowerCase(),
+            currencyCode:     String(cols[4] ?? '').trim().toUpperCase(),
+            controlInventory: String(cols[5] ?? '0').trim() === '1',
+            isActive:         String(cols[6] ?? '1').trim() !== '0',
+          })).filter(r => r.code);
+
+          if (rows.length === 0) {
+            return showToast(t('هیچ داده‌ای برای ورود وجود ندارد', 'No data to import'), 'warning');
+          }
+
+          const lenG  = parseInt(chart?.len_group        || 1, 10);
+          const lenGe = parseInt(chart?.len_general      || 2, 10);
+          const lenSb = parseInt(chart?.len_subsidiary   || 3, 10);
+          const lenDt = parseInt(chart?.len_detail       || 4, 10);
+
+          const level1 = lenG;
+          const level2 = lenG + lenGe;
+          const level3 = lenG + lenGe + lenSb;
+
+          const getParentCode = (code) => {
+            const cl = code.length;
+            if (cl <= level1) return null;
+            if (cl <= level2) return code.substring(0, level1);
+            if (cl <= level3) return code.substring(0, level2);
+            return code.substring(0, level3);
+          };
+
+          // Sort ascending by code length so parents are inserted before children
+          rows.sort((a, b) => a.code.length - b.code.length || a.code.localeCompare(b.code));
+
+          // Seed map with existing accounts
+          const codeToId = {};
+          rawAccounts.forEach(a => { if (a.code) codeToId[a.code] = a.id; });
+
+          let insertedCount = 0;
+          let updatedCount  = 0;
+          const rowErrors   = [];
+
+          for (const row of rows) {
+            try {
+              const parentCode = getParentCode(row.code);
+              const parentId   = parentCode ? (codeToId[parentCode] ?? null) : null;
+
+              const matchedCurrency = row.currencyCode
+                ? lookups.currencies.find(c => (c.code || '').toUpperCase() === row.currencyCode)
+                : null;
+
+              const payload = {
+                chart_id:          chart.id,
+                code:              row.code,
+                title_fa:          row.titleFa || row.code,
+                title_en:          row.titleEn || null,
+                account_type:      ['main', 'intermediate'].includes(row.accountType) ? row.accountType : 'main',
+                currency_id:       matchedCurrency ? matchedCurrency.id : null,
+                control_inventory: row.controlInventory,
+                is_active:         row.isActive,
+                parent_id:         parentId,
+              };
+
+              const existing = rawAccounts.find(a => a.code === row.code);
+              if (existing) {
+                const { error } = await supabase.from('fm_coa_accounts').update(payload).eq('id', existing.id);
+                if (error) throw error;
+                codeToId[row.code] = existing.id;
+                updatedCount++;
+              } else {
+                const { data: inserted, error } = await supabase.from('fm_coa_accounts').insert([payload]).select('id');
+                if (error) throw error;
+                if (inserted && inserted.length > 0) codeToId[row.code] = inserted[0].id;
+                insertedCount++;
+              }
+            } catch (err) {
+              console.error('Import row error:', row, err);
+              rowErrors.push(`${t('کد', 'Code')} ${row.code}: ${err?.message || JSON.stringify(err)}`);
+            }
+          }
+
+          await fetchDesignerData();
+
+          if (rowErrors.length > 0) {
+            setImportErrors({ isOpen: true, errors: rowErrors, insertedCount, updatedCount });
+          } else {
+            const msg = isRtl
+              ? `ورود اطلاعات کامل شد: ${insertedCount} ردیف جدید، ${updatedCount} ردیف به‌روز شد`
+              : `Import complete: ${insertedCount} inserted, ${updatedCount} updated`;
+            showToast(msg, 'success');
+          }
+        } catch (err) {
+          showToast(t('خطا در پردازش فایل', 'Error processing file'), 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    };
+
+    const handleExportTree = () => {
+      if (!rawAccounts || rawAccounts.length === 0) {
+         return showToast(t('داده‌ای برای خروجی وجود ندارد.', 'No data to export.'), 'warning');
+      }
+      
+      showToast(t('در حال آماده‌سازی فایل خروجی...', 'Preparing export file...'), 'info');
+      
+      try {
+        const headers = isRtl 
+          ? 'کد حساب,عنوان فارسی,عنوان انگلیسی,نوع حساب (main/intermediate),کد ارز (مثال: IRR),کنترل موجودی (1/0),وضعیت (1/0)' 
+          : 'Account Code,Persian Title,English Title,Account Type (main/intermediate),Currency Code (e.g. IRR),Control Inventory (1/0),Status (1/0)';
+        
+        const csvRows = rawAccounts.map(row => {
+          const code = row.code || '';
+          const titleFa = `"${(row.titleFa || '').replace(/"/g, '""')}"`;
+          const titleEn = `"${(row.titleEn || '').replace(/"/g, '""')}"`;
+          const type = row.accountType || 'main';
+          
+          let currencyCode = '';
+          if (row.currencyId) {
+             const c = lookups.currencies.find(x => String(x.id) === String(row.currencyId));
+             if (c) currencyCode = c.code || '';
+          }
+          
+          const controlInv = row.controlInventory ? '1' : '0';
+          const status = row.isActive ? '1' : '0';
+
+          return `${code},${titleFa},${titleEn},${type},${currencyCode},${controlInv},${status}`;
         });
 
-        if (maxAccess) {
-          const userParty = systemParties.find(p => String(p.id) === String(user.party_id || user.person_id));
-          let fNameStr = '';
-          if (userParty) {
-              if (userParty.party_type === 'legal' && userParty.company_name) {
-                  fNameStr = userParty.company_name;
-              } else {
-                  fNameStr = `${userParty.first_name || ''} ${userParty.last_name || ''}`.trim();
-              }
-          }
-          if (!fNameStr || fNameStr === '') {
-              const fname = user.first_name || user.name || '';
-              const lname = user.last_name || user.family || '';
-              fNameStr = (fname || lname) ? `${fname} ${lname}`.trim() : '---';
-          }
-          
-          result.push({
-            id: user.id,
-            username: user.username || user.name || user.email || '---',
-            fullName: fNameStr,
-            accessLevel: maxAccess,
-            reason: reasons.join(' / ')
-          });
-        }
-      });
-
-      return result;
-    }, [selectedNodeId, systemUsers, activeNodePermissions, userRolesMapping, systemRoles, systemParties, t]);
-
-    const permColumns = [
-      {
-        field: 'grantee_type', header_fa: 'نوع دسترسی', header_en: 'Type', width: '110px',
-        render: (v) => <Badge variant="slate" size="sm">{v === 'user' ? t('کاربر', 'User') : t('نقش', 'Role')}</Badge>
-      },
-      {
-        field: 'grantee_id', header_fa: 'نام کاربری / عنوان نقش', header_en: 'Name/Title', width: '220px',
-        render: (v, row) => {
-          if (row.grantee_type === 'user') {
-            const u = systemUsers.find(su => String(su.id) === String(v));
-            return u ? (u.username || u.name || u.email || v) : v;
-          } else {
-            const role = systemRoles.find(r => String(r.id) === String(v));
-            return role ? (role.title || role.name) : v;
-          }
-        }
-      },
-      {
-        field: 'access_level', header_fa: 'سطح دسترسی', header_en: 'Access Level', width: '130px',
-        render: (v) => (
-          <Badge variant={v === 'full' ? 'indigo' : 'amber'} size="sm">
-            {v === 'full' ? t('کامل (ویرایش و حذف)', 'Full Access') : t('فقط مشاهده', 'View Only')}
-          </Badge>
-        )
+        const csvContent = '\uFEFF' + headers + '\n' + csvRows.join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `ChartOfAccounts_${chart?.code || 'Export'}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        showToast(t('خطا در تولید فایل خروجی', 'Error generating export file'), 'error');
       }
-    ];
-
-    const consolidatedColumns = [
-      { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '130px' },
-      { field: 'fullName', header_fa: 'نام و نام خانوادگی', header_en: 'Full Name', width: '160px' },
-      {
-        field: 'accessLevel', header_fa: 'سطح دسترسی', header_en: 'Effective Access', width: '150px',
-        render: (v) => (
-          <Badge variant={v === 'full' ? 'indigo' : 'amber'} size="sm">
-            {v === 'full' ? t('کامل', 'Full Access') : t('فقط مشاهده', 'View Only')}
-          </Badge>
-        )
-      },
-      { field: 'reason', header_fa: 'نحوه تخصیص و ارث‌بری', header_en: 'Inheritance/Reason', width: '300px' }
-    ];
+    };
 
     const levelLabels = {
       1: t('سطح ۱ - گروه حساب', 'Level 1 - Account Group'),
@@ -494,10 +673,180 @@
       4: t('سطح ۴ - حساب تفصیل', 'Level 4 - Detail Account')
     };
 
+    const getNodeCurrencyCode = () => {
+      if (!nodeFormData.currencyId) return 'IRR';
+      const c = lookups.currencies.find(x => String(x.id) === String(nodeFormData.currencyId));
+      return c ? c.code : 'IRR';
+    };
+
+    const getNodeCurrencyName = () => {
+      if (!nodeFormData.currencyId) return isRtl ? 'ریال' : 'IRR';
+      const c = lookups.currencies.find(x => String(x.id) === String(nodeFormData.currencyId));
+      if (!c) return isRtl ? 'ریال' : 'IRR';
+      return isRtl ? (c.title_fa || c.title || c.code) : (c.title_en || c.title || c.code);
+    };
+
+    const selectedNodeRecord = useMemo(() => {
+      if (!selectedNodeId) return null;
+      return rawAccounts.find(node => String(node.id) === String(selectedNodeId)) || null;
+    }, [rawAccounts, selectedNodeId]);
+
+    const getSelectedNodeCurrencyCode = useCallback(() => {
+      const currency = lookups.currencies.find(x => String(x.id) === String(selectedNodeRecord?.currencyId || ''));
+      return currency ? (currency.code || 'IRR') : 'IRR';
+    }, [lookups.currencies, selectedNodeRecord]);
+
+    const getSelectedNodeCurrencyName = useCallback(() => {
+      const currency = lookups.currencies.find(x => String(x.id) === String(selectedNodeRecord?.currencyId || ''));
+      if (!currency) return isRtl ? 'ریال' : 'IRR';
+      return isRtl ? (currency.title_fa || currency.title || currency.code) : (currency.title_en || currency.title || currency.code);
+    }, [isRtl, lookups.currencies, selectedNodeRecord]);
+
+    const loadNodeBalanceSnapshot = useCallback(async (node) => {
+      if (!supabase || !node?.id) {
+        setNodeBalanceSnapshot({ balance: 0, usd: 0, balanceDate: '' });
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('fm_transaction_items')
+          .select('id, remained_amount, deposit_amount, withdrawal_amount, row_number, created_at, transaction_id, fm_transactions(id, document_date, created_at)')
+          .eq('account_id', node.id);
+        if (error) throw error;
+
+        const sortedItems = (data || [])
+          .map(item => {
+            const tx = Array.isArray(item.fm_transactions) ? item.fm_transactions[0] : item.fm_transactions;
+            return {
+              ...item,
+              _tx_date: String(tx?.document_date || '').replace(/\//g, '-'),
+              _tx_created_at: String(tx?.created_at || item.created_at || ''),
+            };
+          })
+          .sort((a, b) => {
+            const dateCmp = String(a._tx_date || '').localeCompare(String(b._tx_date || ''));
+            if (dateCmp !== 0) return dateCmp;
+            const createdCmp = String(a._tx_created_at || '').localeCompare(String(b._tx_created_at || ''));
+            if (createdCmp !== 0) return createdCmp;
+            const rowCmp = (parseInt(a.row_number || 0, 10) || 0) - (parseInt(b.row_number || 0, 10) || 0);
+            if (rowCmp !== 0) return rowCmp;
+            return String(a.id || '').localeCompare(String(b.id || ''));
+          });
+
+        let computedBalance = 0;
+        let lastKnownBalance = 0;
+        let lastKnownDate = '';
+
+        sortedItems.forEach(item => {
+          const dep = parseFloat(item.deposit_amount || 0) || 0;
+          const wid = parseFloat(item.withdrawal_amount || 0) || 0;
+          computedBalance += dep > 0 ? dep : -wid;
+          const persistedBalance = item.remained_amount !== null && item.remained_amount !== undefined && item.remained_amount !== ''
+            ? parseFloat(item.remained_amount)
+            : null;
+          lastKnownBalance = !isNaN(persistedBalance) && persistedBalance !== null ? persistedBalance : computedBalance;
+          if (item._tx_date) lastKnownDate = item._tx_date;
+        });
+
+        const currencyCode = getSelectedNodeCurrencyCode();
+        const usdRate = resolveConversionRate(buildRateLookup(currencyRates), currencyCode, 'USD', '9999-12-31');
+
+        setNodeBalanceSnapshot({
+          balance: lastKnownBalance || 0,
+          usd: (lastKnownBalance || 0) * (usdRate || 1),
+          balanceDate: lastKnownDate,
+        });
+      } catch (err) {
+        console.error('Error loading node balance snapshot:', err);
+        setNodeBalanceSnapshot({ balance: 0, usd: 0, balanceDate: '' });
+      }
+    }, [currencyRates, getSelectedNodeCurrencyCode, supabase]);
+
+    useEffect(() => {
+      if (!selectedNodeId || isCreatingNode) {
+        setNodeBalanceSnapshot({ balance: 0, usd: 0, balanceDate: '' });
+        return;
+      }
+      if (!selectedNodeRecord) return;
+      loadNodeBalanceSnapshot(selectedNodeRecord);
+    }, [isCreatingNode, loadNodeBalanceSnapshot, selectedNodeId, selectedNodeRecord]);
+
+    const tabOptions = [
+      { id: 'details', label: t('مشخصات حساب', 'Account Parameters') },
+      ...(!isCreatingNode ? [
+        { id: 'access', label: t('تنظیمات دسترسی', 'Access Configuration') },
+        { id: 'balance_groups', label: t('گروه‌های بالانس', 'Balance Groups') }
+      ] : [])
+    ];
+
+    const userLovData = useMemo(() => {
+      return lookups.systemUsers.map(u => {
+        const party = lookups.systemParties.find(p => String(p.id) === String(u.party_id || u.person_id || ''));
+        let fullName = '';
+        if (party) fullName = party.party_type === 'legal' ? (party.company_name || '') : `${party.first_name || ''} ${party.last_name || ''}`.trim();
+        if (!fullName) fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.name || '';
+        return { value: u.id, label: fullName || u.username || u.email || String(u.id), username: u.username || u.email || '---' };
+      });
+    }, [lookups.systemUsers, lookups.systemParties]);
+
+    const currencyLovData = useMemo(() => {
+      return lookups.currencies.map(c => ({
+        value: c.id || c.currency_id || c.code,
+        label: isRtl ? (c.name_fa || c.title_fa || c.name || c.code || '') : (c.name_en || c.title_en || c.name || c.code || ''),
+        code: c.code || ''
+      }));
+    }, [lookups.currencies, isRtl]);
+
+    const filteredAccounts = useMemo(() => {
+      const userId = (advancedFilter.user && typeof advancedFilter.user === 'object') ? advancedFilter.user.value || '' : '';
+      const balanceGroupId = advancedFilter.balanceGroupId || '';
+      const currencyId = (advancedFilter.currency && typeof advancedFilter.currency === 'object') ? advancedFilter.currency.value || '' : '';
+      const accountType = advancedFilter.accountType || '';
+      if (!userId && !balanceGroupId && !currencyId && !accountType) return rawAccounts;
+      const matchingIds = new Set();
+      rawAccounts.forEach(acc => {
+        let matches = true;
+        if (currencyId && String(acc.currencyId || '') !== String(currencyId)) matches = false;
+        if (matches && accountType && acc.accountType !== accountType) matches = false;
+        if (matches && balanceGroupId) {
+          const hasBg = allAccountBalanceGroups.some(bg => String(bg.account_id) === String(acc.id) && String(bg.group_id) === String(balanceGroupId));
+          if (!hasBg) matches = false;
+        }
+        if (matches && userId) {
+          const userGroupIds = lookups.userGroupsMapping.filter(m => String(m.user_id) === String(userId)).map(m => String(m.group_id));
+          const hasAccess = allPermissions.some(p =>
+            String(p.account_id) === String(acc.id) && (
+              (p.grantee_type === 'user' && String(p.grantee_id) === String(userId)) ||
+              ((p.grantee_type === 'user_group' || p.grantee_type === 'group' || p.grantee_type === 'role') && userGroupIds.includes(String(p.grantee_id)))
+            )
+          );
+          if (!hasAccess) matches = false;
+        }
+        if (matches) matchingIds.add(acc.id);
+      });
+      const addAncestors = (nodeId) => {
+        const node = rawAccounts.find(n => n.id === nodeId);
+        if (!node || !node.parentId) return;
+        if (!matchingIds.has(node.parentId)) { matchingIds.add(node.parentId); addAncestors(node.parentId); }
+      };
+      [...matchingIds].forEach(id => addAncestors(id));
+      return rawAccounts.filter(a => matchingIds.has(a.id));
+    }, [rawAccounts, advancedFilter, allPermissions, allAccountBalanceGroups, lookups]);
+
+    useEffect(() => {
+      if (!selectedNodeId) return;
+      if (!filteredAccounts.find(a => String(a.id) === String(selectedNodeId))) {
+        setSelectedNodeId(null);
+        setNodeFormData({});
+        setIsCreatingNode(false);
+      }
+    }, [filteredAccounts, selectedNodeId]);
+
     return (
       <div className="p-4 h-full flex flex-col font-sans bg-slate-50/50 dark:bg-slate-900" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className="flex-1 min-h-0 flex flex-col bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-          <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shrink-0">
+          <div className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shrink-0 h-12">
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="sm" icon={isRtl ? ArrowRight : ArrowLeft} onClick={onBack}>{t('بازگشت به لیست', 'Back')}</Button>
               <div className="h-4 w-px bg-slate-300 dark:bg-slate-600"></div>
@@ -508,53 +857,124 @@
             <Button variant="ghost" size="sm" icon={RefreshCw} onClick={() => fetchDesignerData(selectedNodeId)} className="h-8 w-8 px-0" />
           </div>
 
-          <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
+          <div className="px-3 pt-2 shrink-0">
+            <AdvancedFilter
+              language={language}
+              fields={[
+                { type: 'lov', name: 'user', label: t('دسترسی کاربر', 'User Access'),
+                  lovData: userLovData,
+                  lovColumns: [
+                    { field: 'username', header_fa: 'نام کاربری', header_en: 'Username', width: '130px' },
+                    { field: 'label', header_fa: 'نام کامل', header_en: 'Full Name', width: '180px' },
+                  ],
+                  dropdownWidth: 'min-w-[360px]'
+                },
+                { type: 'select', name: 'balanceGroupId', label: t('گروه بالانس', 'Balance Group'),
+                  options: [{ value: '', label: t('همه گروه‌ها', 'All Groups') }, ...lookups.balanceGroupsMaster.map(bg => ({ value: bg.id, label: `${bg.code} - ${isRtl ? bg.title_fa : (bg.title_en || bg.title_fa)}` }))]
+                },
+                { type: 'lov', name: 'currency', label: t('نوع ارز', 'Currency'),
+                  lovData: currencyLovData,
+                  lovColumns: [
+                    { field: 'code', header_fa: 'کد ارز', header_en: 'Code', width: '80px' },
+                    { field: 'label', header_fa: 'نام ارز', header_en: 'Currency Name', width: '160px' },
+                  ],
+                  dropdownWidth: 'min-w-[280px]'
+                },
+                { type: 'select', name: 'accountType', label: t('نوع حساب', 'Account Type'),
+                  options: [
+                    { value: '', label: t('همه انواع', 'All Types') },
+                    { value: 'main', label: t('حساب اصلی', 'Main Account') },
+                    { value: 'intermediate', label: t('حساب واسط / کنترلی', 'Intermediate') }
+                  ]
+                }
+              ]}
+              onFilter={(vals) => setAdvancedFilter(vals)}
+              onClear={() => setAdvancedFilter({})}
+              initialValues={advancedFilter}
+            />
+          </div>
+
+          <div className="flex-1 flex overflow-hidden flex-col md:flex-row min-h-0">
             <div className={`w-full md:w-[40%] flex flex-col bg-slate-50/40 dark:bg-slate-900/10 border-b md:border-b-0 ${isRtl ? 'md:border-l' : 'md:border-r'} border-slate-200 dark:border-slate-700 overflow-y-auto`}>
               <Tree
-                data={rawAccounts} language={language} formCode={formCode}
+                data={filteredAccounts} language={language} formCode={formCode}
                 idField="id" parentField="parentId" displayField="title" secondaryField="code" activeField="isActive"
                 selectedId={selectedNodeId}
                 onSelect={handleSelectTreeNode}
                 onAddRoot={access.canCreate ? handleAddTreeRoot : undefined}
                 onAddChild={access.canCreate ? handleAddTreeChild : undefined}
                 onDelete={access.canDelete ? handleDeleteNode : undefined}
-                onImport={(file) => showToast(t(`فایل ${file.name} جهت پردازش بارگذاری شد.`, `File ${file.name} uploaded for processing.`), 'info')}
-                onDownloadSample={() => showToast(t('در حال دانلود نمونه فایل اکسل...', 'Downloading Excel Sample...'), 'info')}
+                onImport={handleImportTree}
+                onExport={handleExportTree}
+                onDownloadSample={handleDownloadSample}
               />
             </div>
 
             <div className="flex-1 flex flex-col overflow-auto p-4 gap-3 bg-slate-50/50 dark:bg-slate-900/20">
               {selectedNodeId || isCreatingNode ? (
                 <Card noPadding={true} className="flex-1 border border-slate-200 dark:border-slate-700 flex flex-col min-h-0 bg-white dark:bg-slate-800 shadow-sm h-full">
-                  <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 px-3 pt-2 gap-1 shrink-0">
-                    <button onClick={() => setActiveTab('details')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'details' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                      {t('مشخصات حساب', 'Account Parameters')}
-                    </button>
-                    {!isCreatingNode && (
-                      <>
-                        <button onClick={() => setActiveTab('permissions')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'permissions' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                          {t('قوانین دسترسی', 'Access Grantees')}
-                        </button>
-                        <button onClick={() => setActiveTab('summary')} className={`px-4 py-2 font-bold text-xs border-b-2 transition-all ${activeTab === 'summary' ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-white dark:bg-slate-800 rounded-t-lg shadow-sm' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                          {t('مجموع کاربران مجاز حساب', 'Consolidated User Scope')}
-                        </button>
-                      </>
-                    )}
+                  
+                  <div className="px-3 pt-3 pb-1 border-b border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/30 shrink-0">
+                    <Tabs tabs={tabOptions} activeTab={activeTab} onChange={setActiveTab} />
                   </div>
 
                   <div className="flex-1 flex flex-col p-4 overflow-y-auto min-h-0">
                     {activeTab === 'details' && (
                       <div className="flex flex-col h-full min-h-0 animate-in fade-in duration-200">
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
-                          <Alert type="info" icon={Info} message={<span>{t('سطح گره جاری:', 'Current Element Hierarchy Level:')} <strong className="text-indigo-600 dark:text-indigo-300">{levelLabels[nodeDepth]}</strong></span>} />
+                          
+                          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 shrink-0 lg:h-[60px]">
+                            <div className="lg:col-span-2 flex items-center gap-3 px-4 py-2 bg-blue-50/60 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-xl h-full shadow-sm">
+                              <Info size={18} className="text-blue-500 shrink-0" />
+                              <div className="flex flex-col justify-center overflow-hidden">
+                                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold mb-0.5 whitespace-nowrap">{t('سطح گره جاری', 'Current Level')}</span>
+                                  <span className="text-[13px] font-black text-blue-800 dark:text-blue-300 truncate">{levelLabels[nodeDepth]}</span>
+                              </div>
+                            </div>
+
+                            {!isCreatingNode && (
+                              <div className="lg:col-span-2 flex items-center justify-between gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl h-full shadow-sm">
+                                <div className="flex flex-col justify-center flex-1">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5 truncate">{t(`بالانس در لحظه (به ${getSelectedNodeCurrencyName()})`, `Real-time Balance (${getSelectedNodeCurrencyName()})`)}</span>
+                                    <div className="text-[14px] font-black text-slate-800 dark:text-slate-200 dir-ltr text-right truncate">
+                                      {formatAmount(nodeBalanceSnapshot.balance)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold ml-0.5">{getSelectedNodeCurrencyCode()}</span>
+                                    </div>
+                                    {nodeBalanceSnapshot.balanceDate && (
+                                      <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                                        {t(`آخرین تراکنش: ${nodeBalanceSnapshot.balanceDate}`, `Latest transaction: ${nodeBalanceSnapshot.balanceDate}`)}
+                                      </span>
+                                    )}
+                                </div>
+                                <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0"></div>
+                                <div className="flex-col justify-center hidden sm:flex flex-1">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5 truncate">{t('معادل ارزی پایه (دلار)', 'Base Currency Eq (USD)')}</span>
+                                    <div className="text-[14px] font-black text-slate-800 dark:text-slate-200 dir-ltr text-right truncate">
+                                      {formatAmount(nodeBalanceSnapshot.usd)} <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold ml-0.5">USD</span>
+                                    </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                           
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <TextField size="sm" formCode={formCode} label={t('کد حساب (ترکیبی اتوماتیک)', 'Account Code')} value={nodeFormData.code || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, code: e.target.value })} isRtl={isRtl} required dir="ltr" />
-                            <SelectField size="sm" formCode={formCode} label={t('نوع ارز', 'Currency Type')} value={nodeFormData.currencyId || ''} onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} options={[{ value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, ...currencies.map(c => {
-                               const cNameFa = c.name_fa || c.title_fa || c.name || c.title || '';
-                               const cNameEn = c.name_en || c.title_en || c.name || c.title || '';
-                               return { value: c.id, label: `${c.code || c.id} - ${isRtl ? cNameFa : cNameEn}` };
-                            })]} isRtl={isRtl} />
+                            <SelectField 
+                                size="sm" 
+                                formCode={formCode} 
+                                label={t('نوع ارز', 'Currency Type')} 
+                                value={nodeFormData.currencyId || ''} 
+                                onChange={(e) => setNodeFormData({ ...nodeFormData, currencyId: e.target.value })} 
+                                options={[
+                                    { value: '', label: t('بدون محدودیت ارزی', 'No Currency Restriction') }, 
+                                    ...lookups.currencies.map(c => {
+                                        const cId = c.id || c.currency_id || c.code;
+                                        const cNameFa = c.name_fa || c.title_fa || c.name || c.title || '';
+                                        const cNameEn = c.name_en || c.title_en || c.name || c.title || '';
+                                        return { value: cId, label: `${c.code || cId} - ${isRtl ? cNameFa : cNameEn}` };
+                                    })
+                                ]} 
+                                isRtl={isRtl} 
+                            />
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -582,34 +1002,13 @@
                       </div>
                     )}
 
-                    {activeTab === 'permissions' && (
-                      <div className="space-y-4 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
-                        <div className="bg-slate-50 dark:bg-slate-900/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end shrink-0">
-                          <SelectField size="sm" label={t('نوع دسترسی', 'Grantee Type')} value={permFormData.granteeType} onChange={(e) => setPermFormData({ ...permFormData, granteeType: e.target.value, granteeId: '' })} options={[{ value: 'user', label: t('کاربر مشخص', 'Specific User') }, { value: 'role', label: t('نقش کاربر', 'User Role') }]} isRtl={isRtl} />
-                          
-                          <SelectField size="sm" label={t('انتخاب هدف', 'Select Target')} value={permFormData.granteeId} onChange={(e) => setPermFormData({ ...permFormData, granteeId: e.target.value })} options={[{ value: '', label: t('انتخاب کنید...', 'Select...') }, ...(permFormData.granteeType === 'user' ? systemUsers.map(u => ({ value: u.id, label: u.username || u.name || u.email || '---' })) : systemRoles.map(r => ({ value: r.id, label: r.title || r.name })))]} isRtl={isRtl} />
-                          
-                          <SelectField size="sm" label={t('محدوده سطح دسترسی', 'Access Level')} value={permFormData.accessLevel} onChange={(e) => setPermFormData({ ...permFormData, accessLevel: e.target.value })} options={[{ value: 'view', label: t('فقط مشاهده تراکنش‌ها', 'View Only') }, { value: 'full', label: t('کامل (ثبت، ویرایش و حذف)', 'Full Control') }]} isRtl={isRtl} />
-                          
-                          <Button size="sm" variant="primary" icon={Plus} onClick={handleAddPermission}>{t('افزودن دسترسی', 'Grant Access')}</Button>
-                        </div>
-
-                        <div className="flex-1 min-h-[250px]">
-                          <DataGrid
-                            data={activeNodePermissions} columns={permColumns} language={language} formCode={formCode} hideImport={true}
-                            actions={[{ id: 'delete', icon: Trash2, tooltip: t('حذف دسترسی', 'Revoke Permission'), onClick: (row) => setDeleteConfirm({ isOpen: true, type: 'permission', data: row }), className: 'text-red-500 hover:text-red-600' }]}
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTab === 'summary' && (
-                      <div className="space-y-3 flex flex-col h-full min-h-0 animate-in fade-in duration-200">
-                        <Alert type="warning" icon={Shield} message={t('لیست زیر مجموع تمامی کاربرانی است که به صورت مستقیم یا از طریق تفویض نقش‌های خود، اجازه تعامل با این حساب را کسب کرده‌اند.', 'Consolidated aggregate list of all operators with computed effective system access level.')} />
-                        <div className="flex-1 min-h-[300px]">
-                          <DataGrid data={consolidatedUsersList} columns={consolidatedColumns} language={language} formCode={formCode} hideImport={true} />
-                        </div>
-                      </div>
+                    {(activeTab === 'access' || activeTab === 'balance_groups') && window.ChartOfAccountsAccess && (
+                      <window.ChartOfAccountsAccess 
+                         selectedNodeId={selectedNodeId} 
+                         activeTab={activeTab} 
+                         language={language}
+                         lookups={lookups}
+                      />
                     )}
                   </div>
                 </Card>
@@ -623,19 +1022,43 @@
           </div>
         </div>
 
-        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید حذف قطعی رکورد', 'Confirm Permanent Revocation')} language={language} width="max-w-sm">
-          <div className="p-4 flex flex-col gap-3 items-center text-center">
-            <div className="w-11 h-11 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-1"><AlertTriangle size={22} /></div>
-            <div className="bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-3 py-1.5 rounded-full text-[10px] font-black flex items-center gap-1"><Lock size={12}/> {t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}</div>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mt-1">
-              {deleteConfirm.type === 'node' && t(`آیا از حذف حساب کدینگ "${deleteConfirm.data?.titleFa}" اطمینان دارید؟`, `Are you sure you want to delete account component "${deleteConfirm.data?.titleFa}"?`)}
-              {deleteConfirm.type === 'permission' && t('آیا از حذف این ردیف دسترسی اطمینان دارید؟', 'Are you sure you want to revoke this explicit access right?')}
-            </p>
-            <div className="flex gap-2 mt-4 w-full">
-              <Button size="sm" variant="outline" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
-              <Button size="sm" variant="primary" onClick={executeDelete} className="flex-1 bg-red-600 dark:bg-red-500 hover:bg-red-700 border-red-600 dark:border-red-500 shadow-lg">{t('تایید حذف نهایی', 'Delete Now')}</Button>
+        <Modal isOpen={importErrors.isOpen} onClose={() => setImportErrors({ isOpen: false, errors: [], insertedCount: 0, updatedCount: 0 })} title={t('گزارش خطاهای ایمپورت', 'Import Error Report')} language={language} width="max-w-lg">
+          <div className="p-4 flex flex-col gap-3">
+            {(importErrors.insertedCount > 0 || importErrors.updatedCount > 0) && (
+              <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-lg px-3 py-2 text-[13px] font-medium border border-emerald-200 dark:border-emerald-800">
+                <span>✓</span>
+                <span>{t(`${importErrors.insertedCount} ردیف جدید درج شد، ${importErrors.updatedCount} ردیف به‌روز شد.`, `${importErrors.insertedCount} inserted, ${importErrors.updatedCount} updated.`)}</span>
+              </div>
+            )}
+            <div className="text-[12px] font-medium text-slate-600 dark:text-slate-400">
+              {t(`${importErrors.errors.length} ردیف با خطا مواجه شد:`, `${importErrors.errors.length} row(s) had errors:`)}
+            </div>
+            <div className="flex flex-col gap-1 max-h-72 overflow-y-auto custom-scrollbar border border-slate-200 dark:border-slate-700 rounded-lg p-2 bg-slate-50 dark:bg-slate-900">
+              {importErrors.errors.map((err, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-[12px] text-red-600 dark:text-red-400 py-1 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <span className="shrink-0 mt-0.5">•</span>
+                  <span dir="ltr" className="text-left">{err}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end pt-1">
+              <Button variant="outline" size="sm" onClick={() => setImportErrors({ isOpen: false, errors: [], insertedCount: 0, updatedCount: 0 })}>{t('بستن', 'Close')}</Button>
             </div>
           </div>
+        </Modal>
+
+        <Modal isOpen={deleteConfirm.isOpen} onClose={() => setDeleteConfirm({ isOpen: false, type: null, data: null })} title={t('تایید حذف قطعی رکورد', 'Confirm Permanent Revocation')} language={language} width="max-w-sm">
+          <EmptyState
+            icon={AlertTriangle}
+            title={t('هشدار: غیرقابل بازگشت', 'WARNING: IRREVERSIBLE')}
+            description={deleteConfirm.type === 'node' && t(`آیا از حذف حساب کدینگ "${deleteConfirm.data?.titleFa}" اطمینان دارید؟`, `Are you sure you want to delete account component "${deleteConfirm.data?.titleFa}"?`)}
+            action={
+              <div className="flex gap-2 w-full mt-2 px-4">
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setDeleteConfirm({ isOpen: false, type: null, data: null })}>{t('انصراف', 'Cancel')}</Button>
+                <Button variant="danger" size="sm" onClick={executeDelete} className="flex-1">{t('تایید حذف نهایی', 'Delete Now')}</Button>
+              </div>
+            }
+          />
         </Modal>
 
         <Toast isVisible={toast.isVisible} message={toast.message} type={toast.type} onClose={() => setToast(prev => ({ ...prev, isVisible: false }))} />

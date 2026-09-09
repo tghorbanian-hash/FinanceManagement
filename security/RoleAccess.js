@@ -15,7 +15,10 @@
   const { 
       Modal = () => null, 
       Button = () => null, 
-      Tree = () => null 
+      Tree = () => null,
+      CheckboxField = () => null,
+      ToggleField = () => null,
+      EmptyState = () => null
   } = DesignSystem;
 
   const supabase = window.supabase;
@@ -23,6 +26,50 @@
   const SCOPE_DICT = {
     'docTypes': { fa: 'انواع سند مجاز', en: 'Allowed Document Types' },
     'branches': { fa: 'شعب مجاز', en: 'Allowed Branches' }
+  };
+
+  const LOCAL_ACTION_LABELS = {
+    'read':                  { fa: 'مشاهده',                en: 'Read' },
+    'create':                { fa: 'ایجاد',                  en: 'Create' },
+    'edit':                  { fa: 'ویرایش',                 en: 'Edit' },
+    'delete':                { fa: 'حذف',                    en: 'Delete' },
+    'print':                 { fa: 'چاپ',                    en: 'Print' },
+    'copy':                  { fa: 'کپی سند',                en: 'Copy Document' },
+    'attach':                { fa: 'مدیریت پیوست',           en: 'Attachments' },
+    'summary':               { fa: 'خلاصه ارزی',             en: 'Currency Summary' },
+    'comment':               { fa: 'کامنت‌ها',                en: 'Comments' },
+    'bulk_delete':           { fa: 'حذف گروهی',              en: 'Bulk Delete' },
+    'set_temporary':         { fa: 'تغییر به موقت',          en: 'Set Temporary' },
+    'set_draft':             { fa: 'تغییر به یادداشت',       en: 'Set Draft' },
+    'set_final':             { fa: 'تبدیل به بررسی شده',     en: 'Set Final' },
+    'set_approved':          { fa: 'تبدیل به تایید شده',     en: 'Set Approved' },
+    'revert_temporary':      { fa: 'برگشت به موقت',          en: 'Revert to Temporary' },
+    'update_rates':          { fa: 'بروزرسانی نرخ ارز',      en: 'Update Exchange Rates' },
+    'manage_accounts':       { fa: 'مدیریت حساب‌ها',         en: 'Manage Accounts' },
+    'manage_access':         { fa: 'مدیریت دسترسی‌ها',       en: 'Manage Access' },
+    'excel_export':          { fa: 'خروجی Excel',            en: 'Excel Export' },
+    'import':                { fa: 'ورود اطلاعات',           en: 'Import' },
+    'download_sample':       { fa: 'دانلود نمونه',           en: 'Download Sample' },
+    'manage_balance_groups': { fa: 'گروه‌های بالانس',         en: 'Balance Groups' },
+    'add_party':             { fa: 'افزودن شخص/شرکت',         en: 'Add Party' },
+    'manage_contracts':      { fa: 'مدیریت قراردادها',         en: 'Manage Contracts' },
+    'view_aggregate':        { fa: 'مشاهده تجمیع',             en: 'View Aggregate' },
+    'design':                { fa: 'طراحی ساختار',             en: 'Design' },
+    'manage_nodes':          { fa: 'مدیریت گره‌ها',             en: 'Manage Nodes' },
+    'manage_personnel':      { fa: 'مدیریت پرسنل',             en: 'Manage Personnel' },
+    'manage_access':         { fa: 'مدیریت دسترسی',             en: 'Manage Access' },
+    'reset_password':        { fa: 'ریست پسوورد',               en: 'Reset Password' },
+  };
+
+  // نگاشت برچسب‌های فارسی قدیمی به کدهای انگلیسی استاندارد
+  const PERSIAN_TO_CODE = {
+    'مشاهده': 'read', 'نمایش': 'read', 'خواندن': 'read',
+    'ایجاد': 'create', 'افزودن': 'create',
+    'ویرایش': 'edit', 'بروزرسانی': 'edit', 'update': 'edit',
+    'حذف': 'delete',
+    'چاپ': 'print',
+    'کپی': 'copy',
+    'حذف گروهی': 'bulk_delete',
   };
 
   const RoleAccess = ({ isOpen, onClose, role, language = 'fa' }) => {
@@ -142,14 +189,29 @@
                     targetIds.forEach(id => {
                         const menuObj = menusData.find(m => m.id === id);
                         if (menuObj) {
-                            const availActions = typeof menuObj.available_actions === 'string' 
-                                ? JSON.parse(menuObj.available_actions || '[]') 
+                            // عملیات: نرمال‌سازی به کدهای انگلیسی و حذف تکراری
+                            const rawActions = typeof menuObj.available_actions === 'string'
+                                ? JSON.parse(menuObj.available_actions || '[]')
                                 : (menuObj.available_actions || []);
-                                
+                            const normalizedActions = [...new Set(rawActions.map(a =>
+                                PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim()
+                            ))];
+
+                            // دسترسی داده: همه option ها را انتخاب کن
+                            const rawScopes = typeof menuObj.available_scopes === 'string'
+                                ? JSON.parse(menuObj.available_scopes || 'null')
+                                : menuObj.available_scopes;
+                            const fullScopes = {};
+                            if (rawScopes && !Array.isArray(rawScopes) && typeof rawScopes === 'object') {
+                                Object.entries(rawScopes).forEach(([key, def]) => {
+                                    fullScopes[key] = (def.options || []).map(o => o.value);
+                                });
+                            }
+
                             nextPerms[id] = {
                                 id: prev[id]?.id || null,
-                                actions: [...availActions],
-                                scopes: prev[id]?.scopes || {}
+                                actions: normalizedActions,
+                                scopes: fullScopes
                             };
                         }
                     });
@@ -196,7 +258,7 @@
 
           Object.entries(tempPermissions).forEach(([menuId, data]) => {
               const hasActions = data.actions.length > 0;
-              const hasScopes = Object.keys(data.scopes).some(k => data.scopes[k]?.length > 0);
+              const hasScopes = data.scopes?.own_data_only === true || Object.keys(data.scopes).some(k => k !== 'own_data_only' && data.scopes[k]?.length > 0);
               
               if (hasActions || hasScopes) {
                   if (data.id) {
@@ -231,6 +293,13 @@
         setTempPermissions(prev => {
             const current = prev[selectedMenu.id] || { actions: [], scopes: {} };
             const hasAction = current.actions.includes(actionId);
+            // اگر دسترسی «مشاهده» حذف شود، تمام عملیات‌ها و محدودیت داده هم پاک می‌شوند
+            if (actionId === 'read' && hasAction) {
+                return {
+                    ...prev,
+                    [selectedMenu.id]: { ...current, actions: [], scopes: {} }
+                };
+            }
             return {
                 ...prev,
                 [selectedMenu.id]: {
@@ -260,10 +329,44 @@
         });
     };
 
+    const toggleOwnDataOnly = () => {
+        if (!selectedMenu) return;
+        setTempPermissions(prev => {
+            const current = prev[selectedMenu.id] || { actions: [], scopes: {} };
+            return {
+                ...prev,
+                [selectedMenu.id]: {
+                    ...current,
+                    scopes: {
+                        ...current.scopes,
+                        own_data_only: !current.scopes?.own_data_only
+                    }
+                }
+            };
+        });
+    };
+
     if (!isOpen) return null;
 
-    const availActions = selectedMenu ? (typeof selectedMenu.available_actions === 'string' ? JSON.parse(selectedMenu.available_actions || '[]') : (selectedMenu.available_actions || [])) : [];
-    const availScopes = selectedMenu ? (typeof selectedMenu.available_scopes === 'string' ? JSON.parse(selectedMenu.available_scopes || '[]') : (selectedMenu.available_scopes || [])) : [];
+    const rawAvailActions = selectedMenu ? (typeof selectedMenu.available_actions === 'string' ? JSON.parse(selectedMenu.available_actions || '[]') : (selectedMenu.available_actions || [])) : [];
+    // نرمال‌سازی به کدهای انگلیسی کوچک + حذف تکراری‌ها بر اساس برچسب نمایشی
+    const _seenActionLabels = new Set();
+    const availActions = rawAvailActions.reduce((acc, a) => {
+        const id = PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim();
+        const lbl = actionDictionary[id] || LOCAL_ACTION_LABELS[id];
+        const key = lbl ? lbl[isRtl ? 'fa' : 'en'] : id;
+        if (!_seenActionLabels.has(key)) { _seenActionLabels.add(key); acc.push(id); }
+        return acc;
+    }, []);
+    // پارسینگ available_scopes - دو فرمت پشتیبانی می‌شود:
+    //   فرمت جدید: آبجکت JSONB با options تعبیه‌شده { key: { label_fa, label_en, options: [{value, label_fa, label_en}] } }
+    //   فرمت قدیمی: آرایه کلیدها ['docTypes', 'branches'] که داده از جداول جداگانه می‌آید
+    const availScopesRaw = selectedMenu ? (typeof selectedMenu.available_scopes === 'string' ? JSON.parse(selectedMenu.available_scopes || 'null') : selectedMenu.available_scopes) : null;
+    const isNewScopeFormat = availScopesRaw && !Array.isArray(availScopesRaw) && typeof availScopesRaw === 'object';
+    const availScopeKeys = isNewScopeFormat ? Object.keys(availScopesRaw) : (Array.isArray(availScopesRaw) ? availScopesRaw : []);
+
+    const currentMenuPerm = selectedMenu ? (tempPermissions[selectedMenu.id] || { actions: [], scopes: {} }) : { actions: [], scopes: {} };
+    const hasReadAccess = currentMenuPerm.actions.some(a => (PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim()) === 'read');
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={`${t('مدیریت دسترسی‌های نقش:', 'Role Permissions Management:')} ${role?.title || ''}`} width="max-w-6xl" language={language}>
@@ -273,7 +376,7 @@
                     {menusData.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-2">
                             <AlertCircle size={24} className="opacity-50" />
-                            <span className="text-[11px]">{t('در حال دریافت یا منویی وجود ندارد.', 'Loading or no menus available.')}</span>
+                            <span className="text-[12px]">{t('در حال دریافت یا منویی وجود ندارد.', 'Loading or no menus available.')}</span>
                         </div>
                     ) : (
                         <Tree 
@@ -305,10 +408,10 @@
                                     </h3>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button size="sm" variant="outline" icon={CheckSquare} onClick={handleGrantFullAccessRecursive} className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20 text-[11px] font-bold">
+                                    <Button size="sm" variant="outline" icon={CheckSquare} onClick={handleGrantFullAccessRecursive} className="text-blue-600 border-blue-200 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-800 dark:hover:bg-blue-900/20 text-[12px] font-bold">
                                         {t('دسترسی کامل شاخه', 'Full Branch Access')}
                                     </Button>
-                                    <Button size="sm" variant="outline" icon={Trash2} onClick={handleRemoveAccessRecursive} className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 text-[11px] font-bold">
+                                    <Button size="sm" variant="outline" icon={Trash2} onClick={handleRemoveAccessRecursive} className="text-red-500 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-900/20 text-[12px] font-bold">
                                         {t('حذف دسترسی شاخه', 'Remove Branch Access')}
                                     </Button>
                                 </div>
@@ -322,69 +425,113 @@
                                     </div>
                                     
                                     {availActions.length === 0 ? (
-                                        <div className="text-[11px] text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                                        <div className="text-[12px] text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
                                             {t('هیچ عملیات خاصی برای این فرم در دیتابیس تعریف نشده است.', 'No specific actions defined for this form in the database.')}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                                             {availActions.map(actionId => {
-                                                const isChecked = tempPermissions[selectedMenu.id]?.actions?.includes(actionId);
-                                                const labelObj = actionDictionary[actionId];
+                                                const isChecked = (tempPermissions[selectedMenu.id]?.actions || []).some(a => (PERSIAN_TO_CODE[String(a).trim()] || String(a).toLowerCase().trim()) === actionId);
+                                                const isReadAction = actionId === 'read';
+                                                const isDisabled = !isReadAction && !hasReadAccess;
+                                                const labelObj = actionDictionary[actionId] || LOCAL_ACTION_LABELS[actionId];
                                                 const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : actionId;
-                                                
                                                 return (
-                                                    <label key={actionId} onClick={() => toggleAction(actionId)} className={`flex items-center gap-2.5 p-2.5 rounded-xl cursor-pointer border transition-all select-none ${isChecked ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-sm' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
-                                                        <div className={`w-4 h-4 rounded flex items-center justify-center shrink-0 border ${isChecked ? 'bg-blue-500 border-blue-500 text-white' : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600'}`}>
-                                                            {isChecked && <Check size={12} strokeWidth={3}/>}
-                                                        </div>
-                                                        <span className={`text-[12px] ${isChecked ? 'font-bold text-blue-900 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 font-medium'}`}>
-                                                            {displayLabel}
-                                                        </span>
-                                                    </label>
-                                                )
+                                                    <button
+                                                        key={actionId}
+                                                        type="button"
+                                                        disabled={isDisabled}
+                                                        onClick={() => !isDisabled && toggleAction(actionId)}
+                                                        className={[
+                                                            'w-full inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all duration-150 select-none',
+                                                            isDisabled
+                                                                ? 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-700/50 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                                                                : isChecked
+                                                                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm cursor-pointer'
+                                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer'
+                                                        ].join(' ')}
+                                                    >
+                                                        {isChecked && !isDisabled && React.createElement(Check, { size: 11, className: 'shrink-0' })}
+                                                        {displayLabel}
+                                                    </button>
+                                                );
                                             })}
                                         </div>
                                     )}
                                 </div>
 
-                                {availScopes.length > 0 && (
+                                {hasReadAccess && (
                                     <div className="space-y-4 pt-2">
                                         <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                                             <div className="w-6 h-6 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center"><Lock size={14}/></div>
-                                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('محدودیت دسترسی به داده‌ها', 'Data Scope Restrictions')}</span>
+                                            <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{t('جزئیات دسترسی به داده‌ها', 'Data Scope Details')}</span>
                                         </div>
-                                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
-                                            {t('در صورت عدم انتخاب هیچ گزینه‌ای در یک بخش، کاربر به تمامی داده‌های آن بخش دسترسی خواهد داشت.', 'If no options are selected, the user will have access to all data in that scope.')}
+
+                                        <div className="flex flex-col gap-0.5">
+                                            <ToggleField
+                                                checked={!!currentMenuPerm.scopes?.own_data_only}
+                                                onChange={toggleOwnDataOnly}
+                                                isRtl={isRtl}
+                                                label={t('ایجادکننده باشد', 'Created By Me')}
+                                            />
+                                            <div className="text-[10px] text-slate-500 dark:text-slate-400 ps-10">{t('کاربر فقط رکوردهایی را می‌بیند که خودش ایجاد کرده است', 'User can only see records they created')}</div>
+                                        </div>
+
+                                        {availScopeKeys.length > 0 && (
+                                            <>
+                                        <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700/50 text-amber-700 dark:text-amber-400 p-2 rounded-lg flex items-center gap-2 mb-1 animate-in slide-in-from-top-2 shrink-0">
+                                            {React.createElement(AlertTriangle, { size: 14, className: 'shrink-0' })}
+                                            <span className="text-[12px] font-bold">{t('در صورت عدم انتخاب هیچ گزینه‌ای در یک بخش، کاربر به تمامی داده‌های آن بخش دسترسی خواهد داشت.', 'If no options are selected in a scope, the user will have access to all data in that scope.')}</span>
                                         </div>
                                         
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {availScopes.map(scopeId => {
-                                                const scopeDataList = scopesData[scopeId] || [];
-                                                const labelObj = SCOPE_DICT[scopeId];
-                                                const displayLabel = labelObj ? labelObj[isRtl ? 'fa' : 'en'] : scopeId;
-                                                
+                                        <div className="flex flex-col gap-5">
+                                            {availScopeKeys.map(scopeKey => {
+                                                const scopeDef = isNewScopeFormat ? availScopesRaw[scopeKey] : null;
+                                                const displayLabel = scopeDef
+                                                    ? (isRtl ? (scopeDef.label_fa || scopeKey) : (scopeDef.label_en || scopeKey))
+                                                    : (SCOPE_DICT[scopeKey] ? SCOPE_DICT[scopeKey][isRtl ? 'fa' : 'en'] : scopeKey);
+                                                const itemsList = scopeDef ? (scopeDef.options || []) : (scopesData[scopeKey] || []);
                                                 return (
-                                                    <div key={scopeId} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden flex flex-col shadow-sm">
-                                                        <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-[11px] font-black text-slate-700 dark:text-slate-300">
+                                                    <div key={scopeKey}>
+                                                        <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                                                             {displayLabel}
                                                         </div>
-                                                        <div className="p-3 flex flex-wrap gap-2 max-h-48 overflow-y-auto custom-scrollbar">
-                                                            {scopeDataList.length > 0 ? scopeDataList.map(item => {
-                                                                const isSelected = tempPermissions[selectedMenu.id]?.scopes?.[scopeId]?.includes(item.id);
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                                            {itemsList.length > 0 ? itemsList.map(item => {
+                                                                const itemValue = scopeDef ? item.value : item.id;
+                                                                const itemLabel = scopeDef
+                                                                    ? (isRtl ? (item.label_fa || item.value) : (item.label_en || item.value))
+                                                                    : item.title;
+                                                                const isSelected = tempPermissions[selectedMenu.id]?.scopes?.[scopeKey]?.includes(itemValue);
                                                                 return (
-                                                                    <div key={item.id} onClick={() => toggleScope(scopeId, item.id)} className={`px-2.5 py-1 text-[11px] rounded-full border cursor-pointer select-none transition-all flex items-center gap-1.5 ${isSelected ? 'bg-blue-500 border-blue-500 text-white font-bold shadow-sm' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-blue-300 dark:hover:border-blue-600'}`}>
-                                                                        {isSelected && <Check size={10} strokeWidth={3}/>}
-                                                                        {item.title}
-                                                                    </div>
-                                                                )
+                                                                    <button
+                                                                        key={itemValue}
+                                                                        type="button"
+                                                                        disabled={!hasReadAccess}
+                                                                        onClick={() => hasReadAccess && toggleScope(scopeKey, itemValue)}
+                                                                        className={[
+                                                                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold border transition-all duration-150 select-none',
+                                                                            !hasReadAccess
+                                                                                ? 'bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-700/50 text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                                                                                : isSelected
+                                                                                    ? 'bg-teal-600 border-teal-600 text-white shadow-sm shadow-teal-200 dark:shadow-teal-900 cursor-pointer'
+                                                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-teal-300 dark:hover:border-teal-700 hover:text-teal-600 dark:hover:text-teal-400 cursor-pointer'
+                                                                        ].join(' ')}
+                                                                    >
+                                                                        {isSelected && hasReadAccess && React.createElement(Check, { size: 11, className: 'shrink-0' })}
+                                                                        {itemLabel}
+                                                                    </button>
+                                                                );
                                                             }) : (
                                                                 <span className="text-[10px] text-slate-400 italic">{t('داده‌ای یافت نشد.', 'No data found.')}</span>
                                                             )}
                                                         </div>
                                                     </div>
-                                                )
+                                                );
                                             })}
                                         </div>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -405,20 +552,19 @@
 
             {confirmModal.isOpen && (
                 <Modal isOpen={true} onClose={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })} title={confirmModal.title} width="max-w-sm" language={language}>
-                    <div className="p-4 flex flex-col gap-3 items-center text-center">
-                        <div className={`w-11 h-11 rounded-full flex items-center justify-center mb-1 ${confirmModal.type === 'remove' ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-500' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-500'}`}>
-                            <AlertTriangle size={22} />
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 text-[13px] leading-relaxed font-bold">
-                            {confirmModal.message}
-                        </p>
-                        <div className="flex gap-2 mt-4 w-full">
-                            <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })}>{t('انصراف', 'Cancel')}</Button>
-                            <Button variant="primary" size="sm" onClick={confirmModal.onConfirm} className={`flex-1 ${confirmModal.type === 'remove' ? 'bg-rose-600 dark:bg-rose-500 hover:bg-rose-700 border-rose-600' : 'bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 border-blue-600'}`}>
-                                {t('تایید عملیات', 'Confirm')}
-                            </Button>
-                        </div>
-                    </div>
+                    <EmptyState
+                        icon={AlertTriangle}
+                        title={confirmModal.title}
+                        description={confirmModal.message}
+                        action={
+                            <div className="flex gap-2 w-full mt-2 px-4">
+                                <Button variant="outline" size="sm" className="flex-1" onClick={() => setConfirmModal({ isOpen: false, type: '', title: '', message: '', onConfirm: null })}>{t('انصراف', 'Cancel')}</Button>
+                                <Button variant={confirmModal.type === 'remove' ? 'danger' : 'primary'} size="sm" onClick={confirmModal.onConfirm} className="flex-1">
+                                    {t('تایید عملیات', 'Confirm')}
+                                </Button>
+                            </div>
+                        }
+                    />
                 </Modal>
             )}
         </Modal>

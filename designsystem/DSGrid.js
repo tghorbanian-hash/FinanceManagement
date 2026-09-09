@@ -42,9 +42,11 @@
     const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef(null);
     const inputRef = useRef(null);
+    const [rect, setRect] = useState(null);
     const t = (fa, en) => isRtl ? fa : en;
     const access = useSecureAccess(formCode);
     const isDisabled = (!access.canEdit && !access.canCreate) || disabled;
+    const ReactDOM = window.ReactDOM;
     
     useEffect(() => {
       const handleClickOutside = (e) => {
@@ -60,6 +62,23 @@
       if (isOpen && inputRef.current) inputRef.current.focus();
     }, [isOpen]);
 
+    useEffect(() => {
+      const updateRect = () => {
+        if (containerRef.current) {
+          setRect(containerRef.current.getBoundingClientRect());
+        }
+      };
+      if (isOpen) {
+        updateRect();
+        window.addEventListener('scroll', updateRect, true);
+        window.addEventListener('resize', updateRect);
+      }
+      return () => {
+        window.removeEventListener('scroll', updateRect, true);
+        window.removeEventListener('resize', updateRect);
+      };
+    }, [isOpen]);
+
     const filteredData = useMemo(() => {
       if (!searchTerm) return data;
       const lowerSearch = searchTerm.toLowerCase();
@@ -72,6 +91,43 @@
     }, [data, columns, searchTerm]);
 
     const heights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+
+    const dropdownContentBox = (
+      <div className="max-h-64 overflow-y-auto custom-scrollbar">
+        {filteredData.length > 0 ? (
+          <table className="w-full text-start border-collapse" style={{ tableLayout: 'fixed' }}>
+            <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm z-10">
+              <tr>
+                {columns.map((col, idx) => (
+                  <th key={idx} className={`p-2.5 text-[12px] font-black text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 overflow-hidden ${isRtl ? 'text-right' : 'text-left'}`} style={{ width: col.width || 'auto' }}>
+                    {t(col.header_fa, col.header_en)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredData.map((row, rIdx) => (
+                <tr 
+                  key={rIdx} 
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onChange(row); setIsOpen(false); setSearchTerm(''); }}
+                  className="cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b border-slate-100 dark:border-slate-700/50 last:border-0 transition-colors"
+                >
+                  {columns.map((col, cIdx) => (
+                    <td key={cIdx} className="p-2.5 text-[12px] text-slate-700 dark:text-slate-300 overflow-hidden" style={{ maxWidth: col.width || 'auto', overflow: 'hidden' }}>
+                      {col.render ? col.render(row[col.field], row) : (row[col.field] || '-')}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-4 text-center text-[12px] text-slate-400 dark:text-slate-500">
+            {t('موردی یافت نشد', 'No results found')}
+          </div>
+        )}
+      </div>
+    );
 
     return (
       <div ref={containerRef} className={`flex flex-col ${size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
@@ -96,7 +152,7 @@
               dir={isRtl ? 'rtl' : 'ltr'}
             />
           ) : (
-            <div className={`w-full truncate ${displayValue ? (isRtl ? 'pl-6' : 'pr-6') : ''}`}>
+            <div className={`w-full truncate ${displayValue ? (isRtl ? 'pl-6' : 'pr-6') : ''} ${!displayValue ? 'text-slate-400 dark:text-slate-500' : ''}`}>
                {displayValue || placeholder || t('انتخاب کنید...', 'Select...')}
             </div>
           )}
@@ -112,49 +168,41 @@
           )}
         </div>
 
-        {isOpen && (
-          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} w-full ${dropdownWidth} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-[9999] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150`}>
-            <div className="max-h-64 overflow-y-auto custom-scrollbar">
-              {filteredData.length > 0 ? (
-                <table className="w-full text-start border-collapse">
-                  <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm z-10">
-                    <tr>
-                      {columns.map((col, idx) => (
-                        <th key={idx} className={`p-2.5 text-[11px] font-black text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700 ${isRtl ? 'text-right' : 'text-left'}`} style={{ width: col.width || 'auto' }}>
-                          {t(col.header_fa, col.header_en)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredData.map((row, rIdx) => (
-                      <tr 
-                        key={rIdx} 
-                        onClick={() => { onChange(row); setIsOpen(false); setSearchTerm(''); }}
-                        className="cursor-pointer hover:bg-indigo-50 dark:hover:bg-indigo-900/30 border-b border-slate-100 dark:border-slate-700/50 last:border-0 transition-colors"
-                      >
-                        {columns.map((col, cIdx) => (
-                          <td key={cIdx} className="p-2.5 text-[12px] text-slate-700 dark:text-slate-300">
-                            {col.render ? col.render(row[col.field], row) : (row[col.field] || '-')}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="p-4 text-center text-[12px] text-slate-400 dark:text-slate-500">
-                  {t('موردی یافت نشد', 'No results found')}
-                </div>
-              )}
+        {isOpen && rect && (() => {
+          const inputWidth = containerRef.current ? containerRef.current.offsetWidth : 0;
+          const minWMatch = dropdownWidth && dropdownWidth.match(/min-w-\[(\d+)px\]/);
+          const estWidth = Math.max(inputWidth, minWMatch ? parseInt(minWMatch[1]) : 300);
+          let posH;
+          if (isRtl) {
+            const leftEdge = rect.right - estWidth;
+            posH = leftEdge >= 8
+              ? { right: window.innerWidth - rect.right }
+              : { left: Math.max(8, Math.min(rect.left, window.innerWidth - estWidth - 8)) };
+          } else {
+            const rightEdge = rect.left + estWidth;
+            posH = rightEdge <= window.innerWidth - 8
+              ? { left: rect.left }
+              : { right: window.innerWidth - rect.right };
+          }
+          const portalNode = (
+            <div
+              style={{ position: 'fixed', top: rect.bottom + 4, ...posH, width: inputWidth || 'auto', zIndex: 999999 }}
+              className={`w-full ${dropdownWidth} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg flex flex-col animate-in fade-in zoom-in-95 duration-150 overflow-hidden`}
+            >
+              {dropdownContentBox}
             </div>
-          </div>
-        )}
+          );
+          return ReactDOM ? ReactDOM.createPortal(portalNode, document.body) : (
+            <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} w-full ${dropdownWidth} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg z-[9999] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150`}>
+              {dropdownContentBox}
+            </div>
+          );
+        })()}
       </div>
     );
   };
 
-  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, language = 'fa', defaultOpen = false, initialValues, children }) => {
+  const AdvancedFilter = ({ title, fields = [], onFilter, onClear, onSearch, language = 'fa', defaultOpen = false, initialValues, children, inlineChildren = false, footerStartContent = null, gridClassName = 'grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3' }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -195,26 +243,50 @@
         </div>
         {isOpen && (
           <div className="p-3 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            <div className={gridClassName}>
               {fields.map((f, idx) => {
+                if (f.type === 'custom' && typeof f.render === 'function') {
+                  return f.render({
+                    key: idx,
+                    value: values[f.name],
+                    values,
+                    setValue: (val) => handleChange(f.name, val),
+                    handleChange,
+                    isRtl,
+                    language,
+                    t,
+                  });
+                }
                 if (f.type === 'select') return <SelectField key={idx} size="sm" label={f.label} isRtl={isRtl} options={f.options} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} />;
                 if (f.type === 'toggle') return <ToggleField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
                 if (f.type === 'checkbox') return <CheckboxField key={idx} size="sm" label={f.label} isRtl={isRtl} checked={values[f.name]} onChange={(v) => handleChange(f.name, v)} wrapperClassName="mt-5" />;
                 if (f.type === 'lov') {
-                  const displayStr = values[f.name] && typeof values[f.name] === 'object' ? (values[f.name].title || values[f.name].name || values[f.name].label || Object.values(values[f.name])[0]) : values[f.name];
+                  let displayStr = values[f.name];
+                  if (values[f.name] && typeof values[f.name] === 'object') {
+                      const v = values[f.name];
+                      displayStr = v.displayLabel || v.title_fa || v.full_name || v.username || v.title || v.name || v.label || v.code || (Object.keys(v).length > 1 ? v[Object.keys(v)[1]] : v[Object.keys(v)[0]]);
+                  }
                   return <LOVField key={idx} size="sm" label={f.label} isRtl={isRtl} data={f.lovData} columns={f.lovColumns} displayValue={displayStr} onChange={(row) => handleChange(f.name, row)} dropdownWidth={f.dropdownWidth} />;
                 }
                 if (f.type === 'date') return <DatePicker key={idx} size="sm" label={f.label} isRtl={isRtl} language={language} value={values[f.name] || ''} onChange={(val) => handleChange(f.name, val)} />;
                 return <TextField key={idx} size="sm" label={f.label} isRtl={isRtl} type={f.type} placeholder={f.type === 'date' ? 'YYYY/MM/DD' : ''} value={values[f.name] || ''} onChange={(e) => handleChange(f.name, e.target.value)} dir={f.type === 'date' || !isRtl ? 'ltr' : 'rtl'} />;
               })}
+              {inlineChildren && children}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                {children}
-              </div>
+            <div className={`flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 ${(!inlineChildren || footerStartContent) ? 'justify-between' : 'justify-end'}`}>
+              {(!inlineChildren || footerStartContent) && (
+                <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                  {!inlineChildren && children}
+                  {footerStartContent}
+                </div>
+              )}
               <div className="flex items-center gap-2 shrink-0 mr-auto">
                 <Button variant="ghost" size="sm" icon={Trash2} onClick={handleClear}>{t('پاک کردن', 'Clear')}</Button>
-                <Button variant="primary" size="sm" icon={Search} onClick={() => onFilter && onFilter(values)}>{t('جستجو', 'Search')}</Button>
+                <Button variant="primary" size="sm" icon={Search} onClick={() => {
+                  const latestValues = lastSyncValues.current || values;
+                  if (onSearch) onSearch(latestValues);
+                  else if (onFilter) onFilter(latestValues);
+                }}>{t('جستجو', 'Search')}</Button>
               </div>
             </div>
           </div>
@@ -223,7 +295,7 @@
     );
   };
 
-  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowClick, onRowDoubleClick, selectable = false, activeRowId = null, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false, gridState, onGridStateChange, hideImport = false, onImport, formCode }) => {
+  const DataGrid = ({ data = [], columns = [], actions = [], language = 'fa', onAdd, onRowClick, onRowDoubleClick, selectable = false, activeRowId = null, bulkActions = [], headerMenus = [], rowReorderable = false, onRowReorder, onDownloadSample, showSummaryRow = false, gridState, onGridStateChange, hideImport = false, hideExport = false, hideToolbar = false, onImport, onExport, formCode, actionWidth = '120px', groupable = false, defaultHiddenCols = [], defaultPinnedCols = [], pageSizeOptions = [10, 20, 50, 100], toolbarContent = null, onSelectionChange = null, minVisibleRows = 0, reserveMiddleSpace = true }) => {
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const globalMode = useCalendarMode();
@@ -286,8 +358,8 @@
 
     const [gridData, setGridData] = useState(data);
     const [columnOrder, setColumnOrder] = useState(columns.map(c => c.field));
-    const [hiddenCols, setHiddenCols] = useState([]);
-    const [pinnedCols, setPinnedCols] = useState([]);
+    const [hiddenCols, setHiddenCols] = useState(defaultHiddenCols);
+    const [pinnedCols, setPinnedCols] = useState(defaultPinnedCols);
     const [filters, setFilters] = useState({});
     const [localFilters, setLocalFilters] = useState({});
     const [sortConfig, setSortConfig] = useState({ field: null, direction: 'asc' });
@@ -295,7 +367,7 @@
     const [collapsedGroups, setCollapsedGroups] = useState([]);
     
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(20);
+    const [pageSize, setPageSize] = useState(() => gridState?.pageSize || 20);
     const [showColMenu, setShowColMenu] = useState(false);
     const [activeHeaderMenu, setActiveHeaderMenu] = useState(null);
     const [selectedRows, setSelectedRows] = useState([]);
@@ -303,6 +375,10 @@
     
     const colMenuRef = useRef(null);
     const headerMenuRef = useRef(null);
+    const colMenuPortalRef = useRef(null);
+    const importInputRef = useRef(null);
+    const [colMenuPosition, setColMenuPosition] = useState(null);
+    const ReactDOM = window.ReactDOM;
     const dragColItem = useRef(); const dragOverColItem = useRef();
     const dragRowItem = useRef(); const dragOverRowItem = useRef();
     const dragGroupItem = useRef(null); const dragOverGroupItem = useRef(null);
@@ -316,8 +392,9 @@
           lastSyncState.current = gridState;
           
           setColumnOrder(gridState.columnOrder || columns.map(c => c.field));
-          setHiddenCols(gridState.hiddenCols || []);
-          setPinnedCols(gridState.pinnedCols || []);
+          setHiddenCols(gridState.hiddenCols || defaultHiddenCols);
+          setPinnedCols(gridState.pinnedCols || defaultPinnedCols);
+          setPageSize(gridState.pageSize || 20);
           setFilters(gridState.filters || {});
           setLocalFilters(gridState.filters || {});
           setSortConfig(gridState.sortConfig || { field: null, direction: 'asc' });
@@ -326,18 +403,19 @@
       } else if (gridState === null && lastSyncState.current !== null) {
         lastSyncState.current = null;
         setColumnOrder(columns.map(c => c.field));
-        setHiddenCols([]);
-        setPinnedCols([]);
+        setHiddenCols(defaultHiddenCols);
+        setPinnedCols(defaultPinnedCols);
+        setPageSize(20);
         setFilters({});
         setLocalFilters({});
         setSortConfig({ field: null, direction: 'asc' });
         setGroupCols([]);
       }
-    }, [gridState, columns]);
+    }, [gridState, columns, defaultPinnedCols]);
 
     useEffect(() => {
       if (onGridStateChange) {
-        const currentState = { columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols };
+        const currentState = { columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, pageSize };
         const stateStr = JSON.stringify(currentState);
         
         if (stateStr !== JSON.stringify(lastSyncState.current || {})) {
@@ -345,11 +423,13 @@
           onGridStateChange(currentState);
         }
       }
-    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, onGridStateChange]);
+    }, [columnOrder, hiddenCols, pinnedCols, filters, sortConfig, groupCols, pageSize, onGridStateChange]);
 
     useEffect(() => {
       const handleClickOutside = (e) => { 
-        if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false); 
+        const inColBtn = colMenuRef.current && colMenuRef.current.contains(e.target);
+        const inColPortal = colMenuPortalRef.current && colMenuPortalRef.current.contains(e.target);
+        if (!inColBtn && !inColPortal) setShowColMenu(false);
         if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setActiveHeaderMenu(null);
       };
       document.addEventListener('mousedown', handleClickOutside);
@@ -358,11 +438,15 @@
 
     useEffect(() => { setGridData(data); setSelectedRows([]); }, [data]);
 
+    useEffect(() => {
+      if (onSelectionChange) onSelectionChange(selectedRows);
+    }, [selectedRows, onSelectionChange]);
+
     const visibleColumns = useMemo(() => {
       const visibleFields = columnOrder.filter(f => !hiddenCols.includes(f));
       const pinned = visibleFields.filter(f => pinnedCols.includes(f));
       const unpinned = visibleFields.filter(f => !pinnedCols.includes(f));
-      return [...pinned, ...unpinned].map(f => columns.find(c => c.field === f)).filter(Boolean);
+      return [...pinned, ...unpinned].map(f => columns.find(c => c.field === f)).filter(Boolean).filter(c => !c.exportOnly);
     }, [columnOrder, hiddenCols, pinnedCols, columns]);
 
     const processedData = useMemo(() => {
@@ -421,6 +505,9 @@
       const start = (page - 1) * pageSize;
       return processedData.slice(start, start + pageSize);
     }, [processedData, page, pageSize]);
+
+    const visibleRowCount = useMemo(() => paginatedData.filter(row => !row.isGroupHeader).length, [paginatedData]);
+    const spacerRows = Math.max(0, (Number(minVisibleRows) || 0) - visibleRowCount);
 
     const summaryData = useMemo(() => {
       if (!showSummaryRow) return null;
@@ -538,11 +625,12 @@
          }
          return;
       }
-      const headers = visibleColumns.map(c => t(c.header_fa, c.header_en)).join(',');
-      const rows = gridData.map(row => visibleColumns.map(c => {
-        let val = row[c.field];
+      const exportCols = columns; // always export ALL defined columns regardless of visibility
+      const headers = exportCols.map(c => t(c.header_fa, c.header_en || c.header_fa)).join(',');
+      const rows = gridData.map(row => exportCols.map(c => {
+        let val = c.exportValue ? c.exportValue(row[c.field], row) : row[c.field];
         if (c.type === 'date') val = formatGlobalDate(val, globalMode);
-        return `"${(val || '').toString().replace(/"/g, '""')}"`;
+        return `"${(val ?? '').toString().replace(/"/g, '""')}"`;
       }).join(',')).join('\n');
       const csv = '\uFEFF' + headers + '\n' + rows;
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -582,7 +670,7 @@
 
     return (
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-sm flex flex-col font-sans h-full overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 gap-2 shrink-0 min-h-[46px]">
+        {!hideToolbar && <div className="flex flex-wrap items-stretch p-1.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 gap-2 shrink-0 min-h-[46px]">
           <div className="flex items-center shrink-0">
             {onAdd && access.canCreate && (
               <Button size="sm" variant="primary" icon={Plus} onClick={onAdd} className="h-full px-3.5 text-[12px] shadow-sm">
@@ -591,9 +679,17 @@
             )}
           </div>
 
+          {toolbarContent ? (
+            <div className="flex-1 flex items-center gap-2 min-w-0 overflow-hidden">
+              {toolbarContent}
+            </div>
+          ) : (
+            <div className="hidden" />
+          )}
+
           {selectedRows.length > 0 && filteredBulkActions.length > 0 ? (
-            <div className="flex-1 flex items-center gap-3 px-4 py-1 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/30 rounded-md transition-all animate-in fade-in">
-              <span className="text-[12px] font-black text-indigo-800 dark:text-indigo-300">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
+            <div className="flex-1 min-w-0 flex items-center gap-3 px-4 py-1 border border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-900/30 rounded-md transition-all animate-in fade-in overflow-hidden">
+              <span className="text-[12px] font-black text-indigo-800 dark:text-indigo-300 whitespace-nowrap shrink-0">{selectedRows.length} {t('مورد انتخاب شده', 'Items selected')}</span>
               <div className="w-px h-4 bg-indigo-200 dark:bg-indigo-800/50 mx-1"></div>
               {filteredBulkActions.map((act, i) => (
                 <Button key={i} size="sm" variant={act.variant || 'outline'} icon={act.icon} onClick={() => {act.onClick(selectedRows); setSelectedRows([]);}} className={`!h-7 text-[10px] ${act.className || ''}`}>
@@ -601,8 +697,8 @@
                 </Button>
               ))}
             </div>
-          ) : (
-            <div className={`flex-1 flex items-center gap-2 px-3 py-1 border border-dashed rounded-md transition-colors overflow-x-auto custom-scrollbar ${groupCols.length > 0 ? 'bg-indigo-50/30 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`} onDragOver={(e) => e.preventDefault()} onDrop={handleGroupDrop}>
+          ) : groupable ? (
+            <div className={`flex-1 min-w-0 flex items-center gap-2 px-3 py-1 border border-dashed rounded-md transition-colors overflow-x-auto custom-scrollbar ${groupCols.length > 0 ? 'bg-indigo-50/30 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800/50' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'}`} onDragOver={(e) => e.preventDefault()} onDrop={handleGroupDrop}>
               <Layers size={14} className={groupCols.length > 0 ? 'text-indigo-500 dark:text-indigo-400 shrink-0' : 'text-slate-400 dark:text-slate-500 shrink-0'} />
               {groupCols.length === 0 ? (
                 <span className="text-[12px] text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap">{t('هدر ستون را برای گروه‌بندی اینجا رها کنید', 'Drop column header here to group')}</span>
@@ -630,7 +726,9 @@
                 </div>
               )}
             </div>
-          )}
+          ) : reserveMiddleSpace ? (
+            <div className="flex-1" />
+          ) : null}
 
           <div className="flex items-center gap-1 shrink-0">
             {filteredHeaderMenus && filteredHeaderMenus.length > 0 && (
@@ -665,12 +763,36 @@
             )}
             
             <div className="relative flex items-center h-full" ref={colMenuRef}>
-              <button onClick={() => setShowColMenu(!showColMenu)} title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
-              {showColMenu && (
-                <div className="absolute top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg p-2 z-50 min-w-[200px] right-0 animate-in zoom-in-95 duration-100">
+              <button
+                onClick={() => {
+                  if (!showColMenu && colMenuRef.current) {
+                    setColMenuPosition(colMenuRef.current.getBoundingClientRect());
+                  }
+                  setShowColMenu(prev => !prev);
+                }}
+                title={t('نمایش/مخفی‌سازی ستون‌ها', 'Columns')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Settings size={16} /></button>
+            </div>
+            {showColMenu && colMenuPosition && (() => {
+              const menuWidth = 220;
+              // Smart horizontal position: right-align if menu fits on left side of button, else left-align
+              const resultingLeftEdge = colMenuPosition.right - menuWidth;
+              const posH = resultingLeftEdge >= 8
+                ? { right: Math.max(4, window.innerWidth - colMenuPosition.right) }
+                : { left: Math.max(8, Math.min(colMenuPosition.left, window.innerWidth - menuWidth - 8)) };
+              // Smart vertical position
+              const spaceBelow = window.innerHeight - colMenuPosition.bottom;
+              const posV = spaceBelow > 270
+                ? { top: colMenuPosition.bottom + 4 }
+                : { bottom: window.innerHeight - colMenuPosition.top + 4 };
+              const menuNode = (
+                <div
+                  ref={colMenuPortalRef}
+                  style={{ position: 'fixed', zIndex: 999999, ...posH, ...posV }}
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl rounded-lg p-2 min-w-[200px] animate-in zoom-in-95 duration-100"
+                >
                   <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 mb-2 pb-2 border-b border-slate-100 dark:border-slate-700 px-1">{t('نمایش / مخفی‌سازی', 'Show / Hide')}</div>
                   <div className="max-h-[250px] overflow-y-auto custom-scrollbar space-y-0.5">
-                    {columns.map(c => (
+                    {columns.filter(c => !c.exportOnly).map(c => (
                       <label key={c.field} className="flex items-center gap-2.5 cursor-pointer p-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-md text-[12px] font-bold text-slate-600 dark:text-slate-300 transition-colors">
                         <input type="checkbox" checked={!hiddenCols.includes(c.field)} onChange={() => toggleVisibility(c.field)} className="rounded border-slate-300 dark:border-slate-500 bg-white dark:bg-slate-700/40 text-indigo-600 dark:text-indigo-400 focus:ring-indigo-500 dark:focus:ring-indigo-400 w-3.5 h-3.5" />
                         {t(c.header_fa, c.header_en)}
@@ -678,23 +800,24 @@
                     ))}
                   </div>
                 </div>
-              )}
-            </div>
+              );
+              return ReactDOM ? ReactDOM.createPortal(menuNode, document.body) : menuNode;
+            })()}
             <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block"></div>
             {onDownloadSample && access.canCreate && (
-              <button onClick={onDownloadSample} title={t('دانلود نمونه فایل اکسل', 'Download Excel Sample')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileDown size={16} /></button>
+              <button type="button" onClick={onDownloadSample} title={t('دانلود نمونه فایل اکسل', 'Download Excel Sample')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileDown size={16} /></button>
             )}
             {!hideImport && access.canCreate && (
               <>
-                <button onClick={() => document.getElementById('grid-import-input').click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
-                <input id="grid-import-input" type="file" className="hidden" accept=".csv" onChange={(e) => { if (onImport && e.target.files.length > 0) { onImport(e.target.files[0]); e.target.value = ''; } }} />
+                <button type="button" onClick={() => importInputRef.current?.click()} title={t('ورود اطلاعات', 'Import')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><Upload size={16} /></button>
+                <input ref={importInputRef} type="file" className="hidden" accept=".csv,.xlsx,.xls" onChange={(e) => { if (onImport && e.target.files.length > 0) { onImport(e.target.files[0]); e.target.value = ''; } }} />
               </>
             )}
-            {access.canPrint && (
-              <button onClick={exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileSpreadsheet size={16} /></button>
+            {!hideExport && access.canPrint && (
+              <button type="button" onClick={onExport || exportCSV} title={t('خروجی اکسل', 'Export')} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent hover:border-slate-200 dark:hover:border-slate-600 rounded-md transition-all h-full flex items-center justify-center"><FileSpreadsheet size={16} /></button>
             )}
           </div>
-        </div>
+        </div>}
 
         <div className="overflow-auto custom-scrollbar flex-1 relative bg-white dark:bg-slate-800">
           <table className="w-full h-full text-start border-separate border-spacing-0 min-w-max" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -730,7 +853,7 @@
                   )
                 })}
                 {filteredActions.length > 0 && (
-                  <th style={{...getStickyStyles('ACTIONS', true, true)}} className="p-1.5 text-[12px] font-black text-slate-700 dark:text-slate-200 w-[120px] bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-0">
+                  <th style={{...getStickyStyles('ACTIONS', true, true), width: actionWidth, minWidth: actionWidth, maxWidth: actionWidth}} className="p-1.5 text-[12px] font-black text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-900 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-0">
                     {t('عملیات', 'Actions')}
                   </th>
                 )}
@@ -778,7 +901,7 @@
                   );
                 })}
                 {filteredActions.length > 0 && (
-                  <td style={getStickyStyles('ACTIONS', true, true)} className="p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
+                  <td style={{...getStickyStyles('ACTIONS', true, true), width: actionWidth, minWidth: actionWidth, maxWidth: actionWidth}} className="p-1 bg-slate-100 dark:bg-slate-900 border-b-2 border-slate-200 dark:border-slate-700 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={applyInlineFilters} title={t('اعمال فیلتر', 'Apply Filter')} className="p-1 rounded bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm transition-colors">
                         <Search size={12} strokeWidth={2.5} />
@@ -849,7 +972,7 @@
                     ))}
                     
                     {filteredActions.length > 0 && (
-                      <td style={{...getStickyStyles('ACTIONS', true), backgroundColor: 'inherit'}} className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.01)] dark:shadow-none bg-inherit ${!isHighlighted ? 'group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50' : ''} border-slate-100 dark:border-slate-700/50`}>
+                      <td style={{...getStickyStyles('ACTIONS', true), width: actionWidth, minWidth: actionWidth, maxWidth: actionWidth}} className={`p-1 text-center shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none border-slate-100 dark:border-slate-700/50 ${isHighlighted ? 'bg-indigo-50/80 dark:bg-indigo-900/30' : 'bg-white dark:bg-slate-800 group-hover:bg-slate-50 dark:group-hover:bg-slate-700/50'}`}>
                         <div className="flex items-center justify-center gap-0.5">
                           {filteredActions.map((act, i) => {
                             if (act.hidden && act.hidden(row)) return null;
@@ -877,6 +1000,15 @@
                   <td colSpan={visibleColumns.length + (filteredActions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="border-0 bg-transparent p-0"></td>
                 </tr>
               )}
+              {spacerRows > 0 && (
+                <>
+                  {Array.from({ length: spacerRows }).map((_, idx) => (
+                    <tr key={`spacer-${idx}`} aria-hidden="true" className="pointer-events-none select-none">
+                      <td colSpan={visibleColumns.length + (filteredActions.length > 0 ? 1 : 0) + (selectable ? 1 : 0) + (rowReorderable ? 1 : 0)} className="border-0 bg-transparent p-0" style={{ height: '34px' }}></td>
+                    </tr>
+                  ))}
+                </>
+              )}
             </tbody>
             
             {showSummaryRow && summaryData && (
@@ -895,7 +1027,7 @@
                       </td>
                     );
                   })}
-                  {filteredActions.length > 0 && <td style={getStickyStyles('ACTIONS', true, false, true)} className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
+                  {filteredActions.length > 0 && <td style={{...getStickyStyles('ACTIONS', true, false, true), width: actionWidth, minWidth: actionWidth, maxWidth: actionWidth}} className="p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 shadow-[-4px_0_10px_rgba(0,0,0,0.03)] dark:shadow-none"></td>}
                 </tr>
               </tfoot>
             )}
@@ -906,7 +1038,7 @@
           <div className="flex items-center gap-2">
             <span className="text-[12px] font-bold text-slate-500 dark:text-slate-400">{t('تعداد در صفحه:', 'Rows per page:')}</span>
             <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="text-[12px] font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-slate-700 dark:text-slate-200 cursor-pointer">
-              {[10, 20, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}
+              {pageSizeOptions.map(size => <option key={size} value={size}>{size}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">

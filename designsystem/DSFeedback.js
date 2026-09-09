@@ -1,4 +1,4 @@
-/* Filename: DSFeedback.js */
+/* Filename: designsystem/DSFeedback.js */
 (() => {
   const React = window.React;
   const { useState, useEffect } = React;
@@ -22,12 +22,14 @@
     ArrowLeft = FallbackIcon,
     ArrowRight = FallbackIcon,
     ChevronDown = FallbackIcon,
-    ChevronUp = FallbackIcon
+    Box = FallbackIcon,
+    Check = FallbackIcon,
+    ExternalLink = FallbackIcon
   } = LucideIcons;
   
-  const { Button } = window.DSCore || {};
+  const { Button } = window.DSCore || window.DesignSystem || {};
 
-  const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa' }) => {
+  const Modal = ({ isOpen, onClose, title, children, showMaximize = true, width = 'max-w-2xl', language = 'fa', headerActions = null }) => {
     const isRtl = language === 'fa';
     const [isMaximized, setIsMaximized] = useState(false);
 
@@ -47,6 +49,7 @@
             <div className="h-11 px-4 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/80 shrink-0 rounded-t-2xl">
               <h3 className="font-black text-slate-700 dark:text-slate-200 text-[14px] tracking-tight">{title}</h3>
               <div className="flex items-center gap-1">
+                {headerActions}
                 {showMaximize && (
                   <button onClick={() => setIsMaximized(!isMaximized)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-700 rounded-lg transition-all active:scale-95">
                     {isMaximized ? <Minimize2 size={14} strokeWidth={2.5} /> : <Maximize2 size={14} strokeWidth={2.5} />}
@@ -234,6 +237,99 @@
     );
   };
 
+  const DiffViewer = ({ oldData, newData, actionType, getFieldLabel = (k) => k, formatValue = (v) => String(v), language = 'fa' }) => {
+    const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
+
+    if (!oldData && !newData) {
+      return (
+        <div className="flex flex-col items-center justify-center p-6 text-slate-400 dark:text-slate-500 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 w-full">
+           <Box size={24} className="opacity-40 mb-2" />
+           <span className="text-[12px] font-bold">{t('اطلاعات ساختاری برای مقایسه یافت نشد.', 'No structural data found for comparison.')}</span>
+        </div>
+      );
+    }
+
+    if (actionType === 'UPDATE') {
+       const changes = [];
+       if (oldData && newData) {
+           Object.keys(newData).forEach(key => {
+               if (['updated_at', 'updated_by', 'created_at', 'created_by'].includes(key)) return;
+               const oldVal = oldData[key];
+               const newVal = newData[key];
+               if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                   changes.push({ key, oldVal, newVal });
+               }
+           });
+       }
+
+       if (changes.length === 0) return (
+          <div className="p-3 text-center text-[12px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700/50 w-full">
+            {t('تغییر مقداری در فیلدها یافت نشد.', 'No value changes found in fields.')}
+          </div>
+       );
+       
+       return (
+          <div className="flex flex-col gap-3 w-full">
+              <h4 className="text-[12px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Edit size={12} className="text-amber-500" />
+                  {t('فیلدهای تغییر یافته:', 'Changed Fields:')}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {changes.map(c => (
+                      <div key={c.key} className="flex items-center flex-wrap gap-2 text-[12px] bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm w-full">
+                          <span className="font-black text-slate-700 dark:text-slate-300 min-w-[70px] shrink-0">{getFieldLabel(c.key)}:</span>
+                          <span className="text-rose-500 dark:text-rose-400 line-through decoration-rose-300/50 truncate max-w-[150px] font-medium" title={formatValue(c.oldVal)}>{formatValue(c.oldVal)}</span>
+                          {isRtl ? <ArrowLeft size={12} className="text-slate-400 shrink-0" /> : <ArrowRight size={12} className="text-slate-400 shrink-0" />}
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[150px]" title={formatValue(c.newVal)}>{formatValue(c.newVal)}</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+       );
+    }
+    
+    if (actionType === 'CREATE' && newData) {
+       return (
+          <div className="flex flex-col gap-3 w-full">
+              <h4 className="text-[12px] font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-1 border-b border-emerald-100 dark:border-emerald-900/30 pb-2">
+                  <Plus size={14} />
+                  {t('اطلاعات رکورد ایجاد شده:', 'Created Record Data:')}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-emerald-50/30 dark:bg-emerald-900/10 p-3 rounded-xl border border-emerald-100/50 dark:border-emerald-900/30 w-full">
+                  {Object.keys(newData).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
+                      <div key={key} className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm w-full">
+                          <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 min-w-[80px] shrink-0">{getFieldLabel(key)}:</span>
+                          <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate" title={formatValue(newData[key])}>{formatValue(newData[key])}</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+       );
+    }
+
+    if (actionType === 'DELETE' && oldData) {
+       return (
+          <div className="flex flex-col gap-3 w-full">
+              <h4 className="text-[12px] font-black text-rose-600 dark:text-rose-400 flex items-center gap-1.5 px-1 border-b border-rose-100 dark:border-rose-900/30 pb-2">
+                  <Trash2 size={14} />
+                  {t('اطلاعات رکورد حذف شده:', 'Deleted Record Data:')}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-rose-50/30 dark:bg-rose-900/10 p-3 rounded-xl border border-rose-100/50 dark:border-rose-900/30 w-full">
+                  {Object.keys(oldData).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
+                      <div key={key} className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm w-full">
+                          <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 min-w-[80px] shrink-0">{getFieldLabel(key)}:</span>
+                          <span className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate" title={formatValue(oldData[key])}>{formatValue(oldData[key])}</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+       );
+    }
+
+    return null;
+  };
+
   const LogTimeline = ({ logs = [], isLoading = false, language = 'fa' }) => {
     const [expandedLogs, setExpandedLogs] = useState([]);
     
@@ -277,12 +373,21 @@
       return String(val);
     };
 
+    const getActionType = (actionStr) => {
+        if (!actionStr) return 'OTHER';
+        const act = String(actionStr).toUpperCase().trim();
+        if (act.includes('CREATE') || act.includes('ایجاد')) return 'CREATE';
+        if (act.includes('UPDATE') || act.includes('ویرایش')) return 'UPDATE';
+        if (act.includes('DELETE') || act.includes('حذف')) return 'DELETE';
+        return 'OTHER';
+    };
+
     const getActionLabel = (action) => {
       if (!action) return '';
-      const act = action.toUpperCase();
-      if (act === 'CREATE' || act === 'ایجاد') return t('ایجاد', 'Create');
-      if (act === 'UPDATE' || act === 'ویرایش') return t('ویرایش', 'Update');
-      if (act === 'DELETE' || act === 'حذف') return t('حذف', 'Delete');
+      const type = getActionType(action);
+      if (type === 'CREATE') return t('ایجاد', 'Create');
+      if (type === 'UPDATE') return t('ویرایش', 'Update');
+      if (type === 'DELETE') return t('حذف', 'Delete');
       return action;
     };
 
@@ -305,86 +410,36 @@
     }
 
     return (
-      <div className="relative px-4 py-6 font-sans min-h-[200px] max-h-[65vh] overflow-y-auto custom-scrollbar" dir={isRtl ? 'rtl' : 'ltr'}>
+      <div className="relative px-4 py-6 font-sans min-h-[200px] max-h-[65vh] overflow-y-auto custom-scrollbar w-full" dir={isRtl ? 'rtl' : 'ltr'}>
         <div className={`absolute top-6 bottom-6 w-px bg-slate-200 dark:bg-slate-700 ${isRtl ? 'right-[31px]' : 'left-[31px]'}`}></div>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 w-full">
           {logs.map((log, index) => {
-            const isCreate = log.action === 'CREATE' || log.action === 'ایجاد';
-            const isDelete = log.action === 'DELETE' || log.action === 'حذف';
-            const isUpdate = log.action === 'UPDATE' || log.action === 'ویرایش';
+            const actionType = getActionType(log.action);
             const logId = log.id || index;
             const isExpanded = expandedLogs.includes(logId);
             
             let ActionIcon = Info;
             let iconColor = 'text-blue-500 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800';
             
-            if (isCreate) { ActionIcon = Plus; iconColor = 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'; }
-            if (isUpdate) { ActionIcon = Edit; iconColor = 'text-amber-500 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800'; }
-            if (isDelete) { ActionIcon = Trash2; iconColor = 'text-rose-500 bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800'; }
+            if (actionType === 'CREATE') { ActionIcon = Plus; iconColor = 'text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800'; }
+            if (actionType === 'UPDATE') { ActionIcon = Edit; iconColor = 'text-amber-500 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800'; }
+            if (actionType === 'DELETE') { ActionIcon = Trash2; iconColor = 'text-rose-500 bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800'; }
 
             const d = new Date(log.timestamp);
             const dateStr = formatDate ? formatDate(log.timestamp, globalMode) : d.toISOString().split('T')[0];
             const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
             const actionDisplay = getActionLabel(log.action);
 
-            const renderDiffs = () => {
-              if (!log.old_data && !log.new_data) return null;
-              
-              if (isUpdate && log.old_data && log.new_data) {
-                 const changes = [];
-                 Object.keys(log.new_data).forEach(key => {
-                    if (['updated_at', 'updated_by', 'created_at', 'created_by'].includes(key)) return;
-                    
-                    const oldVal = log.old_data[key];
-                    const newVal = log.new_data[key];
-                    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-                        changes.push({ key, oldVal, newVal });
-                    }
-                 });
-                 if (changes.length === 0) return null;
-                 return (
-                    <div className="mt-3 flex flex-col gap-1.5 border-t border-slate-100 dark:border-slate-700/50 pt-3">
-                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{t('تغییرات فیلدها:', 'Field Changes:')}</span>
-                       {changes.map(c => (
-                          <div key={c.key} className="flex items-center flex-wrap gap-2 text-[12px] bg-slate-100/50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-200/50 dark:border-slate-700/50">
-                             <span className="font-bold text-slate-600 dark:text-slate-300 min-w-[80px]">{getFieldLabel(c.key)}:</span>
-                             <span className="text-rose-500 dark:text-rose-400 line-through decoration-rose-300/50 truncate max-w-[150px]" title={formatValue(c.oldVal)}>{formatValue(c.oldVal)}</span>
-                             {isRtl ? <ArrowLeft size={10} className="text-slate-400 shrink-0" /> : <ArrowRight size={10} className="text-slate-400 shrink-0" />}
-                             <span className="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[150px]" title={formatValue(c.newVal)}>{formatValue(c.newVal)}</span>
-                          </div>
-                       ))}
-                    </div>
-                 );
-              }
-              
-              if (isDelete && log.old_data) {
-                 return (
-                    <div className="mt-3 flex flex-col gap-1.5 border-t border-slate-100 dark:border-slate-700/50 pt-3">
-                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{t('اطلاعات رکورد حذف شده:', 'Deleted Record Data:')}</span>
-                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {Object.keys(log.old_data).filter(k => !['updated_at', 'updated_by', 'created_at', 'created_by'].includes(k)).map(key => (
-                             <div key={key} className="flex items-center gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-md border border-slate-100 dark:border-slate-700/50">
-                                <span className="text-[10px] font-bold text-slate-400 min-w-[70px]">{getFieldLabel(key)}:</span>
-                                <span className="text-[12px] font-black text-slate-700 dark:text-slate-300 truncate" title={formatValue(log.old_data[key])}>{formatValue(log.old_data[key])}</span>
-                             </div>
-                          ))}
-                       </div>
-                    </div>
-                 )
-              }
-              return null;
-            };
-
             return (
-              <div key={logId} className="relative flex items-start gap-4 group animate-in fade-in slide-in-from-bottom-2" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>
+              <div key={logId} className="relative flex items-start gap-4 group animate-in fade-in slide-in-from-bottom-2 w-full" style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'both' }}>
                 <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 relative z-10 ${iconColor} shadow-sm`}>
                   <ActionIcon size={14} strokeWidth={2.5} />
                 </div>
                 <div 
-                  className={`flex-1 bg-white dark:bg-slate-800 border ${isExpanded ? 'border-indigo-300 dark:border-indigo-600 shadow-md' : 'border-slate-200 dark:border-slate-700 shadow-sm'} rounded-xl p-3.5 hover:shadow-md transition-all cursor-pointer select-none overflow-hidden`}
+                  className={`flex-1 w-full bg-white dark:bg-slate-800 border ${isExpanded ? 'border-indigo-300 dark:border-indigo-600 shadow-md' : 'border-slate-200 dark:border-slate-700 shadow-sm'} rounded-xl p-3.5 hover:shadow-md transition-all cursor-pointer select-none overflow-hidden`}
                   onClick={() => toggleExpand(logId)}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 w-full">
                     <div className="flex items-center gap-2.5">
                       <span className="text-[12.5px] font-black text-slate-800 dark:text-slate-100">{actionDisplay}</span>
                       <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-600">{log.user_name}</span>
@@ -399,13 +454,13 @@
                   </div>
                   
                   {isExpanded && (
-                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-200 cursor-auto" onClick={(e) => e.stopPropagation()}>
+                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50 animate-in fade-in slide-in-from-top-2 duration-200 cursor-auto w-full" onClick={(e) => e.stopPropagation()}>
                         {log.details && (
-                          <div className="text-[11.5px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 leading-relaxed font-medium">
+                          <div className="text-[11.5px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700 leading-relaxed font-medium mb-3 w-full">
                             {log.details}
                           </div>
                         )}
-                        {renderDiffs()}
+                        <DiffViewer oldData={log.old_data} newData={log.new_data} actionType={actionType} getFieldLabel={getFieldLabel} formatValue={formatValue} language={language} />
                      </div>
                   )}
                 </div>
@@ -417,5 +472,91 @@
     );
   };
 
-  window.DSFeedback = { Modal, Tooltip, Alert, Toast, Banner, Dialog, LogTimeline };
+  const NotificationCard = ({
+    id,
+    title,
+    message,
+    type = 'info',
+    isRead = false,
+    timestamp,
+    onRead,
+    onUnread,
+    onDelete,
+    onClick,
+    formatTime = (t) => t,
+    language = 'fa'
+  }) => {
+    const isActionable = typeof onClick === 'function';
+    const isRtl = language === 'fa';
+    const t = (fa, en) => isRtl ? fa : en;
+
+    const icons = {
+      success: <CheckCircle2 size={14} />,
+      error: <AlertCircle size={14} />,
+      info: <Info size={14} />
+    };
+
+    const typeColors = {
+      success: 'text-emerald-500 dark:text-emerald-400',
+      error: 'text-red-500 dark:text-red-400',
+      info: 'text-blue-500 dark:text-blue-400'
+    };
+
+    return (
+      <div
+        onClick={isActionable ? onClick : undefined}
+        className={`group relative border rounded-lg p-3 transition-all animate-in fade-in slide-in-from-bottom-2 ${isActionable ? 'cursor-pointer' : ''} ${
+          isRead
+            ? 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-slate-200 dark:hover:border-slate-600'
+            : 'bg-indigo-50/40 dark:bg-indigo-900/20 border-indigo-100 dark:border-indigo-800/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-sm'
+        } ${isActionable && isRead ? 'hover:bg-slate-50 dark:hover:bg-slate-700/50' : ''} ${isActionable && !isRead ? 'hover:bg-indigo-50 dark:hover:bg-indigo-900/30' : ''}`}
+      >
+        <div className="flex gap-2">
+          <div className={`mt-0.5 shrink-0 ${isRead ? 'opacity-50' : ''} ${typeColors[type] || typeColors.info}`}>
+            {icons[type] || icons.info}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className={`text-[12px] font-bold mb-1 leading-tight ${isRead ? 'text-slate-600 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>{title}</h4>
+            <p className={`text-[12px] leading-relaxed mb-1.5 line-clamp-2 ${isRead ? 'text-slate-400 dark:text-slate-500' : 'text-slate-600 dark:text-slate-300'}`}>{message}</p>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{formatTime(timestamp)}</span>
+              {isActionable && <span className="text-[9px] text-indigo-500 dark:text-indigo-400 flex items-center gap-0.5"><ExternalLink size={10}/></span>}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-0.5 transition-all self-start shrink-0">
+            {!isRead && onRead && (
+              <Button
+                size="sm" variant="ghost" icon={Check}
+                onClick={(e) => { e.stopPropagation(); onRead(id); }}
+                title={t('علامت‌گذاری خوانده شده', 'Mark as read')}
+                className="!text-slate-400 dark:!text-slate-500 hover:!text-indigo-600 dark:hover:!text-indigo-400 hover:!bg-indigo-50 dark:hover:!bg-indigo-900/30 !px-1 !h-6"
+              />
+            )}
+            {isRead && onUnread && (
+              <Button
+                size="sm" variant="ghost" icon={Clock}
+                onClick={(e) => { e.stopPropagation(); onUnread(id); }}
+                title={t('علامت‌گذاری خوانده نشده', 'Mark as unread')}
+                className="!text-slate-400 dark:!text-slate-500 hover:!text-amber-600 dark:hover:!text-amber-400 hover:!bg-amber-50 dark:hover:!bg-amber-900/30 !px-1 !h-6"
+              />
+            )}
+            {onDelete && (
+              <Button
+                size="sm" variant="ghost" icon={Trash2}
+                onClick={(e) => { e.stopPropagation(); onDelete(id); }}
+                title={t('حذف اعلان', 'Delete')}
+                className="!text-slate-400 dark:!text-slate-500 hover:!text-red-500 dark:hover:!text-red-400 hover:!bg-red-50 dark:hover:!bg-red-900/30 !px-1 !h-6"
+              />
+            )}
+          </div>
+        </div>
+        {!isRead && (
+          <div className={`absolute top-1/2 -translate-y-1/2 ${isRtl ? 'right-0 w-1 rounded-l-md' : 'left-0 w-1 rounded-r-md'} h-6 bg-indigo-500 dark:bg-indigo-400`} />
+        )}
+      </div>
+    );
+  };
+
+  window.DSFeedback = { Modal, Tooltip, Alert, Toast, Banner, Dialog, DiffViewer, LogTimeline, NotificationCard };
 })();

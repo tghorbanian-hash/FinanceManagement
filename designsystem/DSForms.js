@@ -16,7 +16,8 @@
     UploadCloud = FallbackIcon, 
     FileText = FallbackIcon, 
     Download = FallbackIcon, 
-    Trash2 = FallbackIcon 
+    Trash2 = FallbackIcon,
+    Eye = FallbackIcon
   } = window.LucideIcons || {};
 
   const { useCalendarMode, formatGlobalDate, j2g, g2j } = window.DSCore || {};
@@ -66,6 +67,9 @@
     const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef(null);
     const inputRef = useRef(null);
+    const dropdownRef = useRef(null);
+    const [rect, setRect] = useState(null);
+    const ReactDOM = window.ReactDOM;
     const t = (fa, en) => isRtl ? fa : en;
     const isXs = size === 'xs';
     
@@ -77,7 +81,7 @@
 
     useEffect(() => {
       const handleClickOutside = (e) => {
-        if (containerRef.current && !containerRef.current.contains(e.target)) {
+        if (containerRef.current && !containerRef.current.contains(e.target) && (!dropdownRef.current || !dropdownRef.current.contains(e.target))) {
           setIsOpen(false);
           setSearchTerm('');
         }
@@ -90,12 +94,51 @@
       if (isOpen && inputRef.current) inputRef.current.focus();
     }, [isOpen]);
 
+    useEffect(() => {
+      const updateRect = () => {
+        if (containerRef.current) {
+          setRect(containerRef.current.getBoundingClientRect());
+        }
+      };
+      if (isOpen) {
+        updateRect();
+        window.addEventListener('scroll', updateRect, true);
+        window.addEventListener('resize', updateRect);
+      }
+      return () => {
+        window.removeEventListener('scroll', updateRect, true);
+        window.removeEventListener('resize', updateRect);
+      };
+    }, [isOpen]);
+
     const filteredOptions = options.filter(o => 
       o.label.toLowerCase().includes(searchTerm.toLowerCase()) || 
       String(o.value).toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const inputHeights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+
+    const dropdownContent = (
+      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+        {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
+          <div 
+            key={idx} 
+            className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if(onChange) onChange({ target: { name: name || id, value: opt.value } });
+              setIsOpen(false);
+              setSearchTerm('');
+            }}
+          >
+            {opt.label}
+          </div>
+        )) : (
+          <div className="px-3 py-4 text-center text-[12px] text-slate-400 dark:text-slate-500">{t('موردی یافت نشد', 'No results')}</div>
+        )}
+      </div>
+    );
 
     return (
       <div ref={containerRef} className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
@@ -121,26 +164,21 @@
           </div>
         </div>
         
-        {isOpen && (
-          <div className={`absolute top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-[9999] max-h-60 overflow-y-auto custom-scrollbar ${isRtl ? 'right-0' : 'left-0'}`}>
-            {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
-              <div 
-                key={idx} 
-                className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(value) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if(onChange) onChange({ target: { name: name || id, value: opt.value } });
-                  setIsOpen(false);
-                  setSearchTerm('');
-                }}
-              >
-                {opt.label}
-              </div>
-            )) : (
-              <div className="px-3 py-4 text-center text-[12px] text-slate-400 dark:text-slate-500">{t('موردی یافت نشد', 'No results')}</div>
-            )}
-          </div>
+        {isOpen && rect && (
+          ReactDOM ? ReactDOM.createPortal(
+            <div 
+              ref={dropdownRef}
+              style={{ position: 'fixed', top: rect.bottom + 4, left: isRtl ? undefined : rect.left, right: isRtl ? (window.innerWidth - rect.right) : undefined, width: containerRef.current ? containerRef.current.offsetWidth : 'auto', zIndex: 999999 }}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150"
+            >
+              {dropdownContent}
+            </div>,
+            document.body
+          ) : (
+            <div ref={dropdownRef} className={`absolute top-full mt-1 w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-[9999] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150 ${isRtl ? 'right-0' : 'left-0'}`}>
+              {dropdownContent}
+            </div>
+          )
         )}
         {error && <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
       </div>
@@ -273,6 +311,9 @@
     const [currentYear, setCurrentYear] = useState(initToday.y);
     
     const containerRef = useRef(null);
+    const dropdownRef = useRef(null);
+    const [rect, setRect] = useState(null);
+    const ReactDOM = window.ReactDOM;
     const [generatedId] = useState(() => `datepicker-${Math.random().toString(36).substr(2, 9)}`);
     const inputId = id || generatedId;
     const inputHeights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
@@ -281,11 +322,28 @@
 
     useEffect(() => {
       const clickOutside = (e) => { 
-        if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false); 
+        if (containerRef.current && !containerRef.current.contains(e.target) && (!dropdownRef.current || !dropdownRef.current.contains(e.target))) setIsOpen(false); 
       };
       document.addEventListener('mousedown', clickOutside);
       return () => document.removeEventListener('mousedown', clickOutside);
     }, []);
+
+    useEffect(() => {
+      const updateRect = () => {
+        if (containerRef.current) {
+          setRect(containerRef.current.getBoundingClientRect());
+        }
+      };
+      if (isOpen) {
+        updateRect();
+        window.addEventListener('scroll', updateRect, true);
+        window.addEventListener('resize', updateRect);
+      }
+      return () => {
+        window.removeEventListener('scroll', updateRect, true);
+        window.removeEventListener('resize', updateRect);
+      };
+    }, [isOpen]);
 
     useEffect(() => {
       if (value && value.length === 10) {
@@ -378,6 +436,64 @@
     const ti = getTodayInfo(calendarMode);
     const todayStr = `${ti.y}/${ti.m < 10 ? '0'+ti.m : ti.m}/${ti.d < 10 ? '0'+ti.d : ti.d}`;
 
+    const calendarContent = (
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
+          <button type="button" onClick={() => { if(currentMonth===1){setCurrentMonth(12); setCurrentYear(currentYear-1)}else setCurrentMonth(currentMonth-1) }} className="p-1 rounded text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm transition-all"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+          <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-1">
+            <span>{monthName}</span>
+            <span className="text-indigo-600 dark:text-indigo-400">{currentYear}</span>
+          </div>
+          <button type="button" onClick={() => { if(currentMonth===12){setCurrentMonth(1); setCurrentYear(currentYear+1)}else setCurrentMonth(currentMonth+1) }} className="p-1 rounded text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm transition-all"><ChevronLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1 mb-1" dir={isRtl ? 'rtl' : 'ltr'}>
+          {weekDays.map((d, i) => <div key={i} className="text-center text-[10px] font-bold text-slate-400 dark:text-slate-500 py-1">{d}</div>)}
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1" dir={isRtl ? 'rtl' : 'ltr'}>
+          {blanksArray.map(b => <div key={`blank-${b}`} className="h-7"></div>)}
+          {daysArray.map(day => {
+            const dStr = day < 10 ? '0'+day : day;
+            const mStr = currentMonth < 10 ? '0'+currentMonth : currentMonth;
+            const currentIterDate = calendarMode === 'jalali' && j2g
+              ? (() => { const [gy,gm,gd] = j2g(currentYear, currentMonth, day); return `${gy}/${gm<10?'0'+gm:gm}/${gd<10?'0'+gd:gd}`; })()
+              : `${currentYear}/${mStr}/${dStr}`;
+            const isSelected = value === currentIterDate;
+            const isToday = (() => { const d=new Date(); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`})() === currentIterDate;
+            
+            let btnClass = 'h-7 w-full rounded flex items-center justify-center text-[12px] font-bold transition-all ';
+            if (isSelected) {
+              btnClass += 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-md';
+            } else if (isToday) {
+              btnClass += 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800';
+            } else {
+              btnClass += 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-300';
+            }
+
+            return (
+              <button 
+                key={day} type="button" onClick={() => handleDayClick(day)}
+                className={btnClass}
+              >
+                {day}
+              </button>
+            );
+          })}
+        </div>
+        
+        <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 flex justify-center">
+          <button 
+            type="button" 
+            onClick={(e) => { e.stopPropagation(); handleTodayClick(); }}
+            className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-4 py-1.5 rounded transition-colors w-full border border-indigo-100 dark:border-indigo-800"
+          >
+            {t('امروز', 'Today')}
+          </button>
+        </div>
+      </div>
+    );
+
     return (
       <div ref={containerRef} className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
         {label && <label htmlFor={inputId} className="text-[12px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">{label} {required && <span className="text-red-500 dark:text-red-400">*</span>}</label>}
@@ -393,6 +509,16 @@
             dir="ltr"
           />
           <div className={`absolute ${isRtl ? 'left-1' : 'right-1'} flex items-center gap-0.5 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded p-0.5 z-10`}>
+            {value && !isDisabled && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onChange(''); setIsOpen(false); }}
+                className={`rounded ${isXs ? 'p-0.5' : 'p-0.5'} transition-all text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30`}
+                title={t('حذف تاریخ', 'Clear Date')}
+              >
+                <X size={isXs ? 10 : 12} />
+              </button>
+            )}
             <button 
               type="button" onClick={(e) => { e.stopPropagation(); toggleCalendarMode(); }}
               className={`rounded ${isXs ? 'px-1 py-0.5 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'} font-black transition-all bg-white dark:bg-slate-800 shadow-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300`}
@@ -403,73 +529,39 @@
           </div>
         </div>
 
-        {isOpen && !isDisabled && (
-          <div className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} z-[9999] w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl p-3 animate-in zoom-in-95 duration-150`}>
-            <div className="flex items-center justify-between mb-3 bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded-lg border border-slate-100 dark:border-slate-700">
-              <button type="button" onClick={() => { if(currentMonth===1){setCurrentMonth(12); setCurrentYear(currentYear-1)}else setCurrentMonth(currentMonth-1) }} className="p-1 rounded text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm transition-all"><ChevronRight size={14} className={isRtl ? '' : 'rotate-180'} /></button>
-              <div className="text-[12px] font-black text-slate-800 dark:text-slate-100 flex items-center gap-1">
-                <span>{monthName}</span>
-                <span className="text-indigo-600 dark:text-indigo-400">{currentYear}</span>
-              </div>
-              <button type="button" onClick={() => { if(currentMonth===12){setCurrentMonth(1); setCurrentYear(currentYear+1)}else setCurrentMonth(currentMonth+1) }} className="p-1 rounded text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-sm transition-all"><ChevronLeft size={14} className={isRtl ? '' : 'rotate-180'} /></button>
+        {isOpen && !isDisabled && rect && (
+          ReactDOM ? ReactDOM.createPortal(
+            <div 
+              ref={dropdownRef}
+              style={{ position: 'fixed', top: rect.bottom + 4, left: isRtl ? undefined : rect.left, right: isRtl ? (window.innerWidth - rect.right) : undefined, zIndex: 999999 }}
+              className="w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl animate-in zoom-in-95 duration-150"
+            >
+              {calendarContent}
+            </div>,
+            document.body
+          ) : (
+            <div ref={dropdownRef} className={`absolute top-full mt-1 ${isRtl ? 'right-0' : 'left-0'} z-[9999] w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl animate-in zoom-in-95 duration-150`}>
+              {calendarContent}
             </div>
-            
-            <div className="grid grid-cols-7 gap-1 mb-1" dir={isRtl ? 'rtl' : 'ltr'}>
-              {weekDays.map((d, i) => <div key={i} className="text-center text-[10px] font-bold text-slate-400 dark:text-slate-500 py-1">{d}</div>)}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1" dir={isRtl ? 'rtl' : 'ltr'}>
-              {blanksArray.map(b => <div key={`blank-${b}`} className="h-7"></div>)}
-              {daysArray.map(day => {
-                const dStr = day < 10 ? '0'+day : day;
-                const mStr = currentMonth < 10 ? '0'+currentMonth : currentMonth;
-                const currentIterDate = calendarMode === 'jalali' && j2g
-                  ? (() => { const [gy,gm,gd] = j2g(currentYear, currentMonth, day); return `${gy}/${gm<10?'0'+gm:gm}/${gd<10?'0'+gd:gd}`; })()
-                  : `${currentYear}/${mStr}/${dStr}`;
-                const isSelected = value === currentIterDate;
-                const isToday = (() => { const d=new Date(); return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`})() === currentIterDate;
-                
-                let btnClass = 'h-7 w-full rounded flex items-center justify-center text-[12px] font-bold transition-all ';
-                if (isSelected) {
-                  btnClass += 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-md';
-                } else if (isToday) {
-                  btnClass += 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800';
-                } else {
-                  btnClass += 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 hover:text-indigo-700 dark:hover:text-indigo-300';
-                }
-
-                return (
-                  <button 
-                    key={day} type="button" onClick={() => handleDayClick(day)}
-                    className={btnClass}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
-            
-            <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-700 flex justify-center">
-              <button 
-                type="button" 
-                onClick={(e) => { e.stopPropagation(); handleTodayClick(); }}
-                className="text-[12px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 px-4 py-1.5 rounded transition-colors w-full border border-indigo-100 dark:border-indigo-800"
-              >
-                {t('امروز', 'Today')}
-              </button>
-            </div>
-          </div>
+          )
         )}
       </div>
     );
   };
 
-  const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, language = 'fa', formCode }) => {
+  const AttachmentManager = ({ files = [], onUpload, onDelete, onDownload, readOnly = false, isUploading = false, language = 'fa', formCode }) => {
     const isReadOnlyMode = useSecureField(formCode, readOnly);
     const isRtl = language === 'fa';
     const t = (fa, en) => isRtl ? fa : en;
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef(null);
+    const [previewFile, setPreviewFile] = useState(null);
+
+    const Feedback = window.DSFeedback || window.DesignSystem || {};
+    const Modal = Feedback.Modal || (({children}) => <div className="hidden">{children}</div>);
+    const EmptyState = Feedback.EmptyState || (({title}) => <div className="text-center p-4 text-slate-500">{title}</div>);
+    const Core = window.DSCore || window.DesignSystem || {};
+    const Button = Core.Button || (({children, onClick}) => <button onClick={onClick}>{children}</button>);
 
     const handleDrop = (e) => { e.preventDefault(); setIsDragging(false); if (!isReadOnlyMode && e.dataTransfer.files?.length > 0) onUpload(Array.from(e.dataTransfer.files)); };
     const handleFileSelect = (e) => { if (e.target.files?.length > 0) onUpload(Array.from(e.target.files)); };
@@ -480,29 +572,62 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     };
 
+    const getName = (f) => f.file_name || f.name;
+    const getSize = (f) => f.file_size || f.size;
+    const getType = (f) => f.file_type || f.type;
+    const getUrl = (f) => f.file_url || f.url || (f instanceof File ? URL.createObjectURL(f) : '');
+
     return (
       <div className="flex flex-col gap-3 font-sans w-full h-full" dir={isRtl ? 'rtl' : 'ltr'}>
         {!isReadOnlyMode && (
-          <div onDragOver={e => {e.preventDefault(); setIsDragging(true);}} onDragLeave={e => {e.preventDefault(); setIsDragging(false);}} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()} className={`flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-xl cursor-pointer transition-all shrink-0 ${isDragging ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500'}`}>
-            <UploadCloud size={24} className={isDragging ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'} />
-            <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300 mt-2">{t('فایل‌ها را اینجا رها کنید یا کلیک کنید', 'Drop files here or click to upload')}</span>
-            <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelect} />
+          <div onDragOver={e => {e.preventDefault(); setIsDragging(true);}} onDragLeave={e => {e.preventDefault(); setIsDragging(false);}} onDrop={handleDrop} onClick={() => fileInputRef.current?.click()} className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all shrink-0 ${isDragging ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500'}`}>
+            <UploadCloud size={24} className={isDragging ? 'text-indigo-600 dark:text-indigo-400 mb-2' : 'text-slate-400 dark:text-slate-500 mb-2'} />
+            <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300">{isUploading ? t('در حال آپلود...', 'Uploading...') : t('برای انتخاب فایل کلیک کنید یا فایل را اینجا رها کنید', 'Click to select file or drop here')}</span>
+            <input type="file" ref={fileInputRef} className="hidden" multiple onChange={handleFileSelect} disabled={isUploading} />
           </div>
         )}
-        <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
-          {files.length === 0 ? <div className="text-center p-4 text-[12px] text-slate-400 dark:text-slate-500 border border-slate-100 dark:border-slate-700 rounded-lg bg-slate-50/50 dark:bg-slate-800/50">{t('هیچ فایلی ضمیمه نشده است.', 'No attachments found.')}</div> : files.map((file, idx) => (
-            <div key={idx} className="flex items-center justify-between p-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:border-indigo-200 dark:hover:border-indigo-500/50 transition-colors group shrink-0">
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md shrink-0"><FileText size={14} /></div>
-                <div className="flex flex-col min-w-0"><span className="text-[12px] font-bold text-slate-700 dark:text-slate-200 truncate">{file.name}</span><span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">{formatSize(file.size)}</span></div>
+        <div className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
+          {files.length === 0 ? (
+              <EmptyState icon={FileText} title={t('هیچ فایلی ضمیمه نشده است.', 'No attachments found.')} />
+          ) : files.map((file, idx) => (
+            <div key={file.id || idx} className="flex items-center justify-between p-3 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:border-indigo-200 dark:hover:border-indigo-500/50 transition-colors group shrink-0">
+              <div className="flex items-center gap-3 overflow-hidden">
+                <FileText size={18} className="text-slate-400 shrink-0" />
+                <div className="flex flex-col min-w-0">
+                    <span className="text-[12px] font-bold text-slate-700 dark:text-slate-300 truncate">{getName(file)}</span>
+                    <span className="text-[10px] text-slate-500">{formatSize(getSize(file))}</span>
+                </div>
               </div>
-              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-md"><Download size={14} /></button>}
-                {!isReadOnlyMode && onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md"><Trash2 size={14} /></button>}
+              <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="sm" icon={Eye} onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }} className="!p-1.5 text-indigo-600 dark:text-indigo-400" title={t('پیش‌نمایش', 'Preview')} />
+                {onDownload && <Button variant="ghost" size="sm" icon={Download} onClick={(e) => { e.stopPropagation(); onDownload(file); }} className="!p-1.5 text-blue-600 dark:text-blue-400" title={t('دانلود', 'Download')} />}
+                {!isReadOnlyMode && onDelete && <Button variant="ghost" size="sm" icon={Trash2} onClick={(e) => { e.stopPropagation(); onDelete(file); }} className="!p-1.5 text-red-500 dark:text-red-400" title={t('حذف', 'Delete')} />}
               </div>
             </div>
           ))}
         </div>
+
+        <Modal isOpen={!!previewFile} onClose={() => setPreviewFile(null)} title={previewFile ? getName(previewFile) : ''} language={language} width="max-w-4xl">
+            <div className="p-4 bg-slate-100 dark:bg-slate-900 rounded-b-lg">
+                {previewFile && (
+                    getType(previewFile)?.startsWith('image/') ? (
+                        <img src={getUrl(previewFile)} alt="preview" className="max-w-full max-h-[70vh] object-contain mx-auto rounded shadow-sm" />
+                    ) : getType(previewFile) === 'application/pdf' ? (
+                        <iframe src={getUrl(previewFile)} className="w-full h-[70vh] border-0 rounded shadow-sm" title="pdf-preview" />
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-[40vh] text-slate-500 bg-white dark:bg-slate-800 rounded shadow-sm border border-slate-200 dark:border-slate-700">
+                            <FileText size={48} className="mb-4 opacity-50 text-indigo-400" />
+                            <p className="font-bold text-[12px]">{t('پیش‌نمایش برای این نوع فایل پشتیبانی نمی‌شود.', 'Preview not supported for this file type.')}</p>
+                            {!isReadOnlyMode && (
+                                <Button variant="outline" size="sm" className="mt-4" onClick={() => window.open(getUrl(previewFile), '_blank')}>
+                                    {t('دانلود فایل برای مشاهده', 'Download File to View')}
+                                </Button>
+                            )}
+                        </div>
+                    )
+                )}
+            </div>
+        </Modal>
       </div>
     );
   };
@@ -546,6 +671,9 @@
     const [searchTerm, setSearchTerm] = useState('');
     const containerRef = useRef(null);
     const searchInputRef = useRef(null);
+    const dropdownRef = useRef(null);
+    const [rect, setRect] = useState(null);
+    const ReactDOM = window.ReactDOM;
     const t = (fa, en) => isRtl ? fa : en;
     const isXs = size === 'xs';
 
@@ -554,7 +682,7 @@
 
     useEffect(() => {
       const handleClickOutside = (e) => {
-        if (containerRef.current && !containerRef.current.contains(e.target)) {
+        if (containerRef.current && !containerRef.current.contains(e.target) && (!dropdownRef.current || !dropdownRef.current.contains(e.target))) {
           setIsOpen(false);
           setSearchTerm('');
         }
@@ -565,6 +693,23 @@
 
     useEffect(() => {
       if (isOpen && searchInputRef.current) searchInputRef.current.focus();
+    }, [isOpen]);
+
+    useEffect(() => {
+      const updateRect = () => {
+        if (containerRef.current) {
+          setRect(containerRef.current.getBoundingClientRect());
+        }
+      };
+      if (isOpen) {
+        updateRect();
+        window.addEventListener('scroll', updateRect, true);
+        window.addEventListener('resize', updateRect);
+      }
+      return () => {
+        window.removeEventListener('scroll', updateRect, true);
+        window.removeEventListener('resize', updateRect);
+      };
     }, [isOpen]);
 
     const filteredOptions = unitOptions.filter(o => 
@@ -588,6 +733,28 @@
     };
 
     const heights = { xs: 'h-6 text-[10px]', sm: 'h-8 text-[12px]', md: 'h-10 text-[14px]', lg: 'h-12 text-[14px]' };
+
+    const suffixDropdownContent = (
+      <div className="max-h-60 overflow-y-auto custom-scrollbar">
+        {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
+          <div 
+            key={idx} 
+            className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(unitValue) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if(onUnitChange) onUnitChange(opt.value);
+              setIsOpen(false);
+              setSearchTerm('');
+            }}
+          >
+            {opt.label}
+          </div>
+        )) : (
+          <div className="px-3 py-4 text-center text-[12px] text-slate-400 dark:text-slate-500">{t('موردی یافت نشد', 'No results')}</div>
+        )}
+      </div>
+    );
 
     return (
       <div className={`flex flex-col ${isXs ? 'gap-0.5' : size === 'sm' ? 'gap-1' : 'gap-1.5'} w-full relative ${isOpen ? 'z-[9999]' : 'z-10'} ${wrapperClassName}`}>
@@ -629,26 +796,21 @@
             <ChevronDown size={14} className="text-slate-400 shrink-0 ml-1" />
           </div>
 
-          {isOpen && (
-            <div className={`absolute top-full mt-1 ${isRtl ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-[9999] max-h-60 overflow-y-auto custom-scrollbar`}>
-              {filteredOptions.length > 0 ? filteredOptions.map((opt, idx) => (
-                <div 
-                  key={idx} 
-                  className={`px-3 py-2 text-[12px] cursor-pointer transition-colors ${String(unitValue) === String(opt.value) ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold' : 'text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 hover:text-indigo-700 dark:hover:text-indigo-300'}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if(onUnitChange) onUnitChange(opt.value);
-                    setIsOpen(false);
-                    setSearchTerm('');
-                  }}
-                >
-                  {opt.label}
-                </div>
-              )) : (
-                <div className="px-3 py-4 text-center text-[12px] text-slate-400 dark:text-slate-500">{t('موردی یافت نشد', 'No results')}</div>
-              )}
-            </div>
+          {isOpen && rect && (
+            ReactDOM ? ReactDOM.createPortal(
+              <div 
+                ref={dropdownRef}
+                style={{ position: 'fixed', top: rect.bottom + 4, left: isRtl ? rect.left : undefined, right: isRtl ? undefined : (window.innerWidth - rect.right), zIndex: 999999 }}
+                className="w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+              >
+                {suffixDropdownContent}
+              </div>,
+              document.body
+            ) : (
+              <div ref={dropdownRef} className={`absolute top-full mt-1 ${isRtl ? 'left-0' : 'right-0'} w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 shadow-xl rounded-lg z-[9999] overflow-hidden`}>
+                {suffixDropdownContent}
+              </div>
+            )
           )}
         </div>
         {error && <div className="flex items-center gap-1 text-red-500 dark:text-red-400 text-[10px] font-bold mt-0.5"><AlertCircle size={10} /><span>{error}</span></div>}
